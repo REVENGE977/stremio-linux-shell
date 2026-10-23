@@ -1133,6 +1133,29 @@
       postEnhancedMessage("getServerStatus", { id });
     });
   }
+  var isReloadingToLocal = false;
+  function reloadToLocalStreamingServer() {
+    if (isReloadingToLocal) return;
+    if (window.location.hostname === "127.0.0.1") {
+      try {
+        window.core?.dispatch?.({ action: "StreamingServer", args: { action: "Reload" } });
+      } catch (_) {
+      }
+      return;
+    }
+    isReloadingToLocal = true;
+    const hash = window.location.hash || "#/";
+    const targetUrl = `http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fweb.stremio.com/${hash}`;
+    console.log("[Enhanced Server] Streaming server running. Reloading from web.stremio.com to local proxy:", targetUrl);
+    setTimeout(() => {
+      postEnhancedMessage("loadUrl", { url: targetUrl });
+      try {
+        window.location.replace(targetUrl);
+      } catch (_) {
+        window.location.href = targetUrl;
+      }
+    }, 500);
+  }
   function startStreamingServer() {
     return new Promise((resolve) => {
       const id = "start_" + Math.random().toString(36).substring(2, 9);
@@ -1144,6 +1167,9 @@
       }, 15e3);
       pendingServerStartRequests.set(id, (success) => {
         clearTimeout(timer);
+        if (success && window.location.hostname !== "127.0.0.1") {
+          reloadToLocalStreamingServer();
+        }
         resolve(success);
       });
       postEnhancedMessage("startStreamingServer", { id });
@@ -1209,13 +1235,10 @@ Click "Open Folder" to open the destination folder, or "Download" to open the do
             await modalManager.showAlert(
               "info",
               "Streaming Server Setup Complete",
-              "The streaming server has been set up successfully and will now start. You may need to reload the streaming server from the settings.",
+              "The streaming server has been set up successfully. The application will now reload to use the local streaming server (127.0.0.1).",
               ["OK"]
             );
-            try {
-              window.core?.dispatch?.({ action: "StreamingServer", args: { action: "Reload" } });
-            } catch (_) {
-            }
+            reloadToLocalStreamingServer();
           }
           return true;
         } else {
@@ -1260,6 +1283,18 @@ Please download the file and place it in the correct location. Do you want to tr
         hasPromptedInitialSetup = true;
         await showMissingServerInstructions(downloadUrl, serverDir);
       } else {
+        if (!status.running) {
+          console.log("[Enhanced Server] server.js exists but is not running. Starting streaming server...");
+          const started = await startStreamingServer();
+          if (started && window.location.hostname !== "127.0.0.1") {
+            reloadToLocalStreamingServer();
+            return;
+          }
+        } else if (window.location.hostname !== "127.0.0.1") {
+          console.log("[Enhanced Server] Streaming server is running. Switching from web.stremio.com to 127.0.0.1...");
+          reloadToLocalStreamingServer();
+          return;
+        }
         const currentVer = status.currentVersion;
         const skippedVer = status.skippedVersion;
         const isDifferent = remote && currentVer && (isNewerVersion(latestVersion, currentVer) || latestVersion !== currentVer);
@@ -1439,7 +1474,23 @@ Please download the file and place it in the correct location. Do you want to tr
       } else {
         const ver = status.currentVersion ? `v${status.currentVersion.replace(/^v/, "")}` : "Installed";
         const runningBadge = status.running ? '<span style="color: #51cf66;">\u25CF Running</span>' : '<span style="color: #fcc419;">\u25CF Stopped</span>';
-        serverStatusInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Status:</span> ${ver} (${runningBadge}) &bull; <span style="color: #888; font-size: 0.85rem;">${status.serverDir}</span>`;
+        const actionBtn = status.running && window.location.hostname !== "127.0.0.1" ? `<button id="enhanced-switch-to-local-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #5c7cfa; color: #fff; border: none; border-radius: 4px; font-weight: 600;">Switch to Local Server (127.0.0.1)</button>` : !status.running ? `<button id="enhanced-start-server-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #51cf66; color: #111; border: none; border-radius: 4px; font-weight: 600;">Start Server</button>` : "";
+        serverStatusInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Status:</span> ${ver} (${runningBadge}) &bull; <span style="color: #888; font-size: 0.85rem;">${status.serverDir}</span>${actionBtn}`;
+        const startBtn = serverStatusInfo.querySelector("#enhanced-start-server-btn");
+        if (startBtn) {
+          startBtn.onclick = async () => {
+            startBtn.textContent = "Starting...";
+            await startStreamingServer();
+            const updated = await getServerStatus();
+            renderServerInfo(updated);
+          };
+        }
+        const switchLocalBtn = serverStatusInfo.querySelector("#enhanced-switch-to-local-btn");
+        if (switchLocalBtn) {
+          switchLocalBtn.onclick = () => {
+            reloadToLocalStreamingServer();
+          };
+        }
       }
     };
     if (serverStatusInfo) {
@@ -2280,6 +2331,9 @@ Are you sure you want to update? It's recommended to read the source code of the
       },
       startStreamingServer: function() {
         return startStreamingServer();
+      },
+      reloadToLocalStreamingServer: function() {
+        reloadToLocalStreamingServer();
       },
       applyTheme: function(fileName) {
         applyThemeUI(fileName);

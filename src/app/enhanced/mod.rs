@@ -106,6 +106,9 @@ pub enum EnhancedAction {
     StartStreamingServer {
         id: String,
     },
+    LoadUrl {
+        url: String,
+    },
     PrepareServerUpdate {
         version: String,
     },

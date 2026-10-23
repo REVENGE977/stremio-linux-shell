@@ -5,7 +5,7 @@ import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON } from '../../ut
 import { renderThemesList } from '../../themes/themeManager';
 import { renderPluginsList } from '../../plugins/pluginManager';
 import { browseMarketplace } from '../../marketplace/marketplaceManager';
-import { openStreamingServerFolder, checkServerJsUpdateAndSetup, getCurrentServerStatus, getServerStatus } from '../../server/serverManager';
+import { openStreamingServerFolder, checkServerJsUpdateAndSetup, getCurrentServerStatus, getServerStatus, startStreamingServer, reloadToLocalStreamingServer } from '../../server/serverManager';
 
 export function checkSettings(): void {
     if (!location.href.includes('#/settings')) return;
@@ -167,7 +167,28 @@ function injectSection(sectionsContainer: Element): void {
             const runningBadge = status.running
                 ? '<span style="color: #51cf66;">● Running</span>'
                 : '<span style="color: #fcc419;">● Stopped</span>';
-            serverStatusInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Status:</span> ${ver} (${runningBadge}) &bull; <span style="color: #888; font-size: 0.85rem;">${status.serverDir}</span>`;
+            const actionBtn = (status.running && window.location.hostname !== '127.0.0.1')
+                ? `<button id="enhanced-switch-to-local-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #5c7cfa; color: #fff; border: none; border-radius: 4px; font-weight: 600;">Switch to Local Server (127.0.0.1)</button>`
+                : (!status.running)
+                ? `<button id="enhanced-start-server-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #51cf66; color: #111; border: none; border-radius: 4px; font-weight: 600;">Start Server</button>`
+                : '';
+            serverStatusInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Status:</span> ${ver} (${runningBadge}) &bull; <span style="color: #888; font-size: 0.85rem;">${status.serverDir}</span>${actionBtn}`;
+
+            const startBtn = serverStatusInfo.querySelector<HTMLElement>('#enhanced-start-server-btn');
+            if (startBtn) {
+                startBtn.onclick = async () => {
+                    startBtn.textContent = 'Starting...';
+                    await startStreamingServer();
+                    const updated = await getServerStatus();
+                    renderServerInfo(updated);
+                };
+            }
+            const switchLocalBtn = serverStatusInfo.querySelector<HTMLElement>('#enhanced-switch-to-local-btn');
+            if (switchLocalBtn) {
+                switchLocalBtn.onclick = () => {
+                    reloadToLocalStreamingServer();
+                };
+            }
         }
     };
 

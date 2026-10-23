@@ -306,6 +306,10 @@ impl ApplicationImpl for Application {
                             );
                             webview.evaluate_javascript(&script);
                         }
+                        crate::app::enhanced::EnhancedAction::LoadUrl { url } => {
+                            info!("Loading URL in webview: {url}");
+                            webview.load_uri(&url);
+                        }
                         crate::app::enhanced::EnhancedAction::PrepareServerUpdate { version } => {
                             if let Some(ref s_rc) = server_ref {
                                 let _ = s_rc.borrow_mut().stop();

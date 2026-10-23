@@ -79,6 +79,33 @@ export function getServerStatus(): Promise<ServerStatusUiData> {
     });
 }
 
+let isReloadingToLocal = false;
+
+export function reloadToLocalStreamingServer(): void {
+    if (isReloadingToLocal) return;
+
+    if (window.location.hostname === '127.0.0.1') {
+        try {
+            (window as any).core?.dispatch?.({ action: 'StreamingServer', args: { action: 'Reload' } });
+        } catch (_) {}
+        return;
+    }
+
+    isReloadingToLocal = true;
+    const hash = window.location.hash || '#/';
+    const targetUrl = `http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fweb.stremio.com/${hash}`;
+    console.log('[Enhanced Server] Streaming server running. Reloading from web.stremio.com to local proxy:', targetUrl);
+
+    setTimeout(() => {
+        postEnhancedMessage('loadUrl', { url: targetUrl });
+        try {
+            window.location.replace(targetUrl);
+        } catch (_) {
+            window.location.href = targetUrl;
+        }
+    }, 500);
+}
+
 export function startStreamingServer(): Promise<boolean> {
     return new Promise((resolve) => {
         const id = 'start_' + Math.random().toString(36).substring(2, 9);
@@ -91,6 +118,9 @@ export function startStreamingServer(): Promise<boolean> {
 
         pendingServerStartRequests.set(id, (success) => {
             clearTimeout(timer);
+            if (success && window.location.hostname !== '127.0.0.1') {
+                reloadToLocalStreamingServer();
+            }
             resolve(success);
         });
 
@@ -161,12 +191,10 @@ export async function showMissingServerInstructions(downloadUrl: string, serverD
                     await modalManager.showAlert(
                         'info',
                         'Streaming Server Setup Complete',
-                        'The streaming server has been set up successfully and will now start. You may need to reload the streaming server from the settings.',
+                        'The streaming server has been set up successfully. The application will now reload to use the local streaming server (127.0.0.1).',
                         ['OK']
                     );
-                    try {
-                        (window as any).core?.dispatch?.({ action: 'StreamingServer', args: { action: 'Reload' } });
-                    } catch (_) {}
+                    reloadToLocalStreamingServer();
                 }
                 return true;
             } else {
@@ -219,6 +247,20 @@ export async function checkServerJsUpdateAndSetup(isManual = false): Promise<voi
             hasPromptedInitialSetup = true;
             await showMissingServerInstructions(downloadUrl, serverDir);
         } else {
+            // If server exists but is stopped, start it; if already running and currently on web.stremio.com, reload to 127.0.0.1
+            if (!status.running) {
+                console.log('[Enhanced Server] server.js exists but is not running. Starting streaming server...');
+                const started = await startStreamingServer();
+                if (started && window.location.hostname !== '127.0.0.1') {
+                    reloadToLocalStreamingServer();
+                    return;
+                }
+            } else if (window.location.hostname !== '127.0.0.1') {
+                console.log('[Enhanced Server] Streaming server is running. Switching from web.stremio.com to 127.0.0.1...');
+                reloadToLocalStreamingServer();
+                return;
+            }
+
             // Server exists - check for update if version is known
             const currentVer = status.currentVersion;
             const skippedVer = status.skippedVersion;

@@ -3,7 +3,7 @@ import { EnhancedData, SettingSchemaItem } from '../types';
 import { applyThemeUI } from '../themes/themeManager';
 import { loadPlugin, unloadPlugin, showReloadWarning } from '../plugins/pluginManager';
 import { modalManager } from '../components/modals/modalManager';
-import { openStreamingServerFolder, checkServerJsUpdateAndSetup, getServerStatus, startStreamingServer } from '../server/serverManager';
+import { openStreamingServerFolder, checkServerJsUpdateAndSetup, getServerStatus, startStreamingServer, reloadToLocalStreamingServer } from '../server/serverManager';
 
 let currentEnhancedData: EnhancedData = { plugins: [], themes: [], activeTheme: null };
 
@@ -190,6 +190,9 @@ export function setupEnhancedApi(): void {
         },
         startStreamingServer: function () {
             return startStreamingServer();
+        },
+        reloadToLocalStreamingServer: function () {
+            reloadToLocalStreamingServer();
         },
         applyTheme: function (fileName: string) {
             applyThemeUI(fileName);
