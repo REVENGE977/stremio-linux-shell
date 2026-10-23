@@ -13,6 +13,24 @@ use tracing::{debug, info, warn};
 use crate::config::IPC_KEY;
 
 pub fn server_dir() -> PathBuf {
+    if let Some(home) = dirs::home_dir() {
+        let host_dir = home.join(".config").join("stremio-enhanced").join("streamingserver");
+        if host_dir.exists() {
+            return host_dir;
+        }
+    }
+
+    if let Some(cfg) = dirs::config_dir() {
+        let cfg_dir = cfg.join("stremio-enhanced").join("streamingserver");
+        if cfg_dir.exists() {
+            return cfg_dir;
+        }
+    }
+
+    if let Some(home) = dirs::home_dir() {
+        return home.join(".config").join("stremio-enhanced").join("streamingserver");
+    }
+
     dirs::config_dir()
         .map(|p| p.join("stremio-enhanced").join("streamingserver"))
         .unwrap_or_else(|| PathBuf::from("streamingserver"))
@@ -26,6 +44,20 @@ pub fn find_server_script() -> Option<PathBuf> {
     let default_path = default_server_path();
     if default_path.exists() {
         return Some(default_path);
+    }
+
+    if let Some(home) = dirs::home_dir() {
+        let host_path = home.join(".config").join("stremio-enhanced").join("streamingserver").join("server.js");
+        if host_path.exists() {
+            return Some(host_path);
+        }
+    }
+
+    if let Some(cfg) = dirs::config_dir() {
+        let cfg_path = cfg.join("stremio-enhanced").join("streamingserver").join("server.js");
+        if cfg_path.exists() {
+            return Some(cfg_path);
+        }
     }
 
     if let Ok(path_str) = env::var("SERVER_PATH") {
@@ -138,5 +170,17 @@ impl Server {
 impl Drop for Server {
     fn drop(&mut self) {
         let _ = self.stop();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_server_discovery() {
+        let path = find_server_script();
+        assert!(path.is_some(), "Expected server.js to be discovered");
+        assert!(path.unwrap().exists());
     }
 }

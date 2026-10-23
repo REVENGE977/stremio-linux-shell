@@ -67,10 +67,16 @@ fn main() -> ExitCode {
         tracing::warn!("Failed to start streaming server: {e}");
     }
 
+    let mut startup_url = args.url;
+    if !server.borrow_mut().is_running() && startup_url == STARTUP_URL {
+        tracing::info!("Streaming server is not running; falling back to direct web app URL");
+        startup_url = "https://web.stremio.com/".to_string();
+    }
+
     let app = Application::new();
     app.set_server(server.clone());
     app.set_property("dev-mode", args.dev);
-    app.set_property("startup-url", args.url);
+    app.set_property("startup-url", startup_url);
     app.set_property("decorations", !args.no_window_decorations);
 
     let runtime = Runtime::new().expect("Failed to create Tokio runtime");
