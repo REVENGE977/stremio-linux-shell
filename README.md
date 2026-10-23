@@ -1,8 +1,11 @@
 <div align="center">
 
-![Stremio icon](data/icons/com.stremio.Stremio.svg "Stremio icon")
+![Stremio icon](data/icons/io.github.revenge977.StremioLinuxShellEnhanced.svg "Stremio icon")
 
 # Stremio on Linux 
+### This is a fork of [stremio-linux-shell](https://github.com/Stremio/stremio-linux-shell) with added [stremio-enhanced](https://github.com/REVENGE977/stremio-enhanced) features.
+
+### This is a community project and is not affiliated with Stremio
 Client for Stremio on Linux using [`gtk4`](https://docs.gtk.org/gtk4/) + [`libadwaita`](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.8/) + [`WebKitGTK`](https://webkitgtk.org/) + [`libmpv`](https://github.com/mpv-player/mpv/blob/master/DOCS/man/libmpv.rst)
 
 <img src="data/screenshots/screenshot1.png" alrt="Screenshot" width="800" />
@@ -53,6 +56,6 @@ flatpak install -y \
 
 ```bash
 ./flatpak/build.sh
-flatpak install ./flatpak/com.stremio.Stremio.Devel.flatpak
-flatpak run com.stremio.Stremio.Devel
+flatpak install ./flatpak/io.github.revenge977.StremioLinuxShellEnhanced.Devel.flatpak
+flatpak run io.github.revenge977.StremioLinuxShellEnhanced.Devel.flatpak
 ```
