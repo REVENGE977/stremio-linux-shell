@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use super::request::IpcMessageRequest;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub enum IpcEventMpv {
     Observe(String),
     Command((String, Vec<String>)),
@@ -12,7 +12,7 @@ pub enum IpcEventMpv {
     Ended((String, Option<String>)),
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub enum IpcEventDiscord {
     Status(bool),
     Connect,
@@ -21,7 +21,7 @@ pub enum IpcEventDiscord {
     ClearActivity,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub enum IpcEvent {
     Init,
     Ready,
@@ -33,6 +33,7 @@ pub enum IpcEvent {
     MediaMetadata((String, Option<String>, Option<String>)),
     MediaStatus(bool),
     Discord(IpcEventDiscord),
+    Ignored,
 }
 
 impl TryFrom<&str> for IpcEvent {

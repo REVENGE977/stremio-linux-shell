@@ -61,13 +61,27 @@ impl TryFrom<IpcMessageRequest> for IpcEvent {
                                 Ok(IpcEvent::Fullscreen(data.fullscreen))
                             }
                             "mpv-command" => {
-                                let data: Vec<String> = serde_json::from_value(data)
+                                let data: Vec<Value> = serde_json::from_value(data)
                                     .map_err(|_| "Invalid mpv-command arguments")?;
-                                let name = data[0].clone();
+                                if data.is_empty() {
+                                    return Err("Empty mpv-command arguments".into());
+                                }
+                                let name = data[0]
+                                    .as_str()
+                                    .ok_or("Invalid mpv-command name")?
+                                    .to_string();
 
                                 let mut args = vec![];
                                 for arg in data.iter().skip(1) {
-                                    args.push(arg.clone());
+                                    if let Some(s) = arg.as_str() {
+                                        args.push(s.to_string());
+                                    } else if let Some(n) = arg.as_f64() {
+                                        args.push(n.to_string());
+                                    } else if let Some(b) = arg.as_bool() {
+                                        args.push(b.to_string());
+                                    } else {
+                                        args.push(arg.to_string());
+                                    }
                                 }
 
                                 Ok(IpcEvent::Mpv(IpcEventMpv::Command((name, args))))
@@ -128,6 +142,7 @@ impl TryFrom<IpcMessageRequest> for IpcEvent {
                             "discord-clear-activity" => {
                                 Ok(IpcEvent::Discord(IpcEventDiscord::ClearActivity))
                             }
+                            "mpv-set-gpu-video-processing" => Ok(IpcEvent::Ignored),
                             method => Err(format!("Invalid method: {method}")),
                         },
                         None => match name {

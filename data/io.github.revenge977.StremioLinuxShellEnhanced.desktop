@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Stremio Enhanced Shell
+Comment=Freedom To Stream - Enhanced Linux Shell
+Icon=io.github.revenge977.StremioLinuxShellEnhanced
+Categories=Utility;AudioVideo;Video;Player;
+Keywords=Stremio;Media;Play;Enhanced;
+Type=Application
+Exec=stremio %u
+MimeType=x-scheme-handler/stremio;
+Terminal=false
+StartupNotify=true
+DBusActivatable=true

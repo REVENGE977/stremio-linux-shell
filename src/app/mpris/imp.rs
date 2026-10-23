@@ -7,7 +7,7 @@ use gtk::{glib::clone, prelude::*, subclass::prelude::*};
 use mpris_server::{Metadata, PlaybackStatus, Player};
 use tracing::error;
 
-use crate::app::config::{APP_ID, APP_NAME};
+use crate::app::config::{APP_ID, APP_NAME, MPRIS_NAME};
 use crate::spawn_local;
 
 #[derive(Default)]
@@ -63,7 +63,7 @@ impl Mpris {
             #[weak]
             object,
             async move {
-                let player = Player::builder(APP_NAME)
+                let player = Player::builder(MPRIS_NAME)
                     .identity(APP_NAME)
                     .desktop_entry(APP_ID)
                     .can_play(true)

@@ -1,0 +1,14 @@
+{
+  "name": "stremio-linux-shell-enhanced",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TypeScript source for Stremio Enhanced integration in Stremio Linux Shell",
+  "scripts": {
+    "build": "node build.js",
+    "watch": "node build.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
+  }
+}

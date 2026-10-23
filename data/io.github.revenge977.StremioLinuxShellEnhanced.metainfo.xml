@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-    <id>com.stremio.Stremio</id>
-    <name>Stremio</name>
-    <summary>Freedom to Stream</summary>
+    <id>io.github.revenge977.StremioLinuxShellEnhanced</id>
+    <name>Stremio Enhanced Shell</name>
+    <summary>Community-enhanced native Linux desktop client based on Stremio Linux Shell</summary>
     <description>
-        <p>Stremio offers a secure, modern and seamless entertainment experience.</p>
-        <p>With its easy-to-use interface and diverse content library, including 4K HDR support, users can enjoy their favorite movies and TV shows across all their devices.</p>
-        <p>And with its commitment to security, Stremio is the ultimate choice for a worry-free, high-quality streaming experience.</p>
+        <p>Stremio Enhanced Shell is a community-enhanced native Linux desktop client building upon Stremio Linux Shell.</p>
+        <p>Featuring native hardware-accelerated MPV playback, WebKitGTK frontend, community themes and plugins marketplace integration, Discord Rich Presence, and streaming server management.</p>
     </description>
-    <developer id="com.stremio">
-        <name>Stremio</name>
+    <developer id="io.github.revenge977">
+        <name>REVENGE977</name>
     </developer>
 
     <branding>
@@ -42,12 +41,12 @@
     <project_license>GPL-3.0-only</project_license>
     <content_rating type="oars-1.1" />
 
-    <url type="homepage">https://github.com/Stremio/stremio-linux-shell</url>
-    <url type="bugtracker">https://github.com/Stremio/stremio-linux-shell/issues</url>
+    <url type="homepage">https://github.com/REVENGE977/stremio-linux-shell-enhanced</url>
+    <url type="bugtracker">https://github.com/REVENGE977/stremio-linux-shell-enhanced/issues</url>
 
     <translation type="gettext">stremio</translation>
 
-    <launchable type="desktop-id">com.stremio.Stremio.desktop</launchable>
+    <launchable type="desktop-id">io.github.revenge977.StremioLinuxShellEnhanced.desktop</launchable>
 
     <releases>
         <release version="1.2.2" date="2026-10-07">

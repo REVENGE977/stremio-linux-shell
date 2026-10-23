@@ -105,6 +105,9 @@ impl Video {
         let widget = self.imp();
 
         match name.as_str() {
+            "vo" => {
+                // vo is handled by GTK GLArea mpv render context and cannot be changed at runtime
+            }
             name if FLOAT_PROPERTIES.contains(&name) => {
                 if let Some(value) = value.as_f64() {
                     widget.set_property(name, value);

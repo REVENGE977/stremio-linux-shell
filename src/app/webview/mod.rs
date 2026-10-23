@@ -11,7 +11,7 @@ use gtk::{
 use tracing::error;
 use webkit::{
     NavigationPolicyDecision, PolicyDecisionType, UserContentInjectedFrames, UserScript,
-    UserScriptInjectionTime, prelude::WebViewExt,
+    UserScriptInjectionTime, UserStyleSheet, UserStyleLevel, prelude::WebViewExt,
 };
 
 glib::wrapper! {
@@ -36,7 +36,7 @@ impl WebView {
         widget.webview.load_uri(uri);
     }
 
-    pub fn inject_script(&self, script: &'static str) {
+    pub fn inject_script(&self, script: &str) {
         let widget = self.imp();
 
         let user_script = UserScript::new(
@@ -49,6 +49,60 @@ impl WebView {
 
         if let Some(user_content_manager) = widget.webview.user_content_manager() {
             user_content_manager.add_script(&user_script);
+        }
+    }
+
+    /// Inject a dynamically-loaded plugin script (owned String) into the webview.
+    pub fn inject_plugin_script(&self, script: &str) {
+        let widget = self.imp();
+
+        let user_script = UserScript::new(
+            script,
+            UserContentInjectedFrames::TopFrame,
+            UserScriptInjectionTime::End,
+            &[],
+            &[],
+        );
+
+        if let Some(user_content_manager) = widget.webview.user_content_manager() {
+            user_content_manager.add_script(&user_script);
+        }
+    }
+
+    /// Inject a dynamically-loaded theme stylesheet (owned String) into the webview.
+    pub fn inject_theme_css(&self, css: &str) {
+        let widget = self.imp();
+
+        let stylesheet = UserStyleSheet::new(
+            css,
+            UserContentInjectedFrames::TopFrame,
+            UserStyleLevel::Author,
+            &[],
+            &[],
+        );
+
+        if let Some(user_content_manager) = widget.webview.user_content_manager() {
+            user_content_manager.add_style_sheet(&stylesheet);
+        }
+    }
+
+    /// Set or clear the active theme stylesheet dynamically.
+    pub fn set_theme_css(&self, css: Option<&str>) {
+        let widget = self.imp();
+
+        if let Some(user_content_manager) = widget.webview.user_content_manager() {
+            user_content_manager.remove_all_style_sheets();
+
+            if let Some(css) = css {
+                let stylesheet = UserStyleSheet::new(
+                    css,
+                    UserContentInjectedFrames::TopFrame,
+                    UserStyleLevel::Author,
+                    &[],
+                    &[],
+                );
+                user_content_manager.add_style_sheet(&stylesheet);
+            }
         }
     }
 
@@ -84,6 +138,18 @@ impl WebView {
             });
     }
 
+    pub fn evaluate_javascript(&self, script: &str) {
+        let widget = self.imp();
+
+        widget
+            .webview
+            .evaluate_javascript(script, None, None, Cancellable::NONE, |result| {
+                if let Err(e) = result {
+                    error!("Failed to evaluate javascript: {e}");
+                }
+            });
+    }
+
     pub fn connect_ipc<T: Fn(WebView, &str) + 'static>(&self, callback: T) {
         let widget = self.imp();
         let webview = self;
@@ -98,6 +164,43 @@ impl WebView {
                     move |_, value| {
                         let message = value.to_string();
                         callback(webview, &message);
+                    }
+                ),
+            );
+        }
+    }
+
+    pub fn connect_enhanced_ipc<T: Fn(WebView, &str) + 'static>(&self, callback: T) {
+        let widget = self.imp();
+        let webview = self;
+
+        if let Some(user_content_manager) = widget.webview.user_content_manager() {
+            let cb = std::rc::Rc::new(callback);
+
+            user_content_manager.register_script_message_handler("enhanced", None);
+            let cb_clone = cb.clone();
+            user_content_manager.connect_script_message_received(
+                Some("enhanced"),
+                clone!(
+                    #[weak]
+                    webview,
+                    move |_, value| {
+                        let message = value.to_string();
+                        cb_clone(webview, &message);
+                    }
+                ),
+            );
+
+            user_content_manager.register_script_message_handler("enhancedIpc", None);
+            let cb_clone2 = cb.clone();
+            user_content_manager.connect_script_message_received(
+                Some("enhancedIpc"),
+                clone!(
+                    #[weak]
+                    webview,
+                    move |_, value| {
+                        let message = value.to_string();
+                        cb_clone2(webview, &message);
                     }
                 ),
             );

@@ -1,6 +1,7 @@
 mod config;
 mod dialogs;
 mod discord;
+pub mod enhanced;
 mod ext;
 mod imp;
 mod ipc;
@@ -10,6 +11,7 @@ mod video;
 mod webview;
 mod window;
 
+use adw::subclass::prelude::ObjectSubclassIsExt;
 use gtk::{
     CssProvider,
     gdk::Display,
@@ -44,6 +46,10 @@ impl Application {
             .property("application-id", APP_ID)
             .property("flags", ApplicationFlags::HANDLES_OPEN)
             .build()
+    }
+
+    pub fn set_server(&self, server: std::rc::Rc<std::cell::RefCell<crate::server::Server>>) {
+        self.imp().set_server(server);
     }
 
     pub fn run(&self, args: Vec<String>) -> ExitCode {

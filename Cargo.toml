@@ -1,10 +1,10 @@
 [package]
-name = "stremio-linux-shell"
+name = "stremio-linux-shell-enhanced"
 version = "1.2.2"
-description = "Freedom to Stream"
-authors = ["Stremio"]
-homepage = "https://stremio.com"
-repository = "https://github.com/Stremio/stremio-linux-shell"
+description = "Community-enhanced native Linux desktop client based on Stremio Linux Shell"
+authors = ["REVENGE977", "Stremio"]
+homepage = "https://github.com/REVENGE977/stremio-linux-shell-enhanced"
+repository = "https://github.com/REVENGE977/stremio-linux-shell-enhanced"
 license = "GPL-3.0-only"
 edition = "2024"
 

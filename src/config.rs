@@ -1,4 +1,4 @@
-pub const DATA_DIR: &str = "stremio";
+pub const DATA_DIR: &str = "stremio-linux-shell-enhanced";
 
 pub const GETTEXT_DOMAIN: &str = "stremio";
 pub const GETTEXT_DIR_FLATPAK: &str = "/app/share/locale";

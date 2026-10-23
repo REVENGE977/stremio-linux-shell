@@ -8,19 +8,49 @@ use std::{
 };
 
 use anyhow::Context;
-use tracing::debug;
+use tracing::{debug, info, warn};
 
 use crate::config::IPC_KEY;
 
+pub fn server_dir() -> PathBuf {
+    dirs::config_dir()
+        .map(|p| p.join("stremio-enhanced").join("streamingserver"))
+        .unwrap_or_else(|| PathBuf::from("streamingserver"))
+}
+
+pub fn default_server_path() -> PathBuf {
+    server_dir().join("server.js")
+}
+
+pub fn find_server_script() -> Option<PathBuf> {
+    let default_path = default_server_path();
+    if default_path.exists() {
+        return Some(default_path);
+    }
+
+    if let Ok(path_str) = env::var("SERVER_PATH") {
+        let path = PathBuf::from(&path_str);
+        if path.exists() {
+            return Some(path);
+        }
+    }
+
+    let flatpak_path = PathBuf::from("/app/libexec/stremio/server.js");
+    if flatpak_path.exists() {
+        return Some(flatpak_path);
+    }
+
+    None
+}
+
 pub struct Server {
     process: Option<Child>,
-    file: PathBuf,
+    file: Option<PathBuf>,
 }
 
 impl Server {
     pub fn new() -> Self {
-        let server_path = env::var("SERVER_PATH").expect("Failed to read SERVER_PATH env");
-        let file = PathBuf::from(&server_path);
+        let file = find_server_script();
 
         Self {
             process: None,
@@ -28,12 +58,40 @@ impl Server {
         }
     }
 
-    pub fn start(&mut self, dev: bool) -> anyhow::Result<()> {
+    pub fn is_running(&mut self) -> bool {
+        if let Some(ref mut child) = self.process {
+            match child.try_wait() {
+                Ok(None) => true,
+                _ => {
+                    self.process = None;
+                    false
+                }
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn start(&mut self, dev: bool) -> anyhow::Result<bool> {
+        if self.is_running() {
+            return Ok(true);
+        }
+
+        if self.file.is_none() || !self.file.as_ref().map(|p| p.exists()).unwrap_or(false) {
+            self.file = find_server_script();
+        }
+
+        let Some(ref file) = self.file else {
+            warn!("server.js not found in expected locations. Server will remain unstarted until setup.");
+            return Ok(false);
+        };
+
+        info!("Starting streaming server with {}", file.display());
         let mut command = Command::new("node");
         command
             .env("NO_CORS", (dev as i32).to_string())
             .env("SERVER_IPC_KEY", IPC_KEY)
-            .arg(self.file.as_os_str())
+            .arg(file.as_os_str())
             .stdout(process::Stdio::piped())
             .process_group(0);
 
@@ -44,7 +102,7 @@ impl Server {
             });
         }
 
-        let mut child = command.spawn()?;
+        let mut child = command.spawn().context("Failed to spawn node process for server.js")?;
 
         if let Some(stdout) = child.stdout.take() {
             let reader = BufReader::new(stdout);
@@ -59,12 +117,18 @@ impl Server {
 
         self.process = Some(child);
 
-        Ok(())
+        Ok(true)
+    }
+
+    pub fn restart(&mut self, dev: bool) -> anyhow::Result<bool> {
+        let _ = self.stop();
+        self.file = find_server_script();
+        self.start(dev)
     }
 
     pub fn stop(&mut self) -> anyhow::Result<()> {
         if let Some(mut process) = self.process.take() {
-            process.kill().context("Failed to kill server process")?;
+            let _ = process.kill();
         }
 
         Ok(())
@@ -73,6 +137,6 @@ impl Server {
 
 impl Drop for Server {
     fn drop(&mut self) {
-        self.stop().expect("Failed to stop server");
+        let _ = self.stop();
     }
 }

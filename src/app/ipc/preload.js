@@ -35,10 +35,35 @@ const createIpc = () => {
 window.ipc = createIpc();
 
 // Backward compatibility
-window.qt = {
-    webChannelTransport: {
-        send: window.ipc.postMessage,
+const webChannelTransport = {
+    send: window.ipc.postMessage,
+};
+
+let webChannelQueue = [];
+let webChannelOnMessage = null;
+
+Object.defineProperty(webChannelTransport, 'onmessage', {
+    get() {
+        return webChannelOnMessage;
     },
+    set(fn) {
+        webChannelOnMessage = fn;
+        if (typeof fn === 'function') {
+            while (webChannelQueue.length > 0) {
+                const msg = webChannelQueue.shift();
+                try {
+                    fn(msg);
+                } catch (e) {
+                    console.error('[WebChannel] Error delivering queued message:', e);
+                }
+            }
+        }
+    },
+    configurable: true,
+});
+
+window.qt = {
+    webChannelTransport: webChannelTransport,
 };
 
 globalThis.chrome = {
@@ -54,7 +79,15 @@ globalThis.chrome = {
 };
 
 window.ipc.addEventListener('message', (message) => {
-    window.qt.webChannelTransport.onmessage(message);
+    if (typeof webChannelOnMessage === 'function') {
+        try {
+            webChannelOnMessage(message);
+        } catch (e) {
+            console.error('[WebChannel] Error in onmessage:', e);
+        }
+    } else {
+        webChannelQueue.push(message);
+    }
 });
 
 window.stremio_server_ipc_key = "LINUX";

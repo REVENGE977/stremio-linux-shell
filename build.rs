@@ -2,7 +2,7 @@ use std::{fs, path::Path, process::Command};
 
 use anyhow::Result;
 
-const APP_ID: &str = "com.stremio.Stremio";
+const APP_ID: &str = "io.github.revenge977.StremioLinuxShellEnhanced";
 const GETTEXT_DOMAIN: &str = "stremio";
 const GETTEXT_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/po");
 const DATA_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data");
@@ -10,6 +10,69 @@ const DATA_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data");
 fn main() -> Result<()> {
     setup_po()?;
     setup_schemas()?;
+    setup_enhanced()?;
+
+    Ok(())
+}
+
+fn watch_dir_recursively(dir: &Path) -> Result<()> {
+    if !dir.exists() {
+        return Ok(());
+    }
+    println!("cargo:rerun-if-changed={}", dir.display());
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            watch_dir_recursively(&path)?;
+        } else {
+            println!("cargo:rerun-if-changed={}", path.display());
+        }
+    }
+    Ok(())
+}
+
+fn setup_enhanced() -> Result<()> {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let enhanced_dir = manifest_dir.join("src/app/enhanced");
+    let enhanced_src = enhanced_dir.join("src");
+    let enhanced_build_js = enhanced_dir.join("build.js");
+    let enhanced_package_json = enhanced_dir.join("package.json");
+    let enhanced_tsconfig = enhanced_dir.join("tsconfig.json");
+    let enhanced_output = enhanced_dir.join("enhanced.js");
+
+    watch_dir_recursively(&enhanced_src)?;
+    println!("cargo:rerun-if-changed={}", enhanced_build_js.display());
+    println!("cargo:rerun-if-changed={}", enhanced_package_json.display());
+    println!("cargo:rerun-if-changed={}", enhanced_tsconfig.display());
+
+    let status = Command::new("node")
+        .arg(&enhanced_build_js)
+        .current_dir(&enhanced_dir)
+        .status();
+
+    match status {
+        Ok(s) if s.success() => {}
+        Ok(s) => {
+            if !enhanced_output.exists() {
+                anyhow::bail!(
+                    "Failed to compile enhanced.js (node exit code: {:?}). Ensure Node.js and npm/npx are installed.",
+                    s.code()
+                );
+            } else {
+                eprintln!("Warning: Failed to rebuild enhanced.js; using existing bundle.");
+            }
+        }
+        Err(e) => {
+            if !enhanced_output.exists() {
+                anyhow::bail!(
+                    "Failed to run 'node' ({e}) to compile enhanced.js, and no existing bundle was found. Please install Node.js."
+                );
+            } else {
+                eprintln!("Warning: Node.js not found ({e}); using existing enhanced.js.");
+            }
+        }
+    }
 
     Ok(())
 }

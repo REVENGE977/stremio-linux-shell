@@ -1,3 +1,7 @@
 /target
 /vendor
 .flatpak-builder
+/stremio-enhanced
+data/server.js
+**/server.js
+**/node_modules/

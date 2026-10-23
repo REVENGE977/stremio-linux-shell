@@ -21,6 +21,7 @@ pub const BOOL_PROPERTIES: &[&str] = &[
     "eof-reached",
     "paused-for-cache",
     "keepaspect",
+    "sub-ass-force-margins",
 ];
 
 pub const STRING_PROPERTIES: &[&str] = &[

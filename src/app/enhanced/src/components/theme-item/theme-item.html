@@ -1,0 +1,21 @@
+<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">
+    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">
+        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>
+        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>
+        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">
+            {{ descriptionBlock }}
+            {{ authorBlock }}
+        </div>
+    </div>
+    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">
+        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">
+            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 theme-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">
+                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>
+            </div>
+
+            <div tabindex="-1" class="{{ buttonClass }} button-container-zVLH6 theme-apply-btn" data-theme="{{ fileName }}" id="theme-btn-{{ fileName }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.5rem 1.25rem; border-radius: 0.35rem; font-weight: 700;">
+                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ label }}</div>
+            </div>
+        </div>
+    </div>
+</div>

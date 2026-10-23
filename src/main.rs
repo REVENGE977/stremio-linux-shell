@@ -62,10 +62,13 @@ fn main() -> ExitCode {
 
     let args = Args::parse();
 
-    let mut server = Server::new();
-    server.start(args.dev).expect("Failed to start server");
+    let server = std::rc::Rc::new(std::cell::RefCell::new(Server::new()));
+    if let Err(e) = server.borrow_mut().start(args.dev) {
+        tracing::warn!("Failed to start streaming server: {e}");
+    }
 
     let app = Application::new();
+    app.set_server(server.clone());
     app.set_property("dev-mode", args.dev);
     app.set_property("startup-url", args.url);
     app.set_property("decorations", !args.no_window_decorations);

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-    <schema id="com.stremio.Stremio" path="/com/stremio/stremio/">
+    <schema id="io.github.revenge977.StremioLinuxShellEnhanced" path="/io/github/revenge977/stremio-linux-shell-enhanced/">
         <key name="remember-window-state" type="b">
             <default>true</default>
             <summary>Remember window state</summary>
