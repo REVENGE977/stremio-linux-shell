@@ -128,44 +128,21 @@ export function injectFallbackStyles(): void {
             max-height: 100%;
             object-fit: contain;
         }
-        .toggle-container-lZfHP {
-            width: 2.6rem;
-            height: 1.4rem;
-            border-radius: 0.7rem;
-            background-color: rgba(255, 255, 255, 0.2);
-            position: relative;
+        .plugin-toggle, .plugin-setting-toggle {
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            display: inline-block;
         }
-        .toggle-container-lZfHP.checked {
-            background-color: var(--primary-accent-color, #735bf2);
-        }
-        .toggle-container-lZfHP .toggle-toOWM {
-            width: 1.1rem;
-            height: 1.1rem;
-            border-radius: 50%;
-            background-color: #ffffff;
-            position: absolute;
-            top: 0.15rem;
-            left: 0.15rem;
-            transition: transform 0.2s ease;
-        }
-        .toggle-container-lZfHP.checked .toggle-toOWM {
-            transform: translateX(1.2rem);
-        }
-        .install-button-container-yfcq5 {
+        .theme-apply-btn.install-button-container-yfcq5 {
             background-color: var(--primary-accent-color, #735bf2);
             color: #fff;
         }
-        .install-button-container-yfcq5:hover {
+        .theme-apply-btn.install-button-container-yfcq5:hover {
             filter: brightness(1.1);
         }
-        .uninstall-button-container-oV4Yo {
+        .theme-apply-btn.uninstall-button-container-oV4Yo {
             background-color: rgba(255, 255, 255, 0.15);
             color: #fff;
         }
-        .uninstall-button-container-oV4Yo.disabled {
+        .theme-apply-btn.uninstall-button-container-oV4Yo.disabled {
             opacity: 0.85;
             cursor: default;
         }
