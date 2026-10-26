@@ -21,7 +21,7 @@ flatpak install com.stremio.Stremio
 ## Development
 
 ```bash
-git clone --recurse-submodules https://github.com/Stremio/stremio-linux-shell
+git clone --recurse-submodules https://github.com/REVENGE977/stremio-linux-shell
 ```
 
 #### Fedora
