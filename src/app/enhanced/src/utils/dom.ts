@@ -36,12 +36,14 @@ export function waitForElement<T extends Element = HTMLElement>(selector: string
 export function postEnhancedMessage(action: string, payload: Record<string, any> = {}): void {
     try {
         const msg = JSON.stringify({ action, ...payload });
-        if ((window as any).webkit?.messageHandlers?.enhanced?.postMessage) {
+        if ((window as any).chrome?.webview?.postMessage) {
+            (window as any).chrome.webview.postMessage(msg);
+        } else if ((window as any).ipc?.postMessage) {
+            (window as any).ipc.postMessage(msg);
+        } else if ((window as any).webkit?.messageHandlers?.enhanced?.postMessage) {
             (window as any).webkit.messageHandlers.enhanced.postMessage(msg);
         } else if ((window as any).webkit?.messageHandlers?.enhancedIpc?.postMessage) {
             (window as any).webkit.messageHandlers.enhancedIpc.postMessage(msg);
-        } else if ((window as any).ipc?.postMessage) {
-            (window as any).ipc.postMessage(msg);
         }
     } catch (e) {
         console.warn('[Enhanced] Failed to post enhanced IPC message:', e);
@@ -53,6 +55,23 @@ export function injectFallbackStyles(): void {
     const style = document.createElement('style');
     style.id = 'stremio-enhanced-injected-styles';
     style.textContent = `
+        /* Native Player Transparency Bridge */
+        html:has([class*="player-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        html:has([class*="video-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        html:has(#stremio-shell-bridge-video):not(#__shell_guard_root):not(#__shell_guard_body),
+        body:has([class*="player-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        body:has([class*="video-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        html:has([class*="player-container"]) body,
+        html:has([class*="video-container"]) body,
+        html:has([class*="player-container"]) #app,
+        html:has([class*="video-container"]) #app,
+        [class*="player-container"],
+        [class*="video-container"],
+        [class*="video-layer"] {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
         #enhanced-nav-btn {
             user-select: none;
             font-size: 1.1rem !important;

@@ -3,6 +3,8 @@ import { setupLogger } from './utils/logger';
 import { setupFetchInterceptor } from './network/fetchInterceptor';
 import { setupEnhancedApi, updateApiData, syncLocalStorage } from './api/stremioEnhancedApi';
 import { setupVideoBridge, ensureBridgeVideo } from './bridge/videoBridge';
+import { setupTransparencyBridge } from './bridge/transparencyBridge';
+import { setupMediaCapabilitiesBridge } from './bridge/mediaCapabilitiesBridge';
 import { injectFallbackStyles, postEnhancedMessage } from './utils/dom';
 import { updateThemeManagerData, applyThemeUI, ensureActiveTheme, renderThemesList } from './themes/themeManager';
 import { updatePluginManagerData, loadEnabledPlugins, renderPluginsList } from './plugins/pluginManager';
@@ -18,6 +20,8 @@ import { EnhancedData } from './types';
     if ((window as any).__STREMIO_ENHANCED_INITIALIZED__) return;
     (window as any).__STREMIO_ENHANCED_INITIALIZED__ = true;
 
+    (window as any).__STREMIO_SHELL__ = true;
+
     console.log('[Enhanced] Stremio Enhanced initialized.');
 
     // Initialize subsystems
@@ -26,6 +30,8 @@ import { EnhancedData } from './types';
     setupFetchInterceptor();
     setupEnhancedApi();
     setupServerManager();
+    setupMediaCapabilitiesBridge();
+    setupTransparencyBridge();
     setupVideoBridge();
     injectFallbackStyles();
 

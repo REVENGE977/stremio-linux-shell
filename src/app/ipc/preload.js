@@ -91,5 +91,6 @@ window.ipc.addEventListener('message', (message) => {
 });
 
 window.stremio_server_ipc_key = "LINUX";
+window.__STREMIO_SHELL__ = true;
 
 console.log('IPC script injected');

@@ -177,19 +177,19 @@
     return new Promise((resolve, reject) => {
       const elm = document.querySelector(selector);
       if (elm) return resolve(elm);
-      const observer = new MutationObserver(() => {
+      const observer2 = new MutationObserver(() => {
         const found = document.querySelector(selector);
         if (found) {
-          observer.disconnect();
+          observer2.disconnect();
           resolve(found);
         }
       });
-      observer.observe(document.body || document.documentElement, {
+      observer2.observe(document.body || document.documentElement, {
         childList: true,
         subtree: true
       });
       setTimeout(() => {
-        observer.disconnect();
+        observer2.disconnect();
         reject(new Error("Timeout waiting for: " + selector));
       }, timeout);
     });
@@ -197,12 +197,14 @@
   function postEnhancedMessage(action, payload = {}) {
     try {
       const msg = JSON.stringify({ action, ...payload });
-      if (window.webkit?.messageHandlers?.enhanced?.postMessage) {
+      if (window.chrome?.webview?.postMessage) {
+        window.chrome.webview.postMessage(msg);
+      } else if (window.ipc?.postMessage) {
+        window.ipc.postMessage(msg);
+      } else if (window.webkit?.messageHandlers?.enhanced?.postMessage) {
         window.webkit.messageHandlers.enhanced.postMessage(msg);
       } else if (window.webkit?.messageHandlers?.enhancedIpc?.postMessage) {
         window.webkit.messageHandlers.enhancedIpc.postMessage(msg);
-      } else if (window.ipc?.postMessage) {
-        window.ipc.postMessage(msg);
       }
     } catch (e) {
       console.warn("[Enhanced] Failed to post enhanced IPC message:", e);
@@ -213,6 +215,23 @@
     const style = document.createElement("style");
     style.id = "stremio-enhanced-injected-styles";
     style.textContent = `
+        /* Native Player Transparency Bridge */
+        html:has([class*="player-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        html:has([class*="video-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        html:has(#stremio-shell-bridge-video):not(#__shell_guard_root):not(#__shell_guard_body),
+        body:has([class*="player-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        body:has([class*="video-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
+        html:has([class*="player-container"]) body,
+        html:has([class*="video-container"]) body,
+        html:has([class*="player-container"]) #app,
+        html:has([class*="video-container"]) #app,
+        [class*="player-container"],
+        [class*="video-container"],
+        [class*="video-layer"] {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
         #enhanced-nav-btn {
             user-select: none;
             font-size: 1.1rem !important;
@@ -1372,7 +1391,7 @@ Please download the file and place it in the correct location. Do you want to tr
     navBtn.classList.add(selectedClass);
   }
   function setupScrollObserver(navBtn, section) {
-    const observer = new IntersectionObserver((entries) => {
+    const observer2 = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           setActiveNav(navBtn);
@@ -1383,7 +1402,7 @@ Please download the file and place it in the correct location. Do you want to tr
         }
       });
     }, { threshold: 0.1 });
-    observer.observe(section);
+    observer2.observe(section);
   }
   function injectSection(sectionsContainer) {
     const html = TemplateCache.render(settings_section_default, {
@@ -2425,6 +2444,108 @@ Are you sure you want to update? It's recommended to read the source code of the
     };
   }
 
+  // src/bridge/transparencyBridge.ts
+  var isTransparent = false;
+  var modifiedElements = /* @__PURE__ */ new Set();
+  var observer = null;
+  var pollTimer = null;
+  function isPlayerRoute() {
+    const hash = window.location.hash || "";
+    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
+    if (document.querySelector('[class*="player-container"]') !== null) return true;
+    if (document.querySelector('[class*="video-container"]') !== null) return true;
+    return false;
+  }
+  function enforceTransparency(force) {
+    const shouldBeTransparent = force !== void 0 ? force : isPlayerRoute();
+    const html = document.documentElement;
+    const body = document.body;
+    const app = document.getElementById("app");
+    const playerContainer = document.querySelector('[class*="player-container"]');
+    if (shouldBeTransparent) {
+      if (!html || !body) return;
+      isTransparent = true;
+      if (html.style.getPropertyValue("background") !== "transparent") {
+        html.style.setProperty("background", "transparent", "important");
+        html.style.setProperty("background-color", "transparent", "important");
+      }
+      modifiedElements.add(html);
+      if (body.style.getPropertyValue("background") !== "transparent") {
+        body.style.setProperty("background", "transparent", "important");
+        body.style.setProperty("background-color", "transparent", "important");
+      }
+      modifiedElements.add(body);
+      if (app && app.style.getPropertyValue("background") !== "transparent") {
+        app.style.setProperty("background", "transparent", "important");
+        app.style.setProperty("background-color", "transparent", "important");
+        modifiedElements.add(app);
+      }
+      if (playerContainer) {
+        if (playerContainer.style.getPropertyValue("background-color") !== "transparent") {
+          playerContainer.style.setProperty("background", "transparent", "important");
+          playerContainer.style.setProperty("background-color", "transparent", "important");
+        }
+        modifiedElements.add(playerContainer);
+        let curr = playerContainer.parentElement;
+        while (curr && curr !== body && curr !== html) {
+          if (curr.style.getPropertyValue("background") !== "transparent") {
+            curr.style.setProperty("background", "transparent", "important");
+            curr.style.setProperty("background-color", "transparent", "important");
+          }
+          modifiedElements.add(curr);
+          curr = curr.parentElement;
+        }
+      }
+    } else if (isTransparent) {
+      isTransparent = false;
+      modifiedElements.forEach((el) => {
+        try {
+          el.style.removeProperty("background");
+          el.style.removeProperty("background-color");
+        } catch (_) {
+        }
+      });
+      modifiedElements.clear();
+      html?.style.removeProperty("background");
+      html?.style.removeProperty("background-color");
+      body?.style.removeProperty("background");
+      body?.style.removeProperty("background-color");
+      app?.style.removeProperty("background");
+      app?.style.removeProperty("background-color");
+    }
+  }
+  function setupTransparencyBridge() {
+    enforceTransparency();
+    window.addEventListener("hashchange", () => enforceTransparency());
+    window.addEventListener("popstate", () => enforceTransparency());
+    const attachObserver = () => {
+      if (observer) return;
+      const target = document.documentElement || document.body;
+      if (!target) return;
+      observer = new MutationObserver(() => {
+        enforceTransparency();
+      });
+      observer.observe(target, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class", "style"]
+      });
+    };
+    if (document.documentElement || document.body) {
+      attachObserver();
+    } else {
+      document.addEventListener("DOMContentLoaded", attachObserver, { once: true });
+    }
+    if (!pollTimer) {
+      pollTimer = setInterval(() => {
+        if (isPlayerRoute()) {
+          enforceTransparency(true);
+        }
+      }, 300);
+    }
+  }
+
   // src/bridge/videoBridge.ts
   var bridgeHost = null;
   var bridgeVideo = null;
@@ -2454,13 +2575,16 @@ Are you sure you want to update? It's recommended to read the source code of the
   }
   function mountBridgeHost() {
     if (!bridgeHost) return;
-    if (document.body && bridgeHost.parentElement !== document.body) {
-      document.body.appendChild(bridgeHost);
-      console.log("[Enhanced] Mounted bridge video host to document.body");
+    const playerContainer = document.querySelector('[class*="player-container"]');
+    const targetParent = playerContainer || document.body;
+    if (targetParent && bridgeHost.parentElement !== targetParent) {
+      targetParent.appendChild(bridgeHost);
+      console.log(`[Enhanced] Mounted bridge video host to ${playerContainer ? "player-container" : "document.body"}`);
     }
   }
   function ensureBridgeVideo() {
     mountBridgeHost();
+    enforceTransparency();
     const dur = durationVal > 0 ? durationVal : PermanentCore.getState?.("player")?.duration / 1e3 || 0;
     if (dur > 0 && bridgeVideo) {
       bridgeVideo.dispatchEvent(new Event("loadedmetadata"));
@@ -2468,6 +2592,7 @@ Are you sure you want to update? It's recommended to read the source code of the
     }
   }
   function setupVideoBridge() {
+    window.__STREMIO_SHELL__ = true;
     bridgeHost = document.getElementById("stremio-enhanced-bridge-host");
     if (!bridgeHost) {
       bridgeHost = document.createElement("div");
@@ -2493,6 +2618,34 @@ Are you sure you want to update? It's recommended to read the source code of the
       bridgeVideo.setAttribute("muted", "");
       bridgeHost.appendChild(bridgeVideo);
     }
+    try {
+      const origDocQS = Document.prototype.querySelector;
+      const origElemQS = Element.prototype.querySelector;
+      Document.prototype.querySelector = function(selectors) {
+        const result = origDocQS.call(this, selectors);
+        if (!result && bridgeVideo && typeof selectors === "string") {
+          if (selectors === "video" || selectors.endsWith(" video") || selectors.includes("player-container") && selectors.includes("video")) {
+            if (document.querySelector('[class*="player-container"]') || window.location.hash.includes("player")) {
+              return bridgeVideo;
+            }
+          }
+        }
+        return result;
+      };
+      Element.prototype.querySelector = function(selectors) {
+        const result = origElemQS.call(this, selectors);
+        if (!result && bridgeVideo && typeof selectors === "string") {
+          if (selectors === "video" || selectors.endsWith(" video")) {
+            if (this.matches?.('[class*="player-container"]') || this.closest?.('[class*="player-container"]')) {
+              return bridgeVideo;
+            }
+          }
+        }
+        return result;
+      };
+    } catch (e) {
+      console.warn("[Enhanced] Could not patch querySelector:", e);
+    }
     bridgeVideo.closest = function(selector) {
       if (typeof selector === "string" && selector.includes("player-container")) {
         return document.querySelector('[class*="player-container"]') || document.querySelector(".player-container") || document.body;
@@ -2512,11 +2665,30 @@ Are you sure you want to update? It's recommended to read the source code of the
           currentTimeVal = targetTime;
           console.log(`[Enhanced BridgeVideo] Seeking to ${targetTime}s`);
           try {
-            if (window.ipc?.postMessage) {
-              window.ipc.postMessage(JSON.stringify({
-                type: 6,
-                args: ["mpv-command", ["seek", String(targetTime), "absolute"]]
-              }));
+            const postIpc = (data) => {
+              const json = typeof data === "string" ? data : JSON.stringify(data);
+              if (window.ipc?.postMessage) {
+                window.ipc.postMessage(json);
+              } else if (window.chrome?.webview?.postMessage) {
+                window.chrome.webview.postMessage(json);
+              }
+            };
+            postIpc({
+              id: 1,
+              type: 6,
+              args: ["mpv-command", ["seek", String(targetTime), "absolute"]]
+            });
+            postIpc({
+              id: 1,
+              type: 6,
+              args: ["mpv-set-prop", ["time-pos", targetTime]]
+            });
+            const coreDispatch = window.core?.dispatch || window.PermanentCore?.dispatch;
+            if (typeof coreDispatch === "function") {
+              coreDispatch({
+                action: "Player",
+                args: { action: "Seek", time: Math.round(targetTime * 1e3) }
+              });
             }
           } catch (e) {
             console.error("[Enhanced BridgeVideo] Failed to post seek IPC:", e);
@@ -2807,17 +2979,57 @@ Are you sure you want to update? It's recommended to read the source code of the
     return bridgeVideo;
   }
 
+  // src/bridge/mediaCapabilitiesBridge.ts
+  function setupMediaCapabilitiesBridge() {
+    const isAdvancedCodec = (codecStr) => {
+      if (!codecStr) return false;
+      return /hvc1|hev1|hevc|av01|vp09|vp9|avc1/i.test(codecStr);
+    };
+    if (typeof window !== "undefined" && window.MediaSource) {
+      const origIsTypeSupported = window.MediaSource.isTypeSupported.bind(window.MediaSource);
+      window.MediaSource.isTypeSupported = function(type) {
+        if (isAdvancedCodec(type)) return true;
+        return origIsTypeSupported(type);
+      };
+    }
+    if (typeof HTMLMediaElement !== "undefined" && HTMLMediaElement.prototype.canPlayType) {
+      const origCanPlayType = HTMLMediaElement.prototype.canPlayType;
+      HTMLMediaElement.prototype.canPlayType = function(type) {
+        if (isAdvancedCodec(type)) return "probably";
+        return origCanPlayType.call(this, type);
+      };
+    }
+    if (typeof navigator !== "undefined" && navigator.mediaCapabilities?.decodingInfo) {
+      const origDecodingInfo = navigator.mediaCapabilities.decodingInfo.bind(navigator.mediaCapabilities);
+      navigator.mediaCapabilities.decodingInfo = async function(configuration) {
+        const videoType = configuration?.video?.contentType || "";
+        if (isAdvancedCodec(videoType)) {
+          return {
+            supported: true,
+            smooth: true,
+            powerEfficient: true,
+            keySystemAccess: null
+          };
+        }
+        return origDecodingInfo(configuration);
+      };
+    }
+  }
+
   // src/index.ts
   (function() {
     "use strict";
     if (window.__STREMIO_ENHANCED_INITIALIZED__) return;
     window.__STREMIO_ENHANCED_INITIALIZED__ = true;
+    window.__STREMIO_SHELL__ = true;
     console.log("[Enhanced] Stremio Enhanced initialized.");
     setupPermanentCore();
     setupLogger();
     setupFetchInterceptor();
     setupEnhancedApi();
     setupServerManager();
+    setupMediaCapabilitiesBridge();
+    setupTransparencyBridge();
     setupVideoBridge();
     injectFallbackStyles();
     let currentData = {

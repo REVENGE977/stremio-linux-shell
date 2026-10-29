@@ -1,4 +1,5 @@
 import { PermanentCore } from '../core/permanentCore';
+import { enforceTransparency } from './transparencyBridge';
 
 let bridgeHost: HTMLDivElement | null = null;
 let bridgeVideo: HTMLVideoElement | null = null;
@@ -31,14 +32,17 @@ function createTimeRanges(start: number, end: number) {
 
 export function mountBridgeHost(): void {
     if (!bridgeHost) return;
-    if (document.body && bridgeHost.parentElement !== document.body) {
-        document.body.appendChild(bridgeHost);
-        console.log('[Enhanced] Mounted bridge video host to document.body');
+    const playerContainer = document.querySelector<HTMLElement>('[class*="player-container"]');
+    const targetParent = playerContainer || document.body;
+    if (targetParent && bridgeHost.parentElement !== targetParent) {
+        targetParent.appendChild(bridgeHost);
+        console.log(`[Enhanced] Mounted bridge video host to ${playerContainer ? 'player-container' : 'document.body'}`);
     }
 }
 
 export function ensureBridgeVideo(): void {
     mountBridgeHost();
+    enforceTransparency();
     const dur = (durationVal > 0) ? durationVal : ((PermanentCore.getState?.('player')?.duration / 1000) || 0);
     if (dur > 0 && bridgeVideo) {
         bridgeVideo.dispatchEvent(new Event('loadedmetadata'));
@@ -47,6 +51,8 @@ export function ensureBridgeVideo(): void {
 }
 
 export function setupVideoBridge(): HTMLVideoElement {
+    (window as any).__STREMIO_SHELL__ = true;
+
     bridgeHost = document.getElementById('stremio-enhanced-bridge-host') as HTMLDivElement;
     if (!bridgeHost) {
         bridgeHost = document.createElement('div');
@@ -74,6 +80,38 @@ export function setupVideoBridge(): HTMLVideoElement {
         bridgeHost.appendChild(bridgeVideo);
     }
 
+    // Bridge DOM query methods so plugins always discover bridgeVideo
+    try {
+        const origDocQS = Document.prototype.querySelector;
+        const origElemQS = Element.prototype.querySelector;
+
+        Document.prototype.querySelector = function <E extends Element = Element>(selectors: string): E | null {
+            const result = origDocQS.call(this, selectors);
+            if (!result && bridgeVideo && typeof selectors === 'string') {
+                if (selectors === 'video' || selectors.endsWith(' video') || (selectors.includes('player-container') && selectors.includes('video'))) {
+                    if (document.querySelector('[class*="player-container"]') || window.location.hash.includes('player')) {
+                        return bridgeVideo as unknown as E;
+                    }
+                }
+            }
+            return result;
+        };
+
+        Element.prototype.querySelector = function <E extends Element = Element>(selectors: string): E | null {
+            const result = origElemQS.call(this, selectors);
+            if (!result && bridgeVideo && typeof selectors === 'string') {
+                if (selectors === 'video' || selectors.endsWith(' video')) {
+                    if (this.matches?.('[class*="player-container"]') || this.closest?.('[class*="player-container"]')) {
+                        return bridgeVideo as unknown as E;
+                    }
+                }
+            }
+            return result;
+        };
+    } catch (e) {
+        console.warn('[Enhanced] Could not patch querySelector:', e);
+    }
+
     bridgeVideo.closest = function (selector: string) {
         if (typeof selector === 'string' && selector.includes('player-container')) {
             return document.querySelector('[class*="player-container"]') ||
@@ -97,11 +135,36 @@ export function setupVideoBridge(): HTMLVideoElement {
                 console.log(`[Enhanced BridgeVideo] Seeking to ${targetTime}s`);
 
                 try {
-                    if ((window as any).ipc?.postMessage) {
-                        (window as any).ipc.postMessage(JSON.stringify({
-                            type: 6,
-                            args: ["mpv-command", ["seek", String(targetTime), "absolute"]]
-                        }));
+                    const postIpc = (data: any) => {
+                        const json = typeof data === 'string' ? data : JSON.stringify(data);
+                        if ((window as any).ipc?.postMessage) {
+                            (window as any).ipc.postMessage(json);
+                        } else if ((window as any).chrome?.webview?.postMessage) {
+                            (window as any).chrome.webview.postMessage(json);
+                        }
+                    };
+
+                    // 1. mpv-command seek
+                    postIpc({
+                        id: 1,
+                        type: 6,
+                        args: ["mpv-command", ["seek", String(targetTime), "absolute"]]
+                    });
+
+                    // 2. mpv-set-prop time-pos
+                    postIpc({
+                        id: 1,
+                        type: 6,
+                        args: ["mpv-set-prop", ["time-pos", targetTime]]
+                    });
+
+                    // 3. Stremio Core Player Seek
+                    const coreDispatch = (window as any).core?.dispatch || (window as any).PermanentCore?.dispatch;
+                    if (typeof coreDispatch === 'function') {
+                        coreDispatch({
+                            action: 'Player',
+                            args: { action: 'Seek', time: Math.round(targetTime * 1000) }
+                        });
                     }
                 } catch (e) {
                     console.error('[Enhanced BridgeVideo] Failed to post seek IPC:', e);
@@ -381,7 +444,7 @@ export function setupVideoBridge(): HTMLVideoElement {
         window.addEventListener('load', mountBridgeHost, { once: true });
     }
 
-    // Periodic timeupdate when playing
+    // Periodic timeupdate and host mount verification when playing
     setInterval(() => {
         mountBridgeHost();
         const dur = (durationVal > 0) ? durationVal : ((PermanentCore.getState?.('player')?.duration / 1000) || 0);
