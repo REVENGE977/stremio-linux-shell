@@ -8,7 +8,13 @@ const createIpc = () => {
     };
 
     const postMessage = (data) => {
-        globalThis.webkit.messageHandlers.ipc.postMessage(data);
+        if (globalThis.webkit?.messageHandlers?.ipc?.postMessage) {
+            globalThis.webkit.messageHandlers.ipc.postMessage(data);
+        } else if (globalThis.webkit?.messageHandlers?.enhanced?.postMessage) {
+            globalThis.webkit.messageHandlers.enhanced.postMessage(data);
+        } else {
+            console.warn('[IPC] WebKit message handler not available yet');
+        }
     };
 
     const addEventListener = (name, listener) => {

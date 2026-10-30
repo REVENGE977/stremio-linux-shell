@@ -36,14 +36,16 @@ export function waitForElement<T extends Element = HTMLElement>(selector: string
 export function postEnhancedMessage(action: string, payload: Record<string, any> = {}): void {
     try {
         const msg = JSON.stringify({ action, ...payload });
-        if ((window as any).chrome?.webview?.postMessage) {
-            (window as any).chrome.webview.postMessage(msg);
-        } else if ((window as any).ipc?.postMessage) {
-            (window as any).ipc.postMessage(msg);
-        } else if ((window as any).webkit?.messageHandlers?.enhanced?.postMessage) {
+        if ((window as any).webkit?.messageHandlers?.enhanced?.postMessage) {
             (window as any).webkit.messageHandlers.enhanced.postMessage(msg);
         } else if ((window as any).webkit?.messageHandlers?.enhancedIpc?.postMessage) {
             (window as any).webkit.messageHandlers.enhancedIpc.postMessage(msg);
+        } else if ((window as any).enhancedIpc?.postMessage) {
+            (window as any).enhancedIpc.postMessage(msg);
+        } else if ((window as any).chrome?.webview?.postMessage) {
+            (window as any).chrome.webview.postMessage(msg);
+        } else if ((window as any).ipc?.postMessage) {
+            (window as any).ipc.postMessage(msg);
         }
     } catch (e) {
         console.warn('[Enhanced] Failed to post enhanced IPC message:', e);
@@ -72,7 +74,7 @@ export function injectFallbackStyles(): void {
             background-color: transparent !important;
         }
 
-        #enhanced-nav-btn {
+               #enhanced-nav-btn {
             user-select: none;
             font-size: 1.1rem !important;
         }
@@ -166,5 +168,12 @@ export function injectFallbackStyles(): void {
             cursor: default;
         }
     `;
-    (document.head || document.documentElement || document.body).appendChild(style);
+    const target = document.head || document.documentElement || document.body;
+    if (target) {
+        target.appendChild(style);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            (document.head || document.documentElement || document.body)?.appendChild(style);
+        }, { once: true });
+    }
 }

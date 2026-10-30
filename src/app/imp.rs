@@ -43,6 +43,220 @@ pub struct Application {
     server: RefCell<Option<Rc<RefCell<crate::server::Server>>>>,
 }
 
+fn handle_enhanced_action(
+    webview: &WebView,
+    enhanced: &Rc<RefCell<EnhancedManager>>,
+    server: &Option<Rc<RefCell<crate::server::Server>>>,
+    dev_mode: bool,
+    action: crate::app::enhanced::EnhancedAction,
+) {
+    match action {
+        crate::app::enhanced::EnhancedAction::GetData => {
+            let mut mgr = enhanced.borrow_mut();
+            mgr.reload();
+            let running = server
+                .as_ref()
+                .map(|s| s.borrow_mut().is_running())
+                .unwrap_or(false);
+            let data = mgr.ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::OpenThemesFolder => {
+            enhanced.borrow().open_themes_folder();
+        }
+        crate::app::enhanced::EnhancedAction::OpenPluginsFolder => {
+            enhanced.borrow().open_plugins_folder();
+        }
+        crate::app::enhanced::EnhancedAction::OpenStreamingServerFolder => {
+            enhanced.borrow().open_streaming_server_folder();
+        }
+        crate::app::enhanced::EnhancedAction::GetServerStatus { id } => {
+            let running = server
+                .as_ref()
+                .map(|s| s.borrow_mut().is_running())
+                .unwrap_or(false);
+            let status = enhanced.borrow().get_server_status(running);
+            if let Ok(json) = serde_json::to_string(&status) {
+                let script = format!(
+                    "window.__receiveServerStatus && window.__receiveServerStatus({id:?}, {json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::StartStreamingServer { id } => {
+            let mut success = false;
+            if let Some(s_rc) = server {
+                success = s_rc.borrow_mut().restart(dev_mode).unwrap_or(false);
+            }
+            let script = format!(
+                "window.__receiveServerStartResult && window.__receiveServerStartResult({id:?}, {success});"
+            );
+            webview.evaluate_javascript(&script);
+        }
+        crate::app::enhanced::EnhancedAction::LoadUrl { url } => {
+            info!("Loading URL in webview: {url}");
+            webview.load_uri(&url);
+        }
+        crate::app::enhanced::EnhancedAction::PrepareServerUpdate { version } => {
+            if let Some(s_rc) = server {
+                let _ = s_rc.borrow_mut().stop();
+            }
+            if let Err(e) = enhanced.borrow().prepare_server_update(&version) {
+                error!("Failed to prepare server update: {e}");
+            }
+        }
+        crate::app::enhanced::EnhancedAction::SkipServerVersion { version } => {
+            if let Err(e) = enhanced.borrow().skip_server_version(&version) {
+                error!("Failed to skip server version: {e}");
+            }
+        }
+        crate::app::enhanced::EnhancedAction::TogglePlugin {
+            file_name,
+            enabled,
+        } => {
+            info!("Toggling plugin {file_name}: {enabled}");
+            enhanced.borrow_mut().toggle_plugin(&file_name, enabled);
+            let running = server
+                .as_ref()
+                .map(|s| s.borrow_mut().is_running())
+                .unwrap_or(false);
+            let data = enhanced.borrow().ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::ApplyTheme { file_name } => {
+            info!("Applying theme: {file_name}");
+            let new_theme = if file_name == "Default" {
+                None
+            } else {
+                Some(file_name.as_str())
+            };
+            let css = enhanced.borrow_mut().set_active_theme(new_theme);
+            webview.set_theme_css(css.as_deref());
+            let running = server
+                .as_ref()
+                .map(|s| s.borrow_mut().is_running())
+                .unwrap_or(false);
+            let data = enhanced.borrow().ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::Log { level, message } => {
+            match level.as_str() {
+                "error" => error!("{message}"),
+                "warn" => warn!("{message}"),
+                _ => info!("{message}"),
+            }
+        }
+        crate::app::enhanced::EnhancedAction::HttpGet { id, url } => {
+            let webview = webview.clone();
+            spawn_local!(async move {
+                let res = tokio::process::Command::new("curl")
+                    .args(["-4", "-sL", "--connect-timeout", "10", "--max-time", "25", "-w", "\n%{http_code}", &url])
+                    .output()
+                    .await;
+
+                let output = match res {
+                    Ok(out) if out.status.success() => Ok(out),
+                    _ => {
+                        tokio::process::Command::new("curl")
+                            .args(["-sL", "--connect-timeout", "10", "--max-time", "25", "-w", "\n%{http_code}", &url])
+                            .output()
+                            .await
+                    }
+                };
+
+                match output {
+                    Ok(output) if output.status.success() => {
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        if let Some(pos) = stdout.rfind('\n') {
+                            let body = &stdout[..pos];
+                            let code_str = stdout[pos + 1..].trim();
+                            let status: u16 = code_str.parse().unwrap_or(200);
+                            let body_json = serde_json::to_string(body).unwrap_or_else(|_| "\"\"".to_string());
+                            let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, {status}, {body_json});");
+                            webview.evaluate_javascript(&script);
+                        } else {
+                            let body_json = serde_json::to_string(&stdout).unwrap_or_else(|_| "\"\"".to_string());
+                            let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 200, {body_json});");
+                            webview.evaluate_javascript(&script);
+                        }
+                    }
+                    Ok(output) => {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        error!("Curl failed for {url}: {stderr}");
+                        let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Curl error\");");
+                        webview.evaluate_javascript(&script);
+                    }
+                    Err(e) => {
+                        error!("Failed to execute curl for {url}: {e}");
+                        let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Exec error\");");
+                        webview.evaluate_javascript(&script);
+                    }
+                }
+            });
+        }
+        crate::app::enhanced::EnhancedAction::InstallMod {
+            mod_type,
+            file_name,
+            content,
+        } => {
+            info!("Installing mod {mod_type} {file_name}");
+            let mut mgr = enhanced.borrow_mut();
+            if let Err(e) = mgr.install_mod(&mod_type, &file_name, &content) {
+                error!("Failed to install mod {file_name}: {e}");
+            }
+            let running = server
+                .as_ref()
+                .map(|s| s.borrow_mut().is_running())
+                .unwrap_or(false);
+            let data = mgr.ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::DeleteMod {
+            mod_type,
+            file_name,
+        } => {
+            info!("Deleting mod {mod_type} {file_name}");
+            let mut mgr = enhanced.borrow_mut();
+            if let Err(e) = mgr.delete_mod(&mod_type, &file_name) {
+                error!("Failed to delete mod {file_name}: {e}");
+            }
+            let css = mgr.active_theme().map(|t| t.content.clone());
+            webview.set_theme_css(css.as_deref());
+            let running = server
+                .as_ref()
+                .map(|s| s.borrow_mut().is_running())
+                .unwrap_or(false);
+            let data = mgr.ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+    }
+}
+
 impl Application {
     pub fn set_server(&self, server: Rc<RefCell<crate::server::Server>>) {
         *self.server.borrow_mut() = Some(server);
@@ -120,7 +334,6 @@ impl ApplicationImpl for Application {
         }
 
         webview.dev_mode(dev_mode);
-        webview.load_uri(&startup_url);
 
         let window = Window::new(&app);
         window.set_property("decorations", self.decorations.get());
@@ -169,6 +382,9 @@ impl ApplicationImpl for Application {
         ));
 
         let deeplink = self.deeplink.clone();
+        let enhanced_for_ipc = enhanced.clone();
+        let server_for_ipc = self.server.borrow().clone();
+        let dev_mode_for_ipc = dev_mode;
         webview.connect_ipc(clone!(
             #[weak]
             app,
@@ -179,6 +395,10 @@ impl ApplicationImpl for Application {
             #[weak]
             mpris,
             move |webview: WebView, message: &str| {
+                if let Ok(action) = serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
+                    handle_enhanced_action(&webview, &enhanced_for_ipc, &server_for_ipc, dev_mode_for_ipc, action);
+                    return;
+                }
                 if let Ok(event) = ipc::parse_request(message) {
                     match event {
                         IpcEvent::Init => {
@@ -258,211 +478,9 @@ impl ApplicationImpl for Application {
             webview,
             move |_webview: WebView, message: &str| {
                 match serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
-                    Ok(action) => match action {
-                        crate::app::enhanced::EnhancedAction::GetData => {
-                            let mut mgr = enhanced_ref.borrow_mut();
-                            mgr.reload();
-                            let running = server_ref
-                                .as_ref()
-                                .map(|s| s.borrow_mut().is_running())
-                                .unwrap_or(false);
-                            let data = mgr.ui_data(running);
-                            if let Ok(json) = serde_json::to_string(&data) {
-                                let script = format!(
-                                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
-                                );
-                                webview.evaluate_javascript(&script);
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::OpenThemesFolder => {
-                            enhanced_ref.borrow().open_themes_folder();
-                        }
-                        crate::app::enhanced::EnhancedAction::OpenPluginsFolder => {
-                            enhanced_ref.borrow().open_plugins_folder();
-                        }
-                        crate::app::enhanced::EnhancedAction::OpenStreamingServerFolder => {
-                            enhanced_ref.borrow().open_streaming_server_folder();
-                        }
-                        crate::app::enhanced::EnhancedAction::GetServerStatus { id } => {
-                            let running = server_ref
-                                .as_ref()
-                                .map(|s| s.borrow_mut().is_running())
-                                .unwrap_or(false);
-                            let status = enhanced_ref.borrow().get_server_status(running);
-                            if let Ok(json) = serde_json::to_string(&status) {
-                                let script = format!(
-                                    "window.__receiveServerStatus && window.__receiveServerStatus({id:?}, {json});"
-                                );
-                                webview.evaluate_javascript(&script);
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::StartStreamingServer { id } => {
-                            let mut success = false;
-                            if let Some(ref s_rc) = server_ref {
-                                success = s_rc.borrow_mut().restart(dev_mode_flag).unwrap_or(false);
-                            }
-                            let script = format!(
-                                "window.__receiveServerStartResult && window.__receiveServerStartResult({id:?}, {success});"
-                            );
-                            webview.evaluate_javascript(&script);
-                        }
-                        crate::app::enhanced::EnhancedAction::LoadUrl { url } => {
-                            info!("Loading URL in webview: {url}");
-                            webview.load_uri(&url);
-                        }
-                        crate::app::enhanced::EnhancedAction::PrepareServerUpdate { version } => {
-                            if let Some(ref s_rc) = server_ref {
-                                let _ = s_rc.borrow_mut().stop();
-                            }
-                            if let Err(e) = enhanced_ref.borrow().prepare_server_update(&version) {
-                                error!("Failed to prepare server update: {e}");
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::SkipServerVersion { version } => {
-                            if let Err(e) = enhanced_ref.borrow().skip_server_version(&version) {
-                                error!("Failed to skip server version: {e}");
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::TogglePlugin {
-                            file_name,
-                            enabled,
-                        } => {
-                            info!("Toggling plugin {file_name}: {enabled}");
-                            enhanced_ref.borrow_mut().toggle_plugin(&file_name, enabled);
-                            let running = server_ref
-                                .as_ref()
-                                .map(|s| s.borrow_mut().is_running())
-                                .unwrap_or(false);
-                            let data = enhanced_ref.borrow().ui_data(running);
-                            if let Ok(json) = serde_json::to_string(&data) {
-                                let script = format!(
-                                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
-                                );
-                                webview.evaluate_javascript(&script);
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::ApplyTheme { file_name } => {
-                            info!("Applying theme: {file_name}");
-                            let new_theme = if file_name == "Default" {
-                                None
-                            } else {
-                                Some(file_name.as_str())
-                            };
-                            let css = enhanced_ref.borrow_mut().set_active_theme(new_theme);
-                            webview.set_theme_css(css.as_deref());
-                            let running = server_ref
-                                .as_ref()
-                                .map(|s| s.borrow_mut().is_running())
-                                .unwrap_or(false);
-                            let data = enhanced_ref.borrow().ui_data(running);
-                            if let Ok(json) = serde_json::to_string(&data) {
-                                let script = format!(
-                                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
-                                );
-                                webview.evaluate_javascript(&script);
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::Log { level, message } => {
-                            match level.as_str() {
-                                "error" => error!("{message}"),
-                                "warn" => warn!("{message}"),
-                                _ => info!("{message}"),
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::HttpGet { id, url } => {
-                            let webview = webview.clone();
-                            spawn_local!(async move {
-                                let res = tokio::process::Command::new("curl")
-                                    .args(["-4", "-sL", "--connect-timeout", "10", "--max-time", "25", "-w", "\n%{http_code}", &url])
-                                    .output()
-                                    .await;
-
-                                let output = match res {
-                                    Ok(out) if out.status.success() => Ok(out),
-                                    _ => {
-                                        tokio::process::Command::new("curl")
-                                            .args(["-sL", "--connect-timeout", "10", "--max-time", "25", "-w", "\n%{http_code}", &url])
-                                            .output()
-                                            .await
-                                    }
-                                };
-
-                                match output {
-                                    Ok(output) if output.status.success() => {
-                                        let stdout = String::from_utf8_lossy(&output.stdout);
-                                        if let Some(pos) = stdout.rfind('\n') {
-                                            let body = &stdout[..pos];
-                                            let code_str = stdout[pos + 1..].trim();
-                                            let status: u16 = code_str.parse().unwrap_or(200);
-                                            let body_json = serde_json::to_string(body).unwrap_or_else(|_| "\"\"".to_string());
-                                            let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, {status}, {body_json});");
-                                            webview.evaluate_javascript(&script);
-                                        } else {
-                                            let body_json = serde_json::to_string(&stdout).unwrap_or_else(|_| "\"\"".to_string());
-                                            let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 200, {body_json});");
-                                            webview.evaluate_javascript(&script);
-                                        }
-                                    }
-                                    Ok(output) => {
-                                        let stderr = String::from_utf8_lossy(&output.stderr);
-                                        error!("Curl failed for {url}: {stderr}");
-                                        let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Curl error\");");
-                                        webview.evaluate_javascript(&script);
-                                    }
-                                    Err(e) => {
-                                        error!("Failed to execute curl for {url}: {e}");
-                                        let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Exec error\");");
-                                        webview.evaluate_javascript(&script);
-                                    }
-                                }
-                            });
-                        }
-                        crate::app::enhanced::EnhancedAction::InstallMod {
-                            mod_type,
-                            file_name,
-                            content,
-                        } => {
-                            info!("Installing mod {mod_type} {file_name}");
-                            let mut mgr = enhanced_ref.borrow_mut();
-                            if let Err(e) = mgr.install_mod(&mod_type, &file_name, &content) {
-                                error!("Failed to install mod {file_name}: {e}");
-                            }
-                            let running = server_ref
-                                .as_ref()
-                                .map(|s| s.borrow_mut().is_running())
-                                .unwrap_or(false);
-                            let data = mgr.ui_data(running);
-                            if let Ok(json) = serde_json::to_string(&data) {
-                                let script = format!(
-                                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
-                                );
-                                webview.evaluate_javascript(&script);
-                            }
-                        }
-                        crate::app::enhanced::EnhancedAction::DeleteMod {
-                            mod_type,
-                            file_name,
-                        } => {
-                            info!("Deleting mod {mod_type} {file_name}");
-                            let mut mgr = enhanced_ref.borrow_mut();
-                            if let Err(e) = mgr.delete_mod(&mod_type, &file_name) {
-                                error!("Failed to delete mod {file_name}: {e}");
-                            }
-                            let css = mgr.active_theme().map(|t| t.content.clone());
-                            webview.set_theme_css(css.as_deref());
-                            let running = server_ref
-                                .as_ref()
-                                .map(|s| s.borrow_mut().is_running())
-                                .unwrap_or(false);
-                            let data = mgr.ui_data(running);
-                            if let Ok(json) = serde_json::to_string(&data) {
-                                let script = format!(
-                                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
-                                );
-                                webview.evaluate_javascript(&script);
-                            }
-                        }
-                    },
+                    Ok(action) => {
+                        handle_enhanced_action(&webview, &enhanced_ref, &server_ref, dev_mode_flag, action);
+                    }
                     Err(e) => {
                         error!("Failed to parse enhanced IPC message '{message}': {e}");
                     }
@@ -539,6 +557,8 @@ impl ApplicationImpl for Application {
                 window.activate();
             }
         ));
+
+        webview.load_uri(&startup_url);
 
         window.present();
 

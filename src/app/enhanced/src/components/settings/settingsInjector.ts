@@ -122,14 +122,22 @@ function injectSection(sectionsContainer: Element): void {
     const openThemesBtn = sectionDiv.querySelector<HTMLElement>('#openthemesfolderBtn');
     if (openThemesBtn) {
         openThemesBtn.onclick = () => {
-            (window as any).StremioEnhancedAPI.openThemesFolder();
+            if (typeof (window as any).StremioEnhancedAPI?.openThemesFolder === 'function') {
+                (window as any).StremioEnhancedAPI.openThemesFolder();
+            } else {
+                postEnhancedMessage('openThemesFolder');
+            }
         };
     }
 
     const openPluginsBtn = sectionDiv.querySelector<HTMLElement>('#openpluginsfolderBtn');
     if (openPluginsBtn) {
         openPluginsBtn.onclick = () => {
-            (window as any).StremioEnhancedAPI.openPluginsFolder();
+            if (typeof (window as any).StremioEnhancedAPI?.openPluginsFolder === 'function') {
+                (window as any).StremioEnhancedAPI.openPluginsFolder();
+            } else {
+                postEnhancedMessage('openPluginsFolder');
+            }
         };
     }
 

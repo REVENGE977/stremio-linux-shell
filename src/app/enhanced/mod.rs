@@ -609,6 +609,7 @@ impl EnhancedManager {
 
 /// Opens a directory in the user's default file manager.
 pub fn open_folder(path: &Path) {
+    let _ = fs::create_dir_all(path);
     let uri = format!("file://{}", path.display());
     let path_buf = path.to_path_buf();
 
