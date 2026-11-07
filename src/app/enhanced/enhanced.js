@@ -327,6 +327,34 @@
             opacity: 0.85;
             cursor: default;
         }
+        /* Picture-in-Picture Compact Mode */
+        html.stremio-pip-mode [class*="player-container"] [class*="control-bar-container"] {
+            zoom: 0.72;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        html.stremio-pip-mode [class*="player-container"] [class*="nav-bar-container"] {
+            zoom: 0.72;
+        }
+        html.stremio-pip-mode .pip-plugin-button {
+            color: var(--primary-accent-color, #7b5bf5) !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {
+            cursor: nwse-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"] * {
+            cursor: nesw-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"] * {
+            cursor: ew-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"] * {
+            cursor: ns-resize !important;
+        }
     `;
     const target = document.head || document.documentElement || document.body;
     if (target) {
@@ -1089,6 +1117,7 @@
   var latestServerJsUrl = DEFAULT_SERVER_JS_URL;
   var pendingServerStatusRequests = /* @__PURE__ */ new Map();
   var pendingServerStartRequests = /* @__PURE__ */ new Map();
+  var pendingFfmpegRequests = /* @__PURE__ */ new Map();
   function setupServerManager() {
     window.__receiveServerStatus = function(id, status) {
       if (status) {
@@ -1107,6 +1136,16 @@
       const resolver = pendingServerStartRequests.get(id);
       if (resolver) {
         pendingServerStartRequests.delete(id);
+        resolver(success);
+      }
+    };
+    window.__receiveFfmpegResult = function(id, success) {
+      if (currentServerStatus && success) {
+        currentServerStatus.ffmpegInstalled = true;
+      }
+      const resolver = pendingFfmpegRequests.get(id);
+      if (resolver) {
+        pendingFfmpegRequests.delete(id);
         resolver(success);
       }
     };
@@ -1161,7 +1200,7 @@
       }
     }, 500);
   }
-  function startStreamingServer() {
+  function startStreamingServer(autoReload = true) {
     return new Promise((resolve) => {
       const id = "start_" + Math.random().toString(36).substring(2, 9);
       const timer = setTimeout(() => {
@@ -1172,7 +1211,7 @@
       }, 15e3);
       pendingServerStartRequests.set(id, (success) => {
         clearTimeout(timer);
-        if (success && window.location.hostname !== "127.0.0.1") {
+        if (autoReload && success && window.location.hostname !== "127.0.0.1") {
           reloadToLocalStreamingServer();
         }
         resolve(success);
@@ -1207,57 +1246,131 @@
       return null;
     }
   }
+  var activeFfmpegDownload = null;
+  function downloadFfmpeg() {
+    if (activeFfmpegDownload) return activeFfmpegDownload;
+    modalManager.showToast(
+      "ffmpeg-downloading",
+      "FFmpeg Setup",
+      "Downloading and extracting FFmpeg for streaming server. Please wait...",
+      "info"
+    );
+    activeFfmpegDownload = new Promise((resolve) => {
+      const id = "ff_" + Math.random().toString(36).substring(2, 9);
+      const timer = setTimeout(() => {
+        activeFfmpegDownload = null;
+        pendingFfmpegRequests.delete(id);
+        resolve(false);
+      }, 3e5);
+      pendingFfmpegRequests.set(id, (success) => {
+        clearTimeout(timer);
+        activeFfmpegDownload = null;
+        if (success) {
+          if (currentServerStatus) {
+            currentServerStatus.ffmpegInstalled = true;
+          }
+          modalManager.showToast(
+            "ffmpeg-ready",
+            "FFmpeg Ready",
+            "FFmpeg was installed successfully into the streaming server folder.",
+            "info"
+          );
+        } else {
+          modalManager.showToast(
+            "ffmpeg-failed",
+            "FFmpeg Error",
+            "Failed to download FFmpeg automatically.",
+            "fail"
+          );
+        }
+        resolve(success);
+      });
+      postEnhancedMessage("downloadFfmpeg", { id });
+    });
+    return activeFfmpegDownload;
+  }
   async function showMissingServerInstructions(downloadUrl, serverDir) {
-    let serverJsFound = false;
-    while (!serverJsFound) {
+    let serverReady = false;
+    while (!serverReady) {
       const result = await modalManager.showAlert(
         "info",
         "Streaming Server Setup Required",
-        `To enable video playback, you need to download the Stremio streaming server file (server.js).
+        `To enable video playback and add-on streaming, a local streaming server is required.
+(Note: Due to licensing restrictions, server.js cannot be redistributed directly with this shell).
 
-1. Download server.js from:
-${downloadUrl}
+You can choose either of the following setup options:
 
-2. Right click the page and select "Save As" and save it as "server.js".
+OPTION 1: Use server.js directly (Standalone)
+1. Click "Download server.js" (or download from: ${downloadUrl}).
+2. Save the file as "server.js" and place it in:
+   ${serverDir}
+   (Click "Open Folder" below to open this directory).
 
-3. Place it in:
-${serverDir}
+OPTION 2: Use Stremio Service
+If you already have Stremio Service installed, simply start Stremio Service so port 11470 is active. You can also download it from the official Stremio website.
 
-Click "Open Folder" to open the destination folder, or "Download" to open the download link in your browser. Click "Close" when you have placed the file in the correct location and the streaming server will start.`,
-        ["Open Folder", "Download", "Close"]
+When ready, click "Done / Check".`,
+        ["Open Folder", "Download server.js", "Stremio Service", "Done / Check"]
       );
       if (result === 0) {
         openStreamingServerFolder();
       } else if (result === 1) {
         window.open(downloadUrl, "_blank");
+        if (!currentServerStatus?.ffmpegInstalled) {
+          downloadFfmpeg();
+        }
+      } else if (result === 2) {
+        window.open("https://www.stremio.com/download-service", "_blank");
       } else {
         const freshStatus = await getServerStatus();
-        if (freshStatus && freshStatus.exists) {
-          serverJsFound = true;
-          console.log("[Enhanced Server] server.js found after user action. Starting streaming server...");
-          const started = await startStreamingServer();
-          if (started) {
+        if (freshStatus && (freshStatus.running || freshStatus.exists)) {
+          serverReady = true;
+          if (!freshStatus.running && freshStatus.exists) {
+            if (!freshStatus.ffmpegInstalled) {
+              modalManager.showToast(
+                "ffmpeg-setup",
+                "FFmpeg Setup",
+                "Ensuring FFmpeg is installed before starting...",
+                "info"
+              );
+              await downloadFfmpeg();
+            }
+            console.log("[Enhanced Server] server.js found. Starting streaming server...");
+            const started = await startStreamingServer(false);
+            if (started) {
+              await modalManager.showAlert(
+                "info",
+                "Streaming Server Setup Complete",
+                "The streaming server has started successfully. The application will now connect to the local streaming server.",
+                ["OK"]
+              );
+              reloadToLocalStreamingServer();
+              return true;
+            }
+          } else if (freshStatus.running) {
             await modalManager.showAlert(
               "info",
-              "Streaming Server Setup Complete",
-              "The streaming server has been set up successfully. The application will now reload to use the local streaming server (127.0.0.1).",
+              "Streaming Server Connected",
+              "Local streaming server (Stremio Service) is online! The application will now connect to the local server.",
               ["OK"]
             );
             reloadToLocalStreamingServer();
+            return true;
           }
-          return true;
         } else {
           const warnResult = await modalManager.showAlert(
             "warning",
-            "File Not Found",
-            `server.js was not found in:
+            "Streaming Server Not Detected",
+            `Neither server.js was found in:
 ${serverDir}
 
-Please download the file and place it in the correct location. Do you want to try again?`,
-            ["Try Again", "Close"]
+nor is Stremio Service running on port 11470.
+
+Please place server.js in the folder or start Stremio Service. Would you like to try again?`,
+            ["Try Again", "Cancel"]
           );
           if (warnResult === 1) {
-            serverJsFound = true;
+            serverReady = true;
             return false;
           }
         }
@@ -1283,22 +1396,28 @@ Please download the file and place it in the correct location. Do you want to tr
       const latestVersion = remote?.version || "v4.21.1";
       const downloadUrl = remote?.downloadUrl || DEFAULT_SERVER_JS_URL;
       latestServerJsUrl = downloadUrl;
-      if (!status.exists) {
-        console.log("[Enhanced Server] server.js not found. Showing download instructions to user...");
+      if (!status.exists && !status.running) {
+        console.log("[Enhanced Server] Neither server.js nor Stremio Service found running. Showing setup instructions...");
         hasPromptedInitialSetup = true;
         await showMissingServerInstructions(downloadUrl, serverDir);
       } else {
-        if (!status.running) {
-          console.log("[Enhanced Server] server.js exists but is not running. Starting streaming server...");
-          const started = await startStreamingServer();
+        if (status.running) {
+          if (window.location.hostname !== "127.0.0.1") {
+            console.log("[Enhanced Server] Streaming server is running. Switching from web.stremio.com to 127.0.0.1...");
+            reloadToLocalStreamingServer();
+            return;
+          }
+        } else if (status.exists) {
+          if (!status.ffmpegInstalled) {
+            console.log("[Enhanced Server] FFmpeg not installed in streamingserver folder. Downloading FFmpeg first...");
+            await downloadFfmpeg();
+          }
+          console.log("[Enhanced Server] server.js exists. Starting streaming server...");
+          const started = await startStreamingServer(false);
           if (started && window.location.hostname !== "127.0.0.1") {
             reloadToLocalStreamingServer();
             return;
           }
-        } else if (window.location.hostname !== "127.0.0.1") {
-          console.log("[Enhanced Server] Streaming server is running. Switching from web.stremio.com to 127.0.0.1...");
-          reloadToLocalStreamingServer();
-          return;
         }
         const currentVer = status.currentVersion;
         const skippedVer = status.skippedVersion;
@@ -2560,6 +2679,8 @@ Are you sure you want to update? It's recommended to read the source code of the
   // src/bridge/videoBridge.ts
   var bridgeHost = null;
   var bridgeVideo = null;
+  var pipActive = false;
+  var pipListenersInitialized = false;
   var currentTimeVal = 0;
   var durationVal = 0;
   var pausedVal = false;
@@ -2571,6 +2692,146 @@ Are you sure you want to update? It's recommended to read the source code of the
   var srcVal = "";
   var videoWidthVal = 1920;
   var videoHeightVal = 1080;
+  function setPipState(enabled, notifyRust = true) {
+    const next = Boolean(enabled);
+    if (pipActive === next && !notifyRust) return;
+    pipActive = next;
+    if (pipActive) {
+      document.documentElement.classList.add("stremio-pip-mode");
+    } else {
+      document.documentElement.classList.remove("stremio-pip-mode");
+      document.documentElement.style.cursor = "";
+      delete document.documentElement.dataset.pipCursor;
+    }
+    if (notifyRust) {
+      postEnhancedMessage("setPictureInPicture", { enabled: pipActive });
+    }
+    if (bridgeVideo) {
+      bridgeVideo.dispatchEvent(new Event(pipActive ? "enterpictureinpicture" : "leavepictureinpicture", { bubbles: true }));
+    }
+  }
+  function setupPipWindowInteractions() {
+    if (pipListenersInitialized) return;
+    pipListenersInitialized = true;
+    window.__syncPipState = function(enabled) {
+      setPipState(Boolean(enabled), false);
+    };
+    const RESIZE_BORDER = 8;
+    let dragCandidate = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let suppressNextClick = false;
+    function getResizeDirection(e) {
+      const x = e.clientX;
+      const y = e.clientY;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const left = x < RESIZE_BORDER;
+      const right = x >= w - RESIZE_BORDER;
+      const top = y < RESIZE_BORDER;
+      const bottom = y >= h - RESIZE_BORDER;
+      if (top && left) return 13;
+      if (top && right) return 14;
+      if (bottom && left) return 16;
+      if (bottom && right) return 17;
+      if (left) return 10;
+      if (right) return 11;
+      if (top) return 12;
+      if (bottom) return 15;
+      return 0;
+    }
+    function cursorForDirection(dir) {
+      switch (dir) {
+        case 13:
+        case 17:
+          return "nwse-resize";
+        case 14:
+        case 16:
+          return "nesw-resize";
+        case 10:
+        case 11:
+          return "ew-resize";
+        case 12:
+        case 15:
+          return "ns-resize";
+        default:
+          return "";
+      }
+    }
+    const INTERACTIVE_SELECTOR = 'input, select, textarea, button, a, .pip-plugin-button, [class*="slider"], [class*="seek"], [class*="thumb"], [class*="track"], [class*="button-container"], [class*="control-bar-button"], [class*="menu-container"], [class*="popup"]';
+    window.addEventListener("pointerdown", (e) => {
+      if (!pipActive || e.button !== 0) return;
+      const resizeDir = getResizeDirection(e);
+      if (resizeDir !== 0) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
+      const target = e.target;
+      if (target?.closest(INTERACTIVE_SELECTOR)) {
+        return;
+      }
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
+    window.addEventListener("mousedown", (e) => {
+      if (!pipActive || e.button !== 0) return;
+      const resizeDir = getResizeDirection(e);
+      if (resizeDir !== 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        dragCandidate = false;
+        postEnhancedMessage("startPipResize", { direction: resizeDir });
+        return;
+      }
+      const target = e.target;
+      if (target?.closest(INTERACTIVE_SELECTOR)) {
+        dragCandidate = false;
+        return;
+      }
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      dragCandidate = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      suppressNextClick = false;
+    }, true);
+    window.addEventListener("mousemove", (e) => {
+      if (!pipActive) return;
+      if (e.buttons === 0) {
+        dragCandidate = false;
+        const dir = getResizeDirection(e);
+        const cursor = cursorForDirection(dir);
+        document.documentElement.style.cursor = cursor;
+        if (cursor) {
+          document.documentElement.dataset.pipCursor = cursor;
+        } else {
+          delete document.documentElement.dataset.pipCursor;
+        }
+        return;
+      }
+      if ((e.buttons & 1) === 1 && dragCandidate) {
+        const dist = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
+        if (dist > 4) {
+          dragCandidate = false;
+          suppressNextClick = true;
+          postEnhancedMessage("startPipDrag");
+        }
+      }
+    }, true);
+    window.addEventListener("mouseup", () => {
+      dragCandidate = false;
+    }, true);
+    window.addEventListener("click", (e) => {
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+  }
   function createTimeRanges(start, end) {
     return {
       length: end > start ? 1 : 0,
@@ -2596,6 +2857,12 @@ Are you sure you want to update? It's recommended to read the source code of the
   function ensureBridgeVideo() {
     mountBridgeHost();
     enforceTransparency();
+    if (pipActive) {
+      const inPlayer = window.location.hash.startsWith("#/player") || Boolean(document.querySelector('[class*="player-container"]'));
+      if (!inPlayer) {
+        setPipState(false, true);
+      }
+    }
     const dur = durationVal > 0 ? durationVal : PermanentCore.getState?.("player")?.duration / 1e3 || 0;
     if (dur > 0 && bridgeVideo) {
       bridgeVideo.dispatchEvent(new Event("loadedmetadata"));
@@ -2604,6 +2871,7 @@ Are you sure you want to update? It's recommended to read the source code of the
   }
   function setupVideoBridge() {
     window.__STREMIO_SHELL__ = true;
+    setupPipWindowInteractions();
     bridgeHost = document.getElementById("stremio-enhanced-bridge-host");
     if (!bridgeHost) {
       bridgeHost = document.createElement("div");
@@ -2631,6 +2899,7 @@ Are you sure you want to update? It's recommended to read the source code of the
     }
     try {
       const origDocQS = Document.prototype.querySelector;
+      const origDocQSA = Document.prototype.querySelectorAll;
       const origElemQS = Element.prototype.querySelector;
       Document.prototype.querySelector = function(selectors) {
         const result = origDocQS.call(this, selectors);
@@ -2642,6 +2911,12 @@ Are you sure you want to update? It's recommended to read the source code of the
           }
         }
         return result;
+      };
+      Document.prototype.querySelectorAll = function(selectors) {
+        if (typeof selectors === "string" && selectors.includes("video")) {
+          mountBridgeHost();
+        }
+        return origDocQSA.call(this, selectors);
       };
       Element.prototype.querySelector = function(selectors) {
         const result = origElemQS.call(this, selectors);
@@ -2657,11 +2932,76 @@ Are you sure you want to update? It's recommended to read the source code of the
     } catch (e) {
       console.warn("[Enhanced] Could not patch querySelector:", e);
     }
+    try {
+      const origPipElemDesc = Object.getOwnPropertyDescriptor(Document.prototype, "pictureInPictureElement") || Object.getOwnPropertyDescriptor(ShadowRoot.prototype, "pictureInPictureElement");
+      Object.defineProperty(Document.prototype, "pictureInPictureElement", {
+        get() {
+          if (pipActive && bridgeVideo) return bridgeVideo;
+          return origPipElemDesc?.get ? origPipElemDesc.get.call(this) : null;
+        },
+        configurable: true
+      });
+      Object.defineProperty(Document.prototype, "pictureInPictureEnabled", {
+        get() {
+          return true;
+        },
+        configurable: true
+      });
+      const origExitPip = Document.prototype.exitPictureInPicture;
+      Document.prototype.exitPictureInPicture = function() {
+        if (pipActive) {
+          setPipState(false, true);
+          return Promise.resolve();
+        }
+        if (typeof origExitPip === "function") {
+          return origExitPip.call(this);
+        }
+        return Promise.resolve();
+      };
+    } catch (e) {
+      console.warn("[Enhanced] Could not patch Document PiP API:", e);
+    }
     bridgeVideo.closest = function(selector) {
       if (typeof selector === "string" && selector.includes("player-container")) {
         return document.querySelector('[class*="player-container"]') || document.querySelector(".player-container") || document.body;
       }
       return Element.prototype.closest.call(this, selector);
+    };
+    bridgeVideo.getBoundingClientRect = function() {
+      const playerContainer = document.querySelector('[class*="player-container"]');
+      if (playerContainer) {
+        return playerContainer.getBoundingClientRect();
+      }
+      const w = window.innerWidth || 1280;
+      const h = window.innerHeight || 720;
+      return new DOMRect(0, 0, w, h);
+    };
+    bridgeVideo.requestPictureInPicture = function() {
+      setPipState(true, true);
+      return Promise.resolve({
+        width: window.innerWidth || 480,
+        height: window.innerHeight || 270,
+        onresize: null,
+        addEventListener() {
+        },
+        removeEventListener() {
+        },
+        dispatchEvent() {
+          return true;
+        }
+      });
+    };
+    Object.defineProperty(bridgeVideo, "webkitPresentationMode", {
+      get() {
+        return pipActive ? "picture-in-picture" : "inline";
+      },
+      configurable: true
+    });
+    bridgeVideo.webkitSupportsPresentationMode = function(mode) {
+      return mode === "picture-in-picture" || mode === "inline";
+    };
+    bridgeVideo.webkitSetPresentationMode = function(mode) {
+      setPipState(mode === "picture-in-picture", true);
     };
     try {
       Object.defineProperty(bridgeVideo, "currentTime", {
@@ -2846,7 +3186,8 @@ Are you sure you want to update? It's recommended to read the source code of the
         get() {
           const dur = durationVal > 0 ? durationVal : PermanentCore.getState?.("player")?.duration / 1e3 || 0;
           const s = srcVal || PermanentCore.getState?.("player")?.selected?.stream?.url || "";
-          return dur > 0 || s !== "" ? 4 : 0;
+          const inPlayer = window.location.hash.startsWith("#/player") || Boolean(document.querySelector('[class*="player-container"]'));
+          return dur > 0 || s !== "" || inPlayer ? 4 : 0;
         },
         configurable: true
       });
@@ -2981,6 +3322,12 @@ Are you sure you want to update? It's recommended to read the source code of the
     }
     setInterval(() => {
       mountBridgeHost();
+      if (pipActive) {
+        const inPlayer = window.location.hash.startsWith("#/player") || Boolean(document.querySelector('[class*="player-container"]'));
+        if (!inPlayer) {
+          setPipState(false, true);
+        }
+      }
       const dur = durationVal > 0 ? durationVal : PermanentCore.getState?.("player")?.duration / 1e3 || 0;
       const cur = currentTimeVal > 0 ? currentTimeVal : PermanentCore.getState?.("player")?.time / 1e3 || 0;
       if (!pausedVal && (dur > 0 || cur > 0) && bridgeVideo) {

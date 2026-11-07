@@ -32,6 +32,9 @@ use crate::{
 pub struct Window {
     #[property(get, set)]
     decorations: Cell<bool>,
+    pub pip_mode: Cell<bool>,
+    pub was_maximized: Cell<bool>,
+    pub saved_size: Cell<(i32, i32)>,
     #[template_child]
     header: TemplateChild<adw::HeaderBar>,
     #[template_child]
@@ -130,7 +133,8 @@ impl Window {
     }
 
     pub fn show_header(&self, state: bool) {
-        self.header.set_visible(self.decorations.get() && state);
+        self.header
+            .set_visible(self.decorations.get() && state && !self.pip_mode.get());
     }
 }
 
@@ -214,17 +218,25 @@ impl WidgetImpl for Window {
 
         let remember_window_state = settings.boolean("remember-window-state");
         if remember_window_state {
-            let maximized = widget.is_maximized();
+            let maximized = widget.is_maximized() || self.was_maximized.get();
             settings.set_boolean("window-maximized", maximized).ok();
 
             let fullscreen = widget.is_fullscreen();
             settings.set_boolean("window-fullscreen", fullscreen).ok();
 
             if !maximized && !fullscreen {
-                let height = widget.default_height();
+                let (width, height) = if self.pip_mode.get() {
+                    let (w, h) = self.saved_size.get();
+                    if w > 0 && h > 0 {
+                        (w, h)
+                    } else {
+                        (widget.default_width(), widget.default_height())
+                    }
+                } else {
+                    (widget.default_width(), widget.default_height())
+                };
                 settings.set_int("window-height", height).ok();
 
-                let width = widget.default_width();
                 settings.set_int("window-width", width).ok();
             }
         }

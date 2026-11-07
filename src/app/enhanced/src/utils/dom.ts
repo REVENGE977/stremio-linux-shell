@@ -167,6 +167,34 @@ export function injectFallbackStyles(): void {
             opacity: 0.85;
             cursor: default;
         }
+        /* Picture-in-Picture Compact Mode */
+        html.stremio-pip-mode [class*="player-container"] [class*="control-bar-container"] {
+            zoom: 0.72;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        html.stremio-pip-mode [class*="player-container"] [class*="nav-bar-container"] {
+            zoom: 0.72;
+        }
+        html.stremio-pip-mode .pip-plugin-button {
+            color: var(--primary-accent-color, #7b5bf5) !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {
+            cursor: nwse-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"] * {
+            cursor: nesw-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"] * {
+            cursor: ew-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"] * {
+            cursor: ns-resize !important;
+        }
     `;
     const target = document.head || document.documentElement || document.body;
     if (target) {

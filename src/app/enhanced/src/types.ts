@@ -31,6 +31,7 @@ export interface ThemeUiData {
 export interface ServerStatusUiData {
     exists: boolean;
     running: boolean;
+    ffmpegInstalled?: boolean;
     serverDir: string;
     serverPath: string;
     currentVersion: string | null;

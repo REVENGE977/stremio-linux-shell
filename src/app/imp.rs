@@ -43,7 +43,16 @@ pub struct Application {
     server: RefCell<Option<Rc<RefCell<crate::server::Server>>>>,
 }
 
+fn is_server_running(server: &Option<Rc<RefCell<crate::server::Server>>>) -> bool {
+    server
+        .as_ref()
+        .map(|s| s.borrow_mut().is_running())
+        .unwrap_or(false)
+        || crate::server::is_streaming_server_online()
+}
+
 fn handle_enhanced_action(
+    window: &Window,
     webview: &WebView,
     enhanced: &Rc<RefCell<EnhancedManager>>,
     server: &Option<Rc<RefCell<crate::server::Server>>>,
@@ -54,10 +63,7 @@ fn handle_enhanced_action(
         crate::app::enhanced::EnhancedAction::GetData => {
             let mut mgr = enhanced.borrow_mut();
             mgr.reload();
-            let running = server
-                .as_ref()
-                .map(|s| s.borrow_mut().is_running())
-                .unwrap_or(false);
+            let running = is_server_running(server);
             let data = mgr.ui_data(running);
             if let Ok(json) = serde_json::to_string(&data) {
                 let script = format!(
@@ -76,10 +82,7 @@ fn handle_enhanced_action(
             enhanced.borrow().open_streaming_server_folder();
         }
         crate::app::enhanced::EnhancedAction::GetServerStatus { id } => {
-            let running = server
-                .as_ref()
-                .map(|s| s.borrow_mut().is_running())
-                .unwrap_or(false);
+            let running = is_server_running(server);
             let status = enhanced.borrow().get_server_status(running);
             if let Ok(json) = serde_json::to_string(&status) {
                 let script = format!(
@@ -89,14 +92,24 @@ fn handle_enhanced_action(
             }
         }
         crate::app::enhanced::EnhancedAction::StartStreamingServer { id } => {
-            let mut success = false;
             if let Some(s_rc) = server {
-                success = s_rc.borrow_mut().restart(dev_mode).unwrap_or(false);
+                let _ = s_rc.borrow_mut().restart(dev_mode);
             }
-            let script = format!(
-                "window.__receiveServerStartResult && window.__receiveServerStartResult({id:?}, {success});"
-            );
-            webview.evaluate_javascript(&script);
+            let webview = webview.clone();
+            spawn_local!(async move {
+                let mut running = false;
+                for _ in 0..40 {
+                    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                    if crate::server::is_streaming_server_online() {
+                        running = true;
+                        break;
+                    }
+                }
+                let script = format!(
+                    "window.__receiveServerStartResult && window.__receiveServerStartResult({id:?}, {running});"
+                );
+                webview.evaluate_javascript(&script);
+            });
         }
         crate::app::enhanced::EnhancedAction::LoadUrl { url } => {
             info!("Loading URL in webview: {url}");
@@ -121,10 +134,7 @@ fn handle_enhanced_action(
         } => {
             info!("Toggling plugin {file_name}: {enabled}");
             enhanced.borrow_mut().toggle_plugin(&file_name, enabled);
-            let running = server
-                .as_ref()
-                .map(|s| s.borrow_mut().is_running())
-                .unwrap_or(false);
+            let running = is_server_running(server);
             let data = enhanced.borrow().ui_data(running);
             if let Ok(json) = serde_json::to_string(&data) {
                 let script = format!(
@@ -142,10 +152,7 @@ fn handle_enhanced_action(
             };
             let css = enhanced.borrow_mut().set_active_theme(new_theme);
             webview.set_theme_css(css.as_deref());
-            let running = server
-                .as_ref()
-                .map(|s| s.borrow_mut().is_running())
-                .unwrap_or(false);
+            let running = is_server_running(server);
             let data = enhanced.borrow().ui_data(running);
             if let Ok(json) = serde_json::to_string(&data) {
                 let script = format!(
@@ -219,10 +226,7 @@ fn handle_enhanced_action(
             if let Err(e) = mgr.install_mod(&mod_type, &file_name, &content) {
                 error!("Failed to install mod {file_name}: {e}");
             }
-            let running = server
-                .as_ref()
-                .map(|s| s.borrow_mut().is_running())
-                .unwrap_or(false);
+            let running = is_server_running(server);
             let data = mgr.ui_data(running);
             if let Ok(json) = serde_json::to_string(&data) {
                 let script = format!(
@@ -242,10 +246,7 @@ fn handle_enhanced_action(
             }
             let css = mgr.active_theme().map(|t| t.content.clone());
             webview.set_theme_css(css.as_deref());
-            let running = server
-                .as_ref()
-                .map(|s| s.borrow_mut().is_running())
-                .unwrap_or(false);
+            let running = is_server_running(server);
             let data = mgr.ui_data(running);
             if let Ok(json) = serde_json::to_string(&data) {
                 let script = format!(
@@ -253,6 +254,39 @@ fn handle_enhanced_action(
                 );
                 webview.evaluate_javascript(&script);
             }
+        }
+        crate::app::enhanced::EnhancedAction::DownloadFfmpeg { id } => {
+            let webview = webview.clone();
+            spawn_local!(async move {
+                let success = tokio::task::spawn_blocking(|| {
+                    match crate::server::download_and_extract_ffmpeg() {
+                        Ok(()) => true,
+                        Err(e) => {
+                            error!("[FFmpeg] Setup failed: {e}");
+                            false
+                        }
+                    }
+                })
+                .await
+                .unwrap_or(false);
+                let script = format!(
+                    "window.__receiveFfmpegResult && window.__receiveFfmpegResult({id:?}, {success});"
+                );
+                webview.evaluate_javascript(&script);
+            });
+        }
+        crate::app::enhanced::EnhancedAction::SetPictureInPicture { enabled } => {
+            let pip_active = window.set_pip(enabled);
+            let script = format!(
+                "window.__syncPipState && window.__syncPipState({pip_active});"
+            );
+            webview.evaluate_javascript(&script);
+        }
+        crate::app::enhanced::EnhancedAction::StartPipDrag => {
+            window.start_pip_drag();
+        }
+        crate::app::enhanced::EnhancedAction::StartPipResize { direction } => {
+            window.start_pip_resize(direction);
         }
     }
 }
@@ -301,12 +335,7 @@ impl ApplicationImpl for Application {
         let startup_url = self.startup_url.borrow();
         let dev_mode = self.dev_mode.get();
 
-        let server_running = self
-            .server
-            .borrow()
-            .as_ref()
-            .map(|s| s.borrow_mut().is_running())
-            .unwrap_or(false);
+        let server_running = is_server_running(&self.server.borrow());
 
         // Load plugins and themes from ~/.config/stremio-enhanced/
         let enhanced = Rc::new(RefCell::new(EnhancedManager::new()));
@@ -396,7 +425,7 @@ impl ApplicationImpl for Application {
             mpris,
             move |webview: WebView, message: &str| {
                 if let Ok(action) = serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
-                    handle_enhanced_action(&webview, &enhanced_for_ipc, &server_for_ipc, dev_mode_for_ipc, action);
+                    handle_enhanced_action(&window, &webview, &enhanced_for_ipc, &server_for_ipc, dev_mode_for_ipc, action);
                     return;
                 }
                 if let Ok(event) = ipc::parse_request(message) {
@@ -413,6 +442,12 @@ impl ApplicationImpl for Application {
                             }
                         }
                         IpcEvent::Fullscreen(state) => {
+                            if state && window.is_pip() {
+                                window.set_pip(false);
+                                webview.evaluate_javascript(
+                                    "window.__syncPipState && window.__syncPipState(false);",
+                                );
+                            }
                             window.set_fullscreen(state);
 
                             let message = ipc::create_response(IpcEvent::Fullscreen(state));
@@ -465,7 +500,15 @@ impl ApplicationImpl for Application {
         webview.connect_fullscreen(clone!(
             #[weak]
             window,
+            #[weak]
+            webview,
             move |fullscreen: bool| {
+                if fullscreen && window.is_pip() {
+                    window.set_pip(false);
+                    webview.evaluate_javascript(
+                        "window.__syncPipState && window.__syncPipState(false);",
+                    );
+                }
                 window.set_fullscreen(fullscreen);
             }
         ));
@@ -475,11 +518,13 @@ impl ApplicationImpl for Application {
         let dev_mode_flag = dev_mode;
         webview.connect_enhanced_ipc(clone!(
             #[weak]
+            window,
+            #[weak]
             webview,
             move |_webview: WebView, message: &str| {
                 match serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
                     Ok(action) => {
-                        handle_enhanced_action(&webview, &enhanced_ref, &server_ref, dev_mode_flag, action);
+                        handle_enhanced_action(&window, &webview, &enhanced_ref, &server_ref, dev_mode_flag, action);
                     }
                     Err(e) => {
                         error!("Failed to parse enhanced IPC message '{message}': {e}");

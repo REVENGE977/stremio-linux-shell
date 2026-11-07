@@ -63,12 +63,29 @@ fn main() -> ExitCode {
     let args = Args::parse();
 
     let server = std::rc::Rc::new(std::cell::RefCell::new(Server::new()));
-    if let Err(e) = server.borrow_mut().start(args.dev) {
-        tracing::warn!("Failed to start streaming server: {e}");
+    if !crate::server::is_streaming_server_online()
+        && crate::server::find_server_script().is_some()
+        && crate::server::is_ffmpeg_installed()
+    {
+        if let Err(e) = server.borrow_mut().start(args.dev) {
+            tracing::warn!("Failed to start streaming server: {e}");
+        } else {
+            for _ in 0..50 {
+                if crate::server::is_streaming_server_online()
+                    || !server.borrow_mut().is_running()
+                {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+        }
     }
 
     let mut startup_url = args.url;
-    if !server.borrow_mut().is_running() && startup_url == STARTUP_URL {
+    if !crate::server::is_streaming_server_online()
+        && !server.borrow_mut().is_running()
+        && startup_url == STARTUP_URL
+    {
         tracing::info!("Streaming server is not running; falling back to direct web app URL");
         startup_url = "https://web.stremio.com/".to_string();
     }

@@ -86,6 +86,7 @@ impl Default for Settings {
 pub struct ServerStatusUiData {
     pub exists: bool,
     pub running: bool,
+    pub ffmpeg_installed: bool,
     pub server_dir: String,
     pub server_path: String,
     pub current_version: Option<String>,
@@ -138,6 +139,16 @@ pub enum EnhancedAction {
     DeleteMod {
         mod_type: String,
         file_name: String,
+    },
+    DownloadFfmpeg {
+        id: String,
+    },
+    SetPictureInPicture {
+        enabled: bool,
+    },
+    StartPipDrag,
+    StartPipResize {
+        direction: u32,
     },
 }
 
@@ -338,6 +349,7 @@ impl EnhancedManager {
         ServerStatusUiData {
             exists,
             running,
+            ffmpeg_installed: crate::server::is_ffmpeg_installed(),
             server_dir: server_dir.to_string_lossy().to_string(),
             server_path: server_path.to_string_lossy().to_string(),
             current_version,
