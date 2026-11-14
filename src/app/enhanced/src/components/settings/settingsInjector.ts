@@ -1,11 +1,12 @@
 import settingsSectionTemplate from './settings-section.html';
 import { TemplateCache } from '../../utils/templateCache';
-import { waitForElement, postEnhancedMessage } from '../../utils/dom';
-import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON } from '../../utils/icons';
+import { escapeHtml, waitForElement, postEnhancedMessage } from '../../utils/dom';
+import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON, UPDATE_ICON } from '../../utils/icons';
 import { renderThemesList } from '../../themes/themeManager';
 import { renderPluginsList } from '../../plugins/pluginManager';
 import { browseMarketplace } from '../../marketplace/marketplaceManager';
 import { openStreamingServerFolder, checkServerJsUpdateAndSetup, getCurrentServerStatus, getServerStatus, startStreamingServer, reloadToLocalStreamingServer } from '../../server/serverManager';
+import { checkClientUpdate, fetchLatestClientVersion, getCurrentClientVersion, getLatestClientVersion, isNewerVersion, CLIENT_RELEASES_URL } from '../../updates/updateManager';
 
 export function checkSettings(): void {
     if (!location.href.includes('#/settings')) return;
@@ -95,7 +96,8 @@ function injectSection(sectionsContainer: Element): void {
         themeIcon: THEME_ICON,
         pluginIcon: PLUGIN_ICON,
         marketplaceIcon: MARKETPLACE_ICON,
-        serverIcon: SERVER_ICON
+        serverIcon: SERVER_ICON,
+        updateIcon: UPDATE_ICON
     });
 
     const wrapper = document.createElement('div');
@@ -203,6 +205,47 @@ function injectSection(sectionsContainer: Element): void {
     if (serverStatusInfo) {
         renderServerInfo(getCurrentServerStatus());
         getServerStatus().then(renderServerInfo);
+    }
+
+    const clientVersionInfo = sectionDiv.querySelector<HTMLElement>('#enhanced-client-version-info');
+    const renderClientVersionInfo = () => {
+        if (!clientVersionInfo) return;
+        const currentVer = getCurrentClientVersion();
+        const latest = getLatestClientVersion();
+        if (!latest) {
+            clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}`;
+            return;
+        }
+        const hasUpdate = isNewerVersion(latest.version, currentVer);
+        const badge = hasUpdate
+            ? `<span style="color: #fcc419; font-weight: 600;">● Update available: v${escapeHtml(latest.version)}</span>`
+            : `<span style="color: #51cf66;">● Up to date (v${escapeHtml(latest.version)})</span>`;
+        clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}`;
+    };
+
+    const checkClientUpdatesBtn = sectionDiv.querySelector<HTMLElement>('#checkclientupdatesBtn');
+    if (checkClientUpdatesBtn) {
+        checkClientUpdatesBtn.onclick = async () => {
+            await checkClientUpdate(true);
+            renderClientVersionInfo();
+        };
+    }
+
+    const openClientReleasesBtn = sectionDiv.querySelector<HTMLElement>('#openclientreleasesBtn');
+    if (openClientReleasesBtn) {
+        openClientReleasesBtn.onclick = () => {
+            const url = getLatestClientVersion()?.releaseUrl || CLIENT_RELEASES_URL;
+            try {
+                window.open(url, '_blank');
+            } catch (_) {}
+        };
+    }
+
+    if (clientVersionInfo) {
+        renderClientVersionInfo();
+        if (!getLatestClientVersion()) {
+            fetchLatestClientVersion().then(() => renderClientVersionInfo());
+        }
     }
 
     sectionsContainer.appendChild(sectionDiv);

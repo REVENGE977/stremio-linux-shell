@@ -4,6 +4,7 @@ import { applyThemeUI } from '../themes/themeManager';
 import { loadPlugin, unloadPlugin, showReloadWarning } from '../plugins/pluginManager';
 import { modalManager } from '../components/modals/modalManager';
 import { openStreamingServerFolder, checkServerJsUpdateAndSetup, getServerStatus, startStreamingServer, reloadToLocalStreamingServer } from '../server/serverManager';
+import { checkClientUpdate, getCurrentClientVersion } from '../updates/updateManager';
 
 let currentEnhancedData: EnhancedData = { plugins: [], themes: [], activeTheme: null };
 
@@ -184,6 +185,12 @@ export function setupEnhancedApi(): void {
         },
         checkServerUpdates: function () {
             return checkServerJsUpdateAndSetup(true);
+        },
+        checkClientUpdates: function () {
+            return checkClientUpdate(true);
+        },
+        getClientVersion: function () {
+            return getCurrentClientVersion();
         },
         getServerStatus: function () {
             return getServerStatus();

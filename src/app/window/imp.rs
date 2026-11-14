@@ -103,17 +103,34 @@ impl Window {
     }
 
     pub fn open_uri(&self, uri: String) {
-        if let Ok(uri) = Uri::parse(&uri) {
+        let uri_str = uri.clone();
+        if let Ok(parsed_uri) = Uri::parse(&uri) {
             let identifier = self.window_identifier();
 
             spawn_local!(async move {
-                OpenFileRequest::default()
+                if let Err(e) = OpenFileRequest::default()
                     .identifier(identifier.await)
-                    .send_uri(&uri)
+                    .send_uri(&parsed_uri)
                     .await
-                    .map_err(|e| error!("Failed to open uri: {e}"))
-                    .ok();
+                {
+                    error!("Failed to open uri via portal: {e}, falling back to GIO/xdg-open");
+                    if gtk::gio::AppInfo::launch_default_for_uri(
+                        &uri_str,
+                        None::<&gtk::gio::AppLaunchContext>,
+                    )
+                    .is_err()
+                    {
+                        let _ = std::process::Command::new("xdg-open").arg(&uri_str).spawn();
+                    }
+                }
             });
+        } else if gtk::gio::AppInfo::launch_default_for_uri(
+            &uri_str,
+            None::<&gtk::gio::AppLaunchContext>,
+        )
+        .is_err()
+        {
+            let _ = std::process::Command::new("xdg-open").arg(&uri_str).spawn();
         }
     }
 

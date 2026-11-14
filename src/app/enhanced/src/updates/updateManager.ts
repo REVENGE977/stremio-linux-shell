@@ -5,29 +5,110 @@ import { postEnhancedMessage } from '../utils/dom';
 
 let currentEnhancedData: EnhancedData = { plugins: [], themes: [], activeTheme: null };
 
+export const DEFAULT_CLIENT_VERSION = '1.2.2-enhanced.3';
+export const CLIENT_RELEASES_URL = 'https://github.com/REVENGE977/stremio-linux-shell/releases/latest';
+
+const CLIENT_VERSION_SOURCES: { url: string; releaseUrl: string }[] = [
+    {
+        url: 'https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/Cargo.toml',
+        releaseUrl: 'https://github.com/REVENGE977/stremio-linux-shell/releases/latest'
+    },
+    {
+        url: 'https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/VERSION',
+        releaseUrl: 'https://github.com/REVENGE977/stremio-linux-shell/releases/latest'
+    },
+    {
+        url: 'https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/Cargo.toml',
+        releaseUrl: 'https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest'
+    },
+    {
+        url: 'https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/VERSION',
+        releaseUrl: 'https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest'
+    }
+];
+
+const CLIENT_RELEASE_SOURCES: { apiUrl: string; releaseUrl: string }[] = [
+    {
+        apiUrl: 'https://api.github.com/repos/REVENGE977/stremio-linux-shell/releases/latest',
+        releaseUrl: 'https://github.com/REVENGE977/stremio-linux-shell/releases/latest'
+    },
+    {
+        apiUrl: 'https://api.github.com/repos/REVENGE977/stremio-linux-shell-enhanced/releases/latest',
+        releaseUrl: 'https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest'
+    }
+];
+
+let latestClientVersionCache: { version: string; releaseUrl: string } | null = null;
+let clientUpdateCheckInProgress = false;
+
 export function updateUpdateManagerData(data: EnhancedData): void {
     currentEnhancedData = data;
 }
 
+export function getCurrentClientVersion(): string {
+    return (
+        currentEnhancedData.clientVersion ||
+        (window as any).__INITIAL_ENHANCED_DATA__?.clientVersion ||
+        DEFAULT_CLIENT_VERSION
+    );
+}
+
+export function getLatestClientVersion(): { version: string; releaseUrl: string } | null {
+    return latestClientVersionCache;
+}
+
 /**
- * Compare two semantic version strings.
+ * Parse a two-part client version string (e.g. "1.2.2-enhanced.3") into
+ * numeric base version segments ([1, 2, 2]) and enhanced build segments ([3]).
+ */
+export function parseClientVersion(version: string): { base: number[]; enhanced: number[] } {
+    const cleaned = version.trim().replace(/^v/i, '');
+    const [basePart, ...rest] = cleaned.split(/-enhanced\.?/i);
+    const base = (basePart || '')
+        .split('-')[0]
+        .split('.')
+        .map(n => parseInt(n, 10) || 0);
+
+    let enhanced: number[] = [0];
+    if (rest.length > 0 && rest[0]) {
+        enhanced = rest[0]
+            .split('.')
+            .map(n => parseInt(n, 10) || 0);
+    } else {
+        const dashMatch = cleaned.match(/-(\d+(?:\.\d+)*)$/);
+        if (dashMatch && dashMatch[1]) {
+            enhanced = dashMatch[1].split('.').map(n => parseInt(n, 10) || 0);
+        }
+    }
+
+    return { base, enhanced };
+}
+
+/**
+ * Compare two semantic / two-part Enhanced version strings (e.g. "1.2.2-enhanced.3").
  * Returns true if version1 > version2.
  */
 export function isNewerVersion(version1?: string, version2?: string): boolean {
     if (!version1 || !version2) return false;
-    const normalize = (v: string): number[] =>
-        v.replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+    const v1 = parseClientVersion(version1);
+    const v2 = parseClientVersion(version2);
 
-    const v1Parts = normalize(version1);
-    const v2Parts = normalize(version2);
-    const maxLength = Math.max(v1Parts.length, v2Parts.length);
-
-    for (let i = 0; i < maxLength; i++) {
-        const v1 = v1Parts[i] ?? 0;
-        const v2 = v2Parts[i] ?? 0;
-        if (v1 > v2) return true;
-        if (v1 < v2) return false;
+    const maxBaseLength = Math.max(v1.base.length, v2.base.length);
+    for (let i = 0; i < maxBaseLength; i++) {
+        const a = v1.base[i] ?? 0;
+        const b = v2.base[i] ?? 0;
+        if (a > b) return true;
+        if (a < b) return false;
     }
+
+    const maxEnhancedLength = Math.max(v1.enhanced.length, v2.enhanced.length);
+    for (let i = 0; i < maxEnhancedLength; i++) {
+        const a = v1.enhanced[i] ?? 0;
+        const b = v2.enhanced[i] ?? 0;
+        if (a > b) return true;
+        if (a < b) return false;
+    }
+
     return false;
 }
 
@@ -401,6 +482,226 @@ export async function checkForAllUpdates(isManual = false): Promise<void> {
         if (checkBtn) {
             checkBtn.style.pointerEvents = '';
             checkBtn.textContent = 'Check for Updates';
+        }
+    }
+}
+
+/**
+ * Extract a client version token (e.g. "1.2.2-enhanced.3") from a string like a release name or tag.
+ */
+export function extractVersionToken(raw?: string | null): string | null {
+    if (!raw) return null;
+    const match = raw.trim().match(/\bv?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?)\b/i);
+    return match && match[1] ? match[1] : null;
+}
+
+/**
+ * Extract version from either a Cargo.toml file, JSON payload (or GitHub release), or plain version file.
+ */
+export function extractClientVersionFromRemote(content: string): string | null {
+    const trimmed = content.trim();
+    if (!trimmed) return null;
+
+    // 1. Check if content is Cargo.toml with [package] section
+    const pkgSectionMatch = trimmed.match(/\[package\]([\s\S]*?)(?:\r?\n\s*\[|$)/);
+    if (pkgSectionMatch) {
+        const verMatch = pkgSectionMatch[1].match(/^\s*version\s*=\s*"([^"]+)"/m);
+        if (verMatch && verMatch[1]) {
+            return verMatch[1].trim().replace(/^v/i, '');
+        }
+    }
+
+    // 2. Check if content is JSON (custom version JSON or GitHub Release JSON)
+    if (trimmed.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            const fromVersion = extractVersionToken(typeof parsed.version === 'string' ? parsed.version : null);
+            if (fromVersion) return fromVersion;
+
+            const fromReleaseName = extractVersionToken(typeof parsed.name === 'string' ? parsed.name : null);
+            if (fromReleaseName) return fromReleaseName;
+
+            const fromTagName = extractVersionToken(typeof parsed.tag_name === 'string' ? parsed.tag_name : null);
+            if (fromTagName) return fromTagName;
+        } catch (_) {}
+    }
+
+    // 3. Plain text version file (first non-comment line matching version format)
+    for (const line of trimmed.split(/\r?\n/)) {
+        const l = line.trim();
+        if (!l || l.startsWith('#')) continue;
+        if (/^v?\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?$/.test(l)) {
+            return l.replace(/^v/i, '');
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Fetch the latest client version from the GitHub repository (Cargo.toml / VERSION),
+ * falling back to the latest GitHub release name (then tag_name) if no version file
+ * exists or if the version file does not report a newer version than currentVersion.
+ */
+export async function fetchLatestClientVersion(currentVersion?: string): Promise<{ version: string; releaseUrl: string } | null> {
+    let bestCandidate: { version: string; releaseUrl: string } | null = null;
+    const compareAgainst = currentVersion || getCurrentClientVersion();
+
+    for (const source of CLIENT_VERSION_SOURCES) {
+        try {
+            const res = await fetch(source.url, { cache: 'no-store' });
+            if (!res.ok) continue;
+            const text = await res.text();
+            const version = extractClientVersionFromRemote(text);
+            if (version) {
+                if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
+                    bestCandidate = { version, releaseUrl: source.releaseUrl };
+                }
+                if (isNewerVersion(version, compareAgainst)) {
+                    latestClientVersionCache = bestCandidate;
+                    return latestClientVersionCache;
+                }
+                break;
+            }
+        } catch (err) {
+            console.warn(`[Enhanced Client Update] Failed to fetch ${source.url}:`, err);
+        }
+    }
+
+    for (const source of CLIENT_RELEASE_SOURCES) {
+        try {
+            const res = await fetch(source.apiUrl, { cache: 'no-store' });
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (!data || data.draft) continue;
+
+            const version =
+                extractVersionToken(typeof data.name === 'string' ? data.name : null) ||
+                extractVersionToken(typeof data.tag_name === 'string' ? data.tag_name : null);
+            if (version) {
+                const releaseUrl =
+                    typeof data.html_url === 'string' && data.html_url.trim()
+                        ? data.html_url.trim()
+                        : source.releaseUrl;
+                if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
+                    bestCandidate = { version, releaseUrl };
+                }
+                break;
+            }
+        } catch (err) {
+            console.warn(`[Enhanced Client Update] Failed to fetch latest release from ${source.apiUrl}:`, err);
+        }
+    }
+
+    if (bestCandidate) {
+        latestClientVersionCache = bestCandidate;
+    }
+    return bestCandidate;
+}
+
+/**
+ * Check if a newer version of the Stremio Enhanced Linux client is available on GitHub.
+ */
+export async function checkClientUpdate(isManual = false): Promise<boolean> {
+    if (clientUpdateCheckInProgress) return false;
+    clientUpdateCheckInProgress = true;
+
+    const checkBtn = document.getElementById('checkclientupdatesBtn');
+    if (checkBtn) {
+        checkBtn.style.pointerEvents = 'none';
+        checkBtn.textContent = 'Checking...';
+    }
+
+    try {
+        const currentVersion = getCurrentClientVersion();
+        const skippedVersion =
+            currentEnhancedData.skippedClientVersion ??
+            (window as any).__INITIAL_ENHANCED_DATA__?.skippedClientVersion ??
+            null;
+
+        const remote = await fetchLatestClientVersion(currentVersion);
+        if (!remote) {
+            if (isManual) {
+                modalManager.showToast(
+                    'client-update-error',
+                    'Update Check Failed',
+                    'Could not fetch the latest client version from GitHub.',
+                    'fail'
+                );
+            }
+            return false;
+        }
+
+        const hasUpdate = isNewerVersion(remote.version, currentVersion);
+        if (!hasUpdate) {
+            if (isManual) {
+                modalManager.showToast(
+                    'client-up-to-date',
+                    'Client Up to Date',
+                    `You are running the latest version (v${currentVersion}).`,
+                    'info'
+                );
+            }
+            return false;
+        }
+
+        if (!isManual && skippedVersion === remote.version) {
+            console.log(`[Enhanced Client Update] Skipping v${remote.version} (marked as skipped by user).`);
+            return true;
+        }
+
+        const curParsed = parseClientVersion(currentVersion);
+        const remParsed = parseClientVersion(remote.version);
+        const curBaseStr = curParsed.base.join('.');
+        const remBaseStr = remParsed.base.join('.');
+        const curEnhNum = curParsed.enhanced[0] ?? 0;
+        const remEnhNum = remParsed.enhanced[0] ?? 0;
+
+        const details =
+            `A new version of Stremio Linux Shell Enhanced is available!\n\n` +
+            `Installed Version: v${currentVersion} (Base ${curBaseStr}, Enhanced build #${curEnhNum})\n` +
+            `Latest Version: v${remote.version} (Base ${remBaseStr}, Enhanced build #${remEnhNum})\n\n` +
+            `Would you like to open the GitHub Releases page to download the update?`;
+
+        const choice = await modalManager.showAlert(
+            'info',
+            'Client Update Available',
+            details,
+            ['Download / Open Release Page', 'Skip This Version', 'Later']
+        );
+
+        if (choice === 0) {
+            try {
+                window.open(remote.releaseUrl, '_blank');
+            } catch (_) {}
+        } else if (choice === 1) {
+            currentEnhancedData.skippedClientVersion = remote.version;
+            postEnhancedMessage('skipClientVersion', { version: remote.version });
+            modalManager.showToast(
+                'client-update-skipped',
+                'Version Skipped',
+                `Skipped client update v${remote.version}.`,
+                'info'
+            );
+        }
+
+        return true;
+    } catch (err) {
+        console.error('[Enhanced Client Update] Error checking for client updates:', err);
+        if (isManual) {
+            modalManager.showToast(
+                'client-update-error',
+                'Update Check Failed',
+                'An unexpected error occurred while checking for client updates.',
+                'fail'
+            );
+        }
+        return false;
+    } finally {
+        clientUpdateCheckInProgress = false;
+        if (checkBtn) {
+            checkBtn.style.pointerEvents = '';
+            checkBtn.textContent = 'Check for Client Updates';
         }
     }
 }

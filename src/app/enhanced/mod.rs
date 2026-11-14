@@ -116,6 +116,9 @@ pub enum EnhancedAction {
     SkipServerVersion {
         version: String,
     },
+    SkipClientVersion {
+        version: String,
+    },
     TogglePlugin {
         file_name: String,
         enabled: bool,
@@ -188,6 +191,8 @@ pub struct EnhancedUiData {
     pub themes: Vec<ThemeUiData>,
     pub active_theme: Option<String>,
     pub server_status: ServerStatusUiData,
+    pub client_version: String,
+    pub skipped_client_version: Option<String>,
 }
 
 /// The main manager that handles loading plugins/themes and tracking settings.
@@ -385,6 +390,13 @@ impl EnhancedManager {
         Ok(())
     }
 
+    /// Saves a client version string to skip future client update prompts for that version.
+    pub fn skip_client_version(&self, version: &str) -> std::io::Result<()> {
+        let skip_file = self.base_dir.join("skip_client_version.txt");
+        fs::write(&skip_file, version)?;
+        Ok(())
+    }
+
     /// Formats plugins, themes, and server status for the web interface.
     pub fn ui_data(&self, server_running: bool) -> EnhancedUiData {
         let plugins = self
@@ -432,11 +444,19 @@ impl EnhancedManager {
             })
             .collect();
 
+        let skip_client_file = self.base_dir.join("skip_client_version.txt");
+        let skipped_client_version = fs::read_to_string(&skip_client_file)
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
         EnhancedUiData {
             plugins,
             themes,
             active_theme: self.settings.active_theme.clone(),
             server_status: self.get_server_status(server_running),
+            client_version: env!("CARGO_PKG_VERSION").to_string(),
+            skipped_client_version,
         }
     }
 
@@ -724,6 +744,15 @@ mod tests {
             EnhancedAction::DeleteMod { mod_type, file_name } => {
                 assert_eq!(mod_type, "theme");
                 assert_eq!(file_name, "dark.css");
+            }
+            _ => panic!("Wrong action"),
+        }
+
+        let skip_client = r#"{"action":"skipClientVersion","version":"1.2.2-enhanced.4"}"#;
+        let action: EnhancedAction = serde_json::from_str(skip_client).unwrap();
+        match action {
+            EnhancedAction::SkipClientVersion { version } => {
+                assert_eq!(version, "1.2.2-enhanced.4");
             }
             _ => panic!("Wrong action"),
         }

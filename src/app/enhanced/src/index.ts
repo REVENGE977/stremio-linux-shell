@@ -9,7 +9,7 @@ import { injectFallbackStyles, postEnhancedMessage } from './utils/dom';
 import { updateThemeManagerData, applyThemeUI, ensureActiveTheme, renderThemesList } from './themes/themeManager';
 import { updatePluginManagerData, loadEnabledPlugins, renderPluginsList } from './plugins/pluginManager';
 import { updateMarketplaceData } from './marketplace/marketplaceManager';
-import { updateUpdateManagerData, checkForAllUpdates } from './updates/updateManager';
+import { updateUpdateManagerData, checkForAllUpdates, checkClientUpdate } from './updates/updateManager';
 import { checkSettings } from './components/settings/settingsInjector';
 import { setupServerManager, updateServerManagerData, checkServerJsUpdateAndSetup } from './server/serverManager';
 import { EnhancedData } from './types';
@@ -128,8 +128,9 @@ import { EnhancedData } from './types';
     ensureBridgeVideo();
     checkSettings();
 
-    // Check for streaming server availability and updates shortly after launch
+    // Check for streaming server and client updates shortly after launch
     setTimeout(() => {
         checkServerJsUpdateAndSetup(false);
+        checkClientUpdate(false);
     }, 1200);
 })();

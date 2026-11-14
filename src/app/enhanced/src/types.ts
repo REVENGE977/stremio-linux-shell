@@ -43,6 +43,8 @@ export interface EnhancedData {
     themes: ThemeUiData[];
     activeTheme: string | null;
     serverStatus?: ServerStatusUiData;
+    clientVersion?: string;
+    skippedClientVersion?: string | null;
 }
 
 export interface SettingSchemaItem {

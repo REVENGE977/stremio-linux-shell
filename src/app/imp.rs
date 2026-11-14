@@ -128,6 +128,11 @@ fn handle_enhanced_action(
                 error!("Failed to skip server version: {e}");
             }
         }
+        crate::app::enhanced::EnhancedAction::SkipClientVersion { version } => {
+            if let Err(e) = enhanced.borrow().skip_client_version(&version) {
+                error!("Failed to skip client version: {e}");
+            }
+        }
         crate::app::enhanced::EnhancedAction::TogglePlugin {
             file_name,
             enabled,

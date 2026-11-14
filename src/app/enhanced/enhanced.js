@@ -620,7 +620,7 @@
   }
 
   // src/components/settings/settings-section.html
-  var settings_section_default = '<div id="enhanced" class="section-dFpS9" style="margin-bottom: 2rem;">\n    <div class="label-wXG3e" style="font-size: 1.8rem; font-weight: 700; line-height: 3.4rem; margin-bottom: 2rem;">Enhanced</div>\n\n    <!-- Themes Category -->\n    <div id="enhanced-themes-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ themeIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Themes</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Open Themes Folder" class="button-DNmYL button-container-zVLH6 button" id="openthemesfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Themes Folder\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-themes-list"></div>\n    </div>\n\n    <!-- Plugins Category -->\n    <div id="enhanced-plugins-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ pluginIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Plugins</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Open Plugins Folder" class="button-DNmYL button-container-zVLH6 button" id="openpluginsfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Plugins Folder\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-plugins-list"></div>\n    </div>\n\n    <!-- Community Marketplace Category -->\n    <div id="enhanced-marketplace-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ marketplaceIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Community Marketplace</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Browse Plugins & Themes" class="button-DNmYL button-container-zVLH6 button" id="browsePluginsThemesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Browse Community Marketplace\n                </div>\n            </div>\n        </div>\n    </div>\n\n    <!-- Streaming Server Category -->\n    <div id="enhanced-server-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ serverIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Streaming Server</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">\n                <div tabindex="0" title="Open Streaming Server Folder" class="button-DNmYL button-container-zVLH6 button" id="openserverfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Server Folder\n                </div>\n                <div tabindex="0" title="Check for Server Updates" class="button-DNmYL button-container-zVLH6 button" id="checkserverupdatesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Check for Server Updates\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-server-status-info" style="font-size: 0.9rem; color: #a0a0a0; margin-left: 0.2rem;"></div>\n    </div>\n</div>\n\n';
+  var settings_section_default = '<div id="enhanced" class="section-dFpS9" style="margin-bottom: 2rem;">\n    <div class="label-wXG3e" style="font-size: 1.8rem; font-weight: 700; line-height: 3.4rem; margin-bottom: 2rem;">Enhanced</div>\n\n    <!-- Themes Category -->\n    <div id="enhanced-themes-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ themeIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Themes</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Open Themes Folder" class="button-DNmYL button-container-zVLH6 button" id="openthemesfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Themes Folder\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-themes-list"></div>\n    </div>\n\n    <!-- Plugins Category -->\n    <div id="enhanced-plugins-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ pluginIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Plugins</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Open Plugins Folder" class="button-DNmYL button-container-zVLH6 button" id="openpluginsfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Plugins Folder\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-plugins-list"></div>\n    </div>\n\n    <!-- Community Marketplace Category -->\n    <div id="enhanced-marketplace-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ marketplaceIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Community Marketplace</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Browse Plugins & Themes" class="button-DNmYL button-container-zVLH6 button" id="browsePluginsThemesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Browse Community Marketplace\n                </div>\n            </div>\n        </div>\n    </div>\n\n    <!-- Streaming Server Category -->\n    <div id="enhanced-server-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ serverIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Streaming Server</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">\n                <div tabindex="0" title="Open Streaming Server Folder" class="button-DNmYL button-container-zVLH6 button" id="openserverfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Server Folder\n                </div>\n                <div tabindex="0" title="Check for Server Updates" class="button-DNmYL button-container-zVLH6 button" id="checkserverupdatesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Check for Server Updates\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-server-status-info" style="font-size: 0.9rem; color: #a0a0a0; margin-left: 0.2rem;"></div>\n    </div>\n\n    <!-- Client Updates Category -->\n    <div id="enhanced-client-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ updateIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Client Updates</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">\n                <div tabindex="0" title="Check for Client Updates" class="button-DNmYL button-container-zVLH6 button" id="checkclientupdatesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Check for Client Updates\n                </div>\n                <div tabindex="0" title="Open GitHub Releases Page" class="button-DNmYL button-container-zVLH6 button" id="openclientreleasesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    GitHub Releases\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-client-version-info" style="font-size: 0.9rem; color: #a0a0a0; margin-left: 0.2rem;"></div>\n    </div>\n</div>\n\n';
 
   // src/utils/icons.ts
   var THEME_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 512 512">
@@ -634,6 +634,9 @@
 </svg>`;
   var SERVER_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
     <path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zm-1 5h-2v-2h2v2zm-4 0h-2v-2h2v2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 5h-2V6h2v2zm-4 0h-2V6h2v2z"></path>
+</svg>`;
+  var UPDATE_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
+    <path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12zM12.5 8v4.25l3.5 2.08-.72 1.21L11 13V8h1.5z"></path>
 </svg>`;
 
   // src/components/plugin-item/plugin-item.html
@@ -1537,7 +1540,8 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       themeIcon: THEME_ICON,
       pluginIcon: PLUGIN_ICON,
       marketplaceIcon: MARKETPLACE_ICON,
-      serverIcon: SERVER_ICON
+      serverIcon: SERVER_ICON,
+      updateIcon: UPDATE_ICON
     });
     const wrapper = document.createElement("div");
     wrapper.innerHTML = html.trim();
@@ -1628,6 +1632,42 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     if (serverStatusInfo) {
       renderServerInfo(getCurrentServerStatus());
       getServerStatus().then(renderServerInfo);
+    }
+    const clientVersionInfo = sectionDiv.querySelector("#enhanced-client-version-info");
+    const renderClientVersionInfo = () => {
+      if (!clientVersionInfo) return;
+      const currentVer = getCurrentClientVersion();
+      const latest = getLatestClientVersion();
+      if (!latest) {
+        clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}`;
+        return;
+      }
+      const hasUpdate = isNewerVersion(latest.version, currentVer);
+      const badge = hasUpdate ? `<span style="color: #fcc419; font-weight: 600;">\u25CF Update available: v${escapeHtml(latest.version)}</span>` : `<span style="color: #51cf66;">\u25CF Up to date (v${escapeHtml(latest.version)})</span>`;
+      clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}`;
+    };
+    const checkClientUpdatesBtn = sectionDiv.querySelector("#checkclientupdatesBtn");
+    if (checkClientUpdatesBtn) {
+      checkClientUpdatesBtn.onclick = async () => {
+        await checkClientUpdate(true);
+        renderClientVersionInfo();
+      };
+    }
+    const openClientReleasesBtn = sectionDiv.querySelector("#openclientreleasesBtn");
+    if (openClientReleasesBtn) {
+      openClientReleasesBtn.onclick = () => {
+        const url = getLatestClientVersion()?.releaseUrl || CLIENT_RELEASES_URL;
+        try {
+          window.open(url, "_blank");
+        } catch (_) {
+        }
+      };
+    }
+    if (clientVersionInfo) {
+      renderClientVersionInfo();
+      if (!getLatestClientVersion()) {
+        fetchLatestClientVersion().then(() => renderClientVersionInfo());
+      }
     }
     sectionsContainer.appendChild(sectionDiv);
     renderThemesList((fileName) => {
@@ -1840,20 +1880,79 @@ Please place server.js in the folder or start Stremio Service. Would you like to
 
   // src/updates/updateManager.ts
   var currentEnhancedData3 = { plugins: [], themes: [], activeTheme: null };
+  var DEFAULT_CLIENT_VERSION = "1.2.2-enhanced.3";
+  var CLIENT_RELEASES_URL = "https://github.com/REVENGE977/stremio-linux-shell/releases/latest";
+  var CLIENT_VERSION_SOURCES = [
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/Cargo.toml",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
+    },
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/VERSION",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
+    },
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/Cargo.toml",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
+    },
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/VERSION",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
+    }
+  ];
+  var CLIENT_RELEASE_SOURCES = [
+    {
+      apiUrl: "https://api.github.com/repos/REVENGE977/stremio-linux-shell/releases/latest",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
+    },
+    {
+      apiUrl: "https://api.github.com/repos/REVENGE977/stremio-linux-shell-enhanced/releases/latest",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
+    }
+  ];
+  var latestClientVersionCache = null;
+  var clientUpdateCheckInProgress = false;
   function updateUpdateManagerData(data) {
     currentEnhancedData3 = data;
   }
+  function getCurrentClientVersion() {
+    return currentEnhancedData3.clientVersion || window.__INITIAL_ENHANCED_DATA__?.clientVersion || DEFAULT_CLIENT_VERSION;
+  }
+  function getLatestClientVersion() {
+    return latestClientVersionCache;
+  }
+  function parseClientVersion(version) {
+    const cleaned = version.trim().replace(/^v/i, "");
+    const [basePart, ...rest] = cleaned.split(/-enhanced\.?/i);
+    const base = (basePart || "").split("-")[0].split(".").map((n) => parseInt(n, 10) || 0);
+    let enhanced = [0];
+    if (rest.length > 0 && rest[0]) {
+      enhanced = rest[0].split(".").map((n) => parseInt(n, 10) || 0);
+    } else {
+      const dashMatch = cleaned.match(/-(\d+(?:\.\d+)*)$/);
+      if (dashMatch && dashMatch[1]) {
+        enhanced = dashMatch[1].split(".").map((n) => parseInt(n, 10) || 0);
+      }
+    }
+    return { base, enhanced };
+  }
   function isNewerVersion(version1, version2) {
     if (!version1 || !version2) return false;
-    const normalize = (v) => v.replace(/^v/i, "").split(".").map((n) => parseInt(n, 10) || 0);
-    const v1Parts = normalize(version1);
-    const v2Parts = normalize(version2);
-    const maxLength = Math.max(v1Parts.length, v2Parts.length);
-    for (let i = 0; i < maxLength; i++) {
-      const v1 = v1Parts[i] ?? 0;
-      const v2 = v2Parts[i] ?? 0;
-      if (v1 > v2) return true;
-      if (v1 < v2) return false;
+    const v1 = parseClientVersion(version1);
+    const v2 = parseClientVersion(version2);
+    const maxBaseLength = Math.max(v1.base.length, v2.base.length);
+    for (let i = 0; i < maxBaseLength; i++) {
+      const a = v1.base[i] ?? 0;
+      const b = v2.base[i] ?? 0;
+      if (a > b) return true;
+      if (a < b) return false;
+    }
+    const maxEnhancedLength = Math.max(v1.enhanced.length, v2.enhanced.length);
+    for (let i = 0; i < maxEnhancedLength; i++) {
+      const a = v1.enhanced[i] ?? 0;
+      const b = v2.enhanced[i] ?? 0;
+      if (a > b) return true;
+      if (a < b) return false;
     }
     return false;
   }
@@ -2136,6 +2235,180 @@ Are you sure you want to update? It's recommended to read the source code of the
       if (checkBtn) {
         checkBtn.style.pointerEvents = "";
         checkBtn.textContent = "Check for Updates";
+      }
+    }
+  }
+  function extractVersionToken(raw) {
+    if (!raw) return null;
+    const match = raw.trim().match(/\bv?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?)\b/i);
+    return match && match[1] ? match[1] : null;
+  }
+  function extractClientVersionFromRemote(content) {
+    const trimmed = content.trim();
+    if (!trimmed) return null;
+    const pkgSectionMatch = trimmed.match(/\[package\]([\s\S]*?)(?:\r?\n\s*\[|$)/);
+    if (pkgSectionMatch) {
+      const verMatch = pkgSectionMatch[1].match(/^\s*version\s*=\s*"([^"]+)"/m);
+      if (verMatch && verMatch[1]) {
+        return verMatch[1].trim().replace(/^v/i, "");
+      }
+    }
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const fromVersion = extractVersionToken(typeof parsed.version === "string" ? parsed.version : null);
+        if (fromVersion) return fromVersion;
+        const fromReleaseName = extractVersionToken(typeof parsed.name === "string" ? parsed.name : null);
+        if (fromReleaseName) return fromReleaseName;
+        const fromTagName = extractVersionToken(typeof parsed.tag_name === "string" ? parsed.tag_name : null);
+        if (fromTagName) return fromTagName;
+      } catch (_) {
+      }
+    }
+    for (const line of trimmed.split(/\r?\n/)) {
+      const l = line.trim();
+      if (!l || l.startsWith("#")) continue;
+      if (/^v?\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?$/.test(l)) {
+        return l.replace(/^v/i, "");
+      }
+    }
+    return null;
+  }
+  async function fetchLatestClientVersion(currentVersion) {
+    let bestCandidate = null;
+    const compareAgainst = currentVersion || getCurrentClientVersion();
+    for (const source of CLIENT_VERSION_SOURCES) {
+      try {
+        const res = await fetch(source.url, { cache: "no-store" });
+        if (!res.ok) continue;
+        const text = await res.text();
+        const version = extractClientVersionFromRemote(text);
+        if (version) {
+          if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
+            bestCandidate = { version, releaseUrl: source.releaseUrl };
+          }
+          if (isNewerVersion(version, compareAgainst)) {
+            latestClientVersionCache = bestCandidate;
+            return latestClientVersionCache;
+          }
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Enhanced Client Update] Failed to fetch ${source.url}:`, err);
+      }
+    }
+    for (const source of CLIENT_RELEASE_SOURCES) {
+      try {
+        const res = await fetch(source.apiUrl, { cache: "no-store" });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data || data.draft) continue;
+        const version = extractVersionToken(typeof data.name === "string" ? data.name : null) || extractVersionToken(typeof data.tag_name === "string" ? data.tag_name : null);
+        if (version) {
+          const releaseUrl = typeof data.html_url === "string" && data.html_url.trim() ? data.html_url.trim() : source.releaseUrl;
+          if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
+            bestCandidate = { version, releaseUrl };
+          }
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Enhanced Client Update] Failed to fetch latest release from ${source.apiUrl}:`, err);
+      }
+    }
+    if (bestCandidate) {
+      latestClientVersionCache = bestCandidate;
+    }
+    return bestCandidate;
+  }
+  async function checkClientUpdate(isManual = false) {
+    if (clientUpdateCheckInProgress) return false;
+    clientUpdateCheckInProgress = true;
+    const checkBtn = document.getElementById("checkclientupdatesBtn");
+    if (checkBtn) {
+      checkBtn.style.pointerEvents = "none";
+      checkBtn.textContent = "Checking...";
+    }
+    try {
+      const currentVersion = getCurrentClientVersion();
+      const skippedVersion = currentEnhancedData3.skippedClientVersion ?? window.__INITIAL_ENHANCED_DATA__?.skippedClientVersion ?? null;
+      const remote = await fetchLatestClientVersion(currentVersion);
+      if (!remote) {
+        if (isManual) {
+          modalManager.showToast(
+            "client-update-error",
+            "Update Check Failed",
+            "Could not fetch the latest client version from GitHub.",
+            "fail"
+          );
+        }
+        return false;
+      }
+      const hasUpdate = isNewerVersion(remote.version, currentVersion);
+      if (!hasUpdate) {
+        if (isManual) {
+          modalManager.showToast(
+            "client-up-to-date",
+            "Client Up to Date",
+            `You are running the latest version (v${currentVersion}).`,
+            "info"
+          );
+        }
+        return false;
+      }
+      if (!isManual && skippedVersion === remote.version) {
+        console.log(`[Enhanced Client Update] Skipping v${remote.version} (marked as skipped by user).`);
+        return true;
+      }
+      const curParsed = parseClientVersion(currentVersion);
+      const remParsed = parseClientVersion(remote.version);
+      const curBaseStr = curParsed.base.join(".");
+      const remBaseStr = remParsed.base.join(".");
+      const curEnhNum = curParsed.enhanced[0] ?? 0;
+      const remEnhNum = remParsed.enhanced[0] ?? 0;
+      const details = `A new version of Stremio Linux Shell Enhanced is available!
+
+Installed Version: v${currentVersion} (Base ${curBaseStr}, Enhanced build #${curEnhNum})
+Latest Version: v${remote.version} (Base ${remBaseStr}, Enhanced build #${remEnhNum})
+
+Would you like to open the GitHub Releases page to download the update?`;
+      const choice = await modalManager.showAlert(
+        "info",
+        "Client Update Available",
+        details,
+        ["Download / Open Release Page", "Skip This Version", "Later"]
+      );
+      if (choice === 0) {
+        try {
+          window.open(remote.releaseUrl, "_blank");
+        } catch (_) {
+        }
+      } else if (choice === 1) {
+        currentEnhancedData3.skippedClientVersion = remote.version;
+        postEnhancedMessage("skipClientVersion", { version: remote.version });
+        modalManager.showToast(
+          "client-update-skipped",
+          "Version Skipped",
+          `Skipped client update v${remote.version}.`,
+          "info"
+        );
+      }
+      return true;
+    } catch (err) {
+      console.error("[Enhanced Client Update] Error checking for client updates:", err);
+      if (isManual) {
+        modalManager.showToast(
+          "client-update-error",
+          "Update Check Failed",
+          "An unexpected error occurred while checking for client updates.",
+          "fail"
+        );
+      }
+      return false;
+    } finally {
+      clientUpdateCheckInProgress = false;
+      if (checkBtn) {
+        checkBtn.style.pointerEvents = "";
+        checkBtn.textContent = "Check for Client Updates";
       }
     }
   }
@@ -2457,6 +2730,12 @@ Are you sure you want to update? It's recommended to read the source code of the
       },
       checkServerUpdates: function() {
         return checkServerJsUpdateAndSetup(true);
+      },
+      checkClientUpdates: function() {
+        return checkClientUpdate(true);
+      },
+      getClientVersion: function() {
+        return getCurrentClientVersion();
       },
       getServerStatus: function() {
         return getServerStatus();
@@ -3466,6 +3745,7 @@ Are you sure you want to update? It's recommended to read the source code of the
     checkSettings();
     setTimeout(() => {
       checkServerJsUpdateAndSetup(false);
+      checkClientUpdate(false);
     }, 1200);
   })();
 })();
