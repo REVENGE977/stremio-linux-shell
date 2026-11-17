@@ -234,17 +234,7 @@
             background-color: transparent !important;
         }
 
-               #enhanced-nav-btn {
-            user-select: none;
-            font-size: 1.1rem !important;
-        }
-        #enhanced > .label-wXG3e, #enhanced > [class*="label-"] {
-            font-size: 1.8rem !important;
-            font-weight: 700 !important;
-            line-height: 3.4rem !important;
-            margin-bottom: 2rem !important;
-        }
-        .theme-apply-btn, .plugin-toggle, #openthemesfolderBtn, #openpluginsfolderBtn, #browsePluginsThemesBtn, .modActionBtn, .marketplace-repo-btn {
+        .theme-apply-btn, .plugin-toggle, #toggleallpluginsBtn, #openthemesfolderBtn, #openpluginsfolderBtn, #openserverfolderBtn, #checkserverupdatesBtn, .modActionBtn, .marketplace-repo-btn {
             transition: all 0.2s ease-in-out;
         }
         .modActionBtn {
@@ -269,41 +259,6 @@
             background: rgba(255, 255, 255, 0.16) !important;
             color: #fff !important;
         }
-        #marketplace-back-btn:hover {
-            background: rgba(255, 255, 255, 0.16) !important;
-        }
-        .marketplace-tab-view {
-            position: absolute !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            min-height: 0 !important;
-            max-height: 100% !important;
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-            -webkit-overflow-scrolling: touch !important;
-            overscroll-behavior-y: contain !important;
-            box-sizing: border-box !important;
-            scrollbar-width: thin !important;
-            scrollbar-color: rgba(255, 255, 255, 0.25) transparent !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar {
-            width: 8px !important;
-            display: block !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar-track {
-            background: transparent !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 0.25) !important;
-            border-radius: 4px !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar-thumb:hover {
-            background-color: var(--primary-accent-color, #735bf2) !important;
-        }
         .logo-WrsGF {
             max-width: 100%;
             max-height: 100%;
@@ -312,8 +267,16 @@
         .plugin-toggle, .plugin-setting-toggle {
             cursor: pointer;
         }
+        .plugin-settings-btn:hover {
+            background-color: rgba(255, 255, 255, 0.16) !important;
+        }
+        .plugin-delete-btn:hover,
+        .theme-delete-btn:hover {
+            background-color: rgba(220, 38, 38, 0.22) !important;
+            color: #ff6b6b !important;
+        }
         .theme-apply-btn.install-button-container-yfcq5 {
-            background-color: var(--primary-accent-color, #735bf2);
+            background-color: var(--action-background-color, var(--action-color, var(--accent-color, var(--primary-accent-color, #735bf2))));
             color: #fff;
         }
         .theme-apply-btn.install-button-container-yfcq5:hover {
@@ -337,7 +300,7 @@
             zoom: 0.72;
         }
         html.stremio-pip-mode .pip-plugin-button {
-            color: var(--primary-accent-color, #7b5bf5) !important;
+            color: var(--accent-color, var(--primary-accent-color, #7b5bf5)) !important;
         }
         html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
         html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {
@@ -506,7 +469,7 @@
   }
 
   // src/components/theme-item/theme-item.html
-  var theme_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 theme-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="-1" class="{{ buttonClass }} button-container-zVLH6 theme-apply-btn" data-theme="{{ fileName }}" id="theme-btn-{{ fileName }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.5rem 1.25rem; border-radius: 0.35rem; font-weight: 700;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ label }}</div>\n            </div>\n        </div>\n    </div>\n</div>\n';
+  var theme_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 theme-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete theme" class="button-container-zVLH6 theme-delete-btn" style="display: {{ deleteDisplay }}; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="{{ buttonClass }} button-container-zVLH6 theme-apply-btn" data-theme="{{ fileName }}" id="theme-btn-{{ fileName }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.5rem 1.25rem; border-radius: 0.35rem; font-weight: 700;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ label }}</div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
   // src/utils/templateCache.ts
   var TemplateCache = class {
@@ -523,136 +486,17 @@
     }
   };
 
-  // src/components/theme-item/themeItem.ts
-  function createThemeCard(fileName, meta, isApplied, onApply) {
-    const buttonClass = isApplied ? "uninstall-button-container-oV4Yo disabled" : "install-button-container-yfcq5";
-    const label = isApplied ? "Applied" : "Apply";
-    const descriptionBlock = meta.description ? `<b>Description:</b> ${escapeHtml(meta.description)}<br>` : "";
-    const authorBlock = meta.author ? `<b>Author:</b> ${escapeHtml(meta.author)}` : "";
-    const html = TemplateCache.render(theme_item_default, {
-      fileName: escapeHtml(fileName),
-      name: escapeHtml(meta.name),
-      version: escapeHtml(meta.version || ""),
-      descriptionBlock,
-      authorBlock,
-      buttonClass,
-      label
-    });
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = html.trim();
-    const card = wrapper.firstElementChild;
-    const applyBtn = card.querySelector(".theme-apply-btn");
-    if (applyBtn) {
-      applyBtn.onclick = function() {
-        if (applyBtn.classList.contains("disabled")) return;
-        onApply(fileName);
-      };
-    }
-    return card;
-  }
-
-  // src/components/marketplace-tab/marketplace-tab.html
-  var marketplace_tab_default = '<div class="marketplace-tab-view" tabindex="0" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100%; min-height: 0 !important; max-height: 100% !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; box-sizing: border-box; outline: none;">\n    <div style="width: 100%; max-width: 920px; margin: 0 auto; padding: 2rem 2.5rem 4rem 2.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">\n            <div id="marketplace-back-btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border-radius: 0.35rem; background: rgba(255, 255, 255, 0.08); user-select: none; transition: background 0.2s;">\n                <svg viewBox="0 0 512 512" style="width: 1rem; height: 1rem; fill: currentcolor;">\n                    <path d="M328.61 106.469L185.08 243.358l143.53 136.889" style="stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 48; fill: none;"></path>\n                </svg>\n                <span style="font-weight: 600; font-size: 0.95rem; color: #fff;">Back to Settings</span>\n            </div>\n        </div>\n\n        <div style="margin-bottom: 1.25rem;">\n            <label title="Search themes/plugins" style="display: flex; align-items: center; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 0.4rem; padding: 0.65rem 1rem; width: 100%; box-sizing: border-box;">\n                <input size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh" type="text" placeholder="Search themes and plugins..." value="" style="flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 1rem;">\n                <svg viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem; fill: rgba(255, 255, 255, 0.6); margin-left: 0.5rem; flex-shrink: 0;">\n                    <path d="M456.882 415.7999999999997l-93.791-89.45c22.605-28.67 34.784-63.57 34.686-99.44 0-91.54-78.142-166.07-174.125-166.07s-174.125 74.53-174.125 166.17c0 91.54 78.142 166.07 174.125 166.07 37.586 0 74.161-11.61 104.256-33.08l93.79 89.45c3.535 3.04 7.91 5.05 12.604 5.79 4.696 0.74 9.515 0.18 13.887-1.61 4.374-1.79 8.117-4.74 10.788-8.49 2.671-3.76 4.157-8.17 4.284-12.7 0.108-6.11-2.165-12.04-6.379-16.64m-357.62-188.79c-0.01-29.43 11.453-57.8 32.162-79.61 20.709-21.82 49.183-35.49 79.884-38.39 30.7-2.9 61.433 5.2 86.221 22.72 24.787 17.52 41.858 43.2 47.891 72.05 6.034 28.86 0.598 58.83-15.249 84.07s-40.972 43.96-70.489 52.53c-29.518 8.55-61.317 6.33-89.213-6.24s-49.895-34.57-61.718-61.75c-6.258-14.38-9.483-29.81-9.488-45.38" style="fill: currentcolor;"></path>\n                </svg>\n            </label>\n        </div>\n\n        <div tabindex="0" title="Submit your themes and plugins here" style="margin-bottom: 1.75rem; text-align: center;">\n            <a href="https://github.com/REVENGE977/stremio-enhanced-registry" target="_blank" rel="noreferrer" style="display: inline-block; padding: 0.6rem 1.25rem; border-radius: 0.35rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.85); text-decoration: none; font-weight: 500; font-size: 0.9rem; transition: all 0.2s;">\n                Submit your themes and plugins here\n            </a>\n        </div>\n\n        <div id="mods-list" style="display: flex; flex-direction: column; gap: 1rem; width: 100%; box-sizing: border-box;">\n            <div id="marketplace-loading" style="padding: 2.5rem; text-align: center; color: rgba(255, 255, 255, 0.7); font-size: 1.05rem;">\n                Loading community plugins &amp; themes...\n            </div>\n        </div>\n    </div>\n</div>\n';
-
-  // src/components/marketplace-tab/marketplaceTab.ts
-  function getMarketplaceTabHtml() {
-    return TemplateCache.render(marketplace_tab_default, {});
-  }
-
-  // src/components/marketplace-item/marketplace-item.html
-  var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; box-sizing: border-box; margin: 0 0 1rem 0; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-logo-box" style="width: 4.5rem; height: 4.5rem; flex-shrink: 0; margin-right: 1.25rem; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n        {{ logoBlock }}\n    </div>\n\n    <div class="marketplace-info-container" style="flex: 1; min-width: 0; padding-right: 1.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n            <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n            <span style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;">v{{ version }}</span>\n            <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n        </div>\n        <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n            <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n            <div><b>Author:</b> {{ author }}</div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: auto; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; margin-left: 1rem;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
-
-  // src/components/marketplace-item/marketplaceItem.ts
-  function createMarketplaceCard(mod, type, isInstalled, onAction) {
-    let logoBlock = "";
-    if (mod.preview) {
-      logoBlock = `
-            <a href="${escapeHtml(mod.preview)}" target="_blank" rel="noreferrer" style="cursor: zoom-in; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
-                <img class="logo-WrsGF" src="${escapeHtml(mod.preview)}" alt="${escapeHtml(mod.name)} Preview" loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;">
-            </a>`;
-    } else if (type === "Theme") {
-      logoBlock = `
-            <svg viewBox="0 0 24 24" style="width: 2.2rem; height: 2.2rem; fill: currentcolor;">
-                <path d="M4 3h16a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 9h6a1 1 0 0 1 1 1v3h1v6h-4v-6h1v-2H5a1 1 0 0 1-1-1v-2h2v1zm11.732 1.732l1.768-1.768 1.768 1.768a2.5 2.5 0 1 1-3.536 0z"></path>
-            </svg>`;
-    } else {
-      logoBlock = `
-            <svg viewBox="0 0 24 24" style="width: 2.2rem; height: 2.2rem; fill: currentcolor;">
-                <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.49 0 2.7-1.21 2.7-2.7s-1.21-2.7-2.7-2.7z"></path>
-            </svg>`;
-    }
-    let repoBlock = "";
-    if (mod.repo) {
-      repoBlock = `
-            <a href="${escapeHtml(mod.repo)}" target="_blank" rel="noreferrer" class="marketplace-repo-btn" style="cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; padding: 0.55rem 1rem; border-radius: 0.35rem; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); font-size: 0.85rem; font-weight: 500; transition: background 0.2s;">
-                <svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: currentcolor; margin-right: 0.4rem; flex-shrink: 0;">
-                    <path d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z" />
-                </svg>
-                <span>Open repository</span>
-            </a>`;
-    }
-    const actionbtnTitle = isInstalled ? "Uninstall" : "Install";
-    const actionbtnClass = isInstalled ? "uninstall-button-container-oV4Yo" : "install-button-container-yfcq5";
-    const html = TemplateCache.render(marketplace_item_default, {
-      name: escapeHtml(mod.name),
-      version: escapeHtml(mod.version || "1.0.0"),
-      type,
-      description: escapeHtml(mod.description),
-      author: escapeHtml(mod.author),
-      actionbtnTitle,
-      actionbtnClass,
-      download: escapeHtml(mod.download),
-      logoBlock,
-      repoBlock
-    });
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = html.trim();
-    const card = wrapper.querySelector(".marketplace-item-card") || wrapper.firstElementChild;
-    const btn = card.querySelector(".modActionBtn");
-    if (btn) {
-      btn.onclick = async () => {
-        const currentTitle = btn.getAttribute("title");
-        const willInstall = currentTitle === "Install";
-        await onAction(mod, type, willInstall, btn);
-      };
-    }
-    return card;
-  }
-
-  // src/components/settings/settings-section.html
-  var settings_section_default = '<div id="enhanced" class="section-dFpS9" style="margin-bottom: 2rem;">\n    <div class="label-wXG3e" style="font-size: 1.8rem; font-weight: 700; line-height: 3.4rem; margin-bottom: 2rem;">Enhanced</div>\n\n    <!-- Themes Category -->\n    <div id="enhanced-themes-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ themeIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Themes</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Open Themes Folder" class="button-DNmYL button-container-zVLH6 button" id="openthemesfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Themes Folder\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-themes-list"></div>\n    </div>\n\n    <!-- Plugins Category -->\n    <div id="enhanced-plugins-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ pluginIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Plugins</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Open Plugins Folder" class="button-DNmYL button-container-zVLH6 button" id="openpluginsfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Plugins Folder\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-plugins-list"></div>\n    </div>\n\n    <!-- Community Marketplace Category -->\n    <div id="enhanced-marketplace-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ marketplaceIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Community Marketplace</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center;">\n                <div tabindex="0" title="Browse Plugins & Themes" class="button-DNmYL button-container-zVLH6 button" id="browsePluginsThemesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Browse Community Marketplace\n                </div>\n            </div>\n        </div>\n    </div>\n\n    <!-- Streaming Server Category -->\n    <div id="enhanced-server-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ serverIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Streaming Server</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">\n                <div tabindex="0" title="Open Streaming Server Folder" class="button-DNmYL button-container-zVLH6 button" id="openserverfolderBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Open Server Folder\n                </div>\n                <div tabindex="0" title="Check for Server Updates" class="button-DNmYL button-container-zVLH6 button" id="checkserverupdatesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Check for Server Updates\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-server-status-info" style="font-size: 0.9rem; color: #a0a0a0; margin-left: 0.2rem;"></div>\n    </div>\n\n    <!-- Client Updates Category -->\n    <div id="enhanced-client-category" class="category-GP0hI" style="margin-bottom: 2rem;">\n        <div class="heading-XePFl" style="display: flex; align-items: center; margin-bottom: 1.25rem;">\n            <span style="display: flex; align-items: center;">{{ updateIcon }}</span>\n            <div class="label-N_O2v" style="margin-left: 0.5rem;">Client Updates</div>\n        </div>\n        <div class="option-vFOAS option" style="margin-bottom: 1.25rem;">\n            <div class="content-P2T0i content" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">\n                <div tabindex="0" title="Check for Client Updates" class="button-DNmYL button-container-zVLH6 button" id="checkclientupdatesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    Check for Client Updates\n                </div>\n                <div tabindex="0" title="Open GitHub Releases Page" class="button-DNmYL button-container-zVLH6 button" id="openclientreleasesBtn" style="cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.2rem; font-weight: 600; border-radius: 0.35rem; transition: background 0.2s;">\n                    GitHub Releases\n                </div>\n            </div>\n        </div>\n        <div id="enhanced-client-version-info" style="font-size: 0.9rem; color: #a0a0a0; margin-left: 0.2rem;"></div>\n    </div>\n</div>\n\n';
-
-  // src/utils/icons.ts
-  var THEME_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 512 512">
-    <path d="M204.3 5C104.9 24.4 24.4 104.9 5 204.3c-26.1 133.4 75.3 247.9 203 247.9 24.3 0 44-19.7 44-44 0-11.4-4.3-21.8-11.4-29.6-7-7.8-11.6-18.1-11.6-29.4 0-24.3 19.7-44 44-44h52.8c97 0 175.2-78.2 175.2-175.2C501 77.2 360.5-25.3 204.3 5zM112 256c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64-96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm128 0c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64 96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32z"></path>
-</svg>`;
-  var PLUGIN_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
-    <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.49 0 2.7-1.21 2.7-2.7s-1.21-2.7-2.7-2.7z"></path>
-</svg>`;
-  var MARKETPLACE_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
-    <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-1.99.9-1.99 2L3 20c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12zm-7-8c-1.66 0-3-1.34-3-3H7c0 2.76 2.24 5 5 5s5-2.24 5-5h-2c0 1.66-1.34 3-3 3z"></path>
-</svg>`;
-  var SERVER_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
-    <path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zm-1 5h-2v-2h2v2zm-4 0h-2v-2h2v2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 5h-2V6h2v2zm-4 0h-2V6h2v2z"></path>
-</svg>`;
-  var UPDATE_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
-    <path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12zM12.5 8v4.25l3.5 2.08-.72 1.21L11 13V8h1.5z"></path>
-</svg>`;
-
-  // src/components/plugin-item/plugin-item.html
-  var plugin_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 plugin-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1.2rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="-1" id="{{ fileName }}-settings" title="Plugin settings" class="nav-tab-button-tW6qT nav-tab-button-container-dYhs0 button-container-zVLH6 plugin-settings-btn" style="display: {{ settingsDisplay }}; cursor: pointer; margin-right: 1.2rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); transition: background-color 0.2s;">\n                <svg class="icon-TzPrK" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;" viewBox="0 0 512 512">\n                    <path d="M464 250c0-2.7-1-5-3-7l-6-3-26-4-3-2-2-3-1-9v-4l2-2 23-13 5-5v-8l-4-11c-.7-2-2.3-3.7-5-5-2-1.3-4.3-1.7-7-.7l-25 5-4-1-2-2-5-8c-.6-1.1-.8-2.4-.6-3.7.2-1.3.7-2.4 1.6-3.3l17-19 2-7c.7-2.7 0-5-2-7l-7-9c-1.6-2.1-4-3.5-6.6-3.9-2.6-.4-5.3.3-7.4 1.9l-22 13c-.9.9-2.2 1.4-3.5 1.4s-2.6-.5-3.5-1.4l-7-7-2-2v-4l9-24c1.1-2.3 1.3-4.9.6-7.3-.8-2.4-2.4-4.4-4.6-5.7l-10-6c-2-2-4.3-2.3-7-1-2.7.7-5 2-7 4l-16 20-2 2h-4l-9-4-3-2-1-3v-26c.7-2.7 0-5-2-7-1.3-2.7-3.3-4-6-4l-12-2c-2-.7-4.3-.4-7 1l-4 6-9 25-2 3h-13c-1.3.7-2.3.4-3-1l-2-2-9-25c0-2-1.3-4-4-6l-7-1-12 2c-2.7 0-4.7 1.3-6 4-2 2-2.7 4.3-2 7v26l-1 3-3 2-9 4c-2.7.7-4.7 0-6-2l-17-20c-.7-2-2.7-3.3-6-4-2-.7-4.3-.3-7 1l-10 6-5 5v8l10 24v3c0 2-.7 3-2 3l-7 6c-.4.5-.9 1-1.5 1.3-.6.3-1.2.6-1.8.7-.7.1-1.3.1-2-.1-.6-.2-1.2-.5-1.7-.8l-22-14-7-1-7 3-7 9c-1.8 1.9-2.9 4.4-2.9 7s1 5.1 2.9 7l18 20 1 3-1 3-5 9-2 2h-4l-25-4c-2.4-.7-4.9-.4-7.2.7s-3.9 3.1-4.8 5.3l-4 11v7c1.3 3.3 3 5.3 5 6l23 13 2 2v5l-2 8-1 3-3 2-26 4c-2.5.2-4.8 1.4-6.4 3.3-1.7 1.8-2.6 4.3-2.6 6.7v12c0 2.5.9 4.9 2.6 6.7s3.9 3.1 6.4 3.3l26 4 3 2 1 3 2 9v4l-2 2-23 13-5 5v8l4 11c.7 2 2.3 3.7 5 5 2 1.3 4.3 1.7 7 .7l25-5 4 1 2 2 5 8c.7 1.1 1.1 2.3 1.1 3.6 0 1.3-.4 2.5-1.1 3.5l-17 20c-1.7 1.7-2.7 3.9-2.9 6.3-.2 2.4.5 4.8 1.9 6.7l7 9c1.6 2.1 4 3.5 6.6 3.9 2.6.4 5.3-.4 7.4-2l22-13c1.1-.8 2.4-1.1 3.7-.9 1.3.2 2.5.9 3.3 1.9l7 6 2 3v3l-9 24c-1.1 2.3-1.3 4.9-.5 7.3.7 2.4 2.4 4.4 4.5 5.7l10 6c1.1.7 2.4 1.2 3.7 1.5 1.3.2 2.7.2 4-.1 1.3-.3 2.6-.8 3.6-1.6 1.1-.8 2-1.7 2.7-2.8l16-20 5-2 10 4 3 2 1 3v26c-.7 2.7 0 5 2 7 1.3 2.7 3.3 4 6 4l12 2c2.3.2 4.7-.4 6.6-1.7 2-1.3 3.5-3.1 4.4-5.3l9-25 2-2c1.3-1.3 2.3-1.7 3-1.3h10l3 1 2 2 9 25c.7 2 2 3.7 4 5 1.9 1.3 4.3 1.9 6.7 1.7l12-2c2.7-.7 4.7-2 6-4.7.7-2.7.7-5.3.7-7.3v-26l1-3 3-2 9-3c3.3-.7 5.3-.3 6 1.3l17 20c1.4 2 3.5 3.4 5.9 4 2.4.6 4.9.2 7.1-1l10-6 5-5v-8l-10-24v-3l2-3 7-6 4-2 3 1 22 13c2.7 1.3 5 1 7-1l7-9c1-1.3 1.7-2.7 2-4.3.3-1.6.2-3.3-.4-4.8l-17-20-2-3 1-4 5-9 3-2 3-1 25 5c1.2.5 2.6.7 3.9.7 1.3 0 2.6-.4 3.8-1 1.2-.6 2.3-1.4 3.2-2.3.9-1 1.6-2.1 2.1-3.4l3-11v-8l-5-5-23-13-3-2v-5l2-8 1-3 3-2 26-4c2.5-.2 4.8-1.4 6.5-3.3 1.6-1.8 2.5-4.3 2.5-6.7v-12zm-282 94c-1.3 2-3.3 3.7-6 5-2 1.4-4.3 2.3-6.8 2.6-2.4.3-4.9 0-7.2-.8l-6-4c-22.7-24.9-35.3-57.3-35.3-91s12.6-66.1 35.3-91l7-4 7-1c2.5.3 4.9 1.2 7 2.6 2.1 1.4 3.8 3.3 4.9 5.4l46 80c1.4 2.4 2.1 5.2 2.1 8s-.7 5.6-2.1 8l-46 80zm74 47c-10 0-19.3-1-28-3-3.7-.7-7-2.7-9.4-5.6-2.4-2.9-3.7-6.6-3.6-10.3l2-7 46-80 6-6 8-2h92c2.5-.1 5 .4 7.2 1.5s4.2 2.6 5.8 4.6l3 7 1 7c-17 55-68 94-128 94zm7-164l-45-80-2-7c-1.1-3.6 0-7.2 2.2-10.1 2.2-2.9 5.3-5 8.8-5.9 32.7-6.8 66.7-1.2 95.5 15.6 28.8 16.8 50.4 43.7 60.5 75.5l1 7c-.7 3.7-2.7 7-5.6 9.4-2.9 2.4-6.6 3.7-10.4 3.7h-92c-2.7.7-5.3 0-8-2l-6-6.2z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="toggle-container-lZfHP button-container-zVLH6 plugin-toggle {{ checkedClass }}" data-plugin="{{ fileName }}" style="outline: none; cursor: pointer;">\n                <div class="toggle-toOWM"></div>\n            </div>\n        </div>\n    </div>\n</div>\n';
-
   // src/components/modals/plugin-settings-modal.html
-  var plugin_settings_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 800px; height: auto; max-height: 85vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); position: relative; box-sizing: border-box;">\n        <div class="modal-dialog-background-vZpB_"></div>\n        \n        <div tabindex="0" title="Close" class="close-button-container-cmxAp button-container-zVLH6" id="{{ modalId }}-close-x" style="position: absolute; top: 15px; right: 15px; cursor: pointer; z-index: 10; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">\n            <svg class="icon-OYzlV" style="width: 18px; height: 18px; fill: currentcolor;" viewBox="0 0 512 512"><path d="M289.9 256l95-95c4.5-4.5 7-10.6 7.1-17 0-6.4-2.5-12.5-7-17s-10.6-7.1-17-7.1c-3.2 0-6.3.6-9.2 1.8s-5.6 3-7.8 5.2l-95 95-95-95c-3.4-3.3-7.6-5.6-12.3-6.5-4.6-.9-9.4-.4-13.8 1.4-4.4 1.8-8.1 4.9-10.8 8.8-2.6 3.9-4 8.6-4 13.3-.1 3.2.5 6.3 1.7 9.2 1.2 2.9 3 5.6 5.2 7.8l95 95-95 95c-2.8 2.8-4.8 6.2-6 10-1.1 3.8-1.3 7.8-.5 11.6.8 3.9 2.5 7.5 5 10.5 2.5 3.1 5.8 5.4 9.4 6.9 4.4 1.8 9.2 2.3 13.8 1.4 4.7-.9 8.9-3.2 12.3-6.5l95-95 95 95c3.4 3.3 7.6 5.6 12.3 6.5 4.6.9 9.4.4 13.8-1.4 4.4-1.8 8.1-4.9 10.8-8.8 2.6-3.9 4-8.6 4-13.3.1-3.2-.5-6.3-1.7-9.2-1.2-2.9-3-5.6-5.2-7.8z"></path></svg>\n        </div>\n        \n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; max-height: 85vh; padding: 25px 25px 20px 25px; box-sizing: border-box; min-height: 0; flex: 1 1 auto; overflow: hidden;">\n            <div class="title-container-v2mmF" title="{{ pluginName }} Settings" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; color: white; flex-shrink: 0;">{{ pluginName }} Settings</div>\n            \n            <div class="body-container-H80dD" style="flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 12px; box-sizing: border-box;">\n                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">\n                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.5; padding-bottom: 35px; box-sizing: border-box;">\n                        {{ settingsHtml }}\n                    </div>\n                </div>\n            </div>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 15px; display: flex; justify-content: flex-end; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; box-sizing: border-box;">\n                <div tabindex="0" title="Close & Save" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-close-btn" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; font-weight: bold; background-color: var(--primary-accent-color, #735bf2);">\n                    <div class="label-wbfsE" style="color: white;">Close</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
+  var plugin_settings_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 800px; height: auto; max-height: 85vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); position: relative; box-sizing: border-box;">\n        <div class="modal-dialog-background-vZpB_"></div>\n        \n        <div tabindex="0" title="Close" class="close-button-container-cmxAp button-container-zVLH6" id="{{ modalId }}-close-x" style="position: absolute; top: 15px; right: 15px; cursor: pointer; z-index: 10; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">\n            <svg class="icon-OYzlV" style="width: 18px; height: 18px; fill: currentcolor;" viewBox="0 0 512 512"><path d="M289.9 256l95-95c4.5-4.5 7-10.6 7.1-17 0-6.4-2.5-12.5-7-17s-10.6-7.1-17-7.1c-3.2 0-6.3.6-9.2 1.8s-5.6 3-7.8 5.2l-95 95-95-95c-3.4-3.3-7.6-5.6-12.3-6.5-4.6-.9-9.4-.4-13.8 1.4-4.4 1.8-8.1 4.9-10.8 8.8-2.6 3.9-4 8.6-4 13.3-.1 3.2.5 6.3 1.7 9.2 1.2 2.9 3 5.6 5.2 7.8l95 95-95 95c-2.8 2.8-4.8 6.2-6 10-1.1 3.8-1.3 7.8-.5 11.6.8 3.9 2.5 7.5 5 10.5 2.5 3.1 5.8 5.4 9.4 6.9 4.4 1.8 9.2 2.3 13.8 1.4 4.7-.9 8.9-3.2 12.3-6.5l95-95 95 95c3.4 3.3 7.6 5.6 12.3 6.5 4.6.9 9.4.4 13.8-1.4 4.4-1.8 8.1-4.9 10.8-8.8 2.6-3.9 4-8.6 4-13.3.1-3.2-.5-6.3-1.7-9.2-1.2-2.9-3-5.6-5.2-7.8z"></path></svg>\n        </div>\n        \n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; max-height: 85vh; padding: 25px 25px 20px 25px; box-sizing: border-box; min-height: 0; flex: 1 1 auto; overflow: hidden;">\n            <div class="title-container-v2mmF" title="{{ pluginName }} Settings" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; color: white; flex-shrink: 0;">{{ pluginName }} Settings</div>\n            \n            <div class="body-container-H80dD" style="flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 12px; box-sizing: border-box;">\n                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">\n                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.5; padding-bottom: 35px; box-sizing: border-box;">\n                        {{ settingsHtml }}\n                    </div>\n                </div>\n            </div>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 15px; display: flex; justify-content: flex-end; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; box-sizing: border-box;">\n                <div tabindex="0" title="Close & Save" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-close-btn" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; font-weight: bold; background-color: var(--accent-color, var(--primary-accent-color, #735bf2));">\n                    <div class="label-wbfsE" style="color: white;">Close</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
   // src/components/modals/prompt-modal.html
-  var prompt_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75);">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 600px; height: auto; max-height: 80vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; padding: 25px;">\n            <div class="title-container-v2mmF" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; color: white;">{{ title }}</div>\n            <div style="font-size: 0.95rem; color: #a0a0a0; margin-bottom: 20px; line-height: 1.4;">{{ message }}</div>\n            \n            <label class="search-bar-k7MXd search-bar-container-p4tSt" style="width: 100%; padding: 0; margin: 0; display: block;">\n                <input id="{{ modalId }}-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh text-input-hnLiz" type="text" value="{{ defaultValue }}" style="width: 100%; box-sizing: border-box; height: 42px; padding: 0 15px; background-color: rgba(255, 255, 255, 0.08); color: white; border: 1px solid transparent; border-radius: 0.35rem; outline: none;">\n            </label>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 15px;">\n                <div tabindex="0" title="Cancel" class="cancel-button-zuUX6 action-button-eprQG button-container-zVLH6" id="{{ modalId }}-cancel" style="cursor: pointer; padding: 10px 20px; border-radius: 4px; background-color: rgba(255,255,255,0.1);">\n                    <div class="label-wbfsE" style="color: #ccc;">Cancel</div>\n                </div>\n                <div tabindex="0" title="Submit" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-save" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; background-color: var(--primary-accent-color, #735bf2);">\n                    <div class="label-wbfsE" style="color: white; font-weight: bold;">Submit</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
+  var prompt_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75);">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 600px; height: auto; max-height: 80vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; padding: 25px;">\n            <div class="title-container-v2mmF" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; color: white;">{{ title }}</div>\n            <div style="font-size: 0.95rem; color: #a0a0a0; margin-bottom: 20px; line-height: 1.4;">{{ message }}</div>\n            \n            <label class="search-bar-k7MXd search-bar-container-p4tSt" style="width: 100%; padding: 0; margin: 0; display: block;">\n                <input id="{{ modalId }}-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh text-input-hnLiz" type="text" value="{{ defaultValue }}" style="width: 100%; box-sizing: border-box; height: 42px; padding: 0 15px; background-color: rgba(255, 255, 255, 0.08); color: white; border: 1px solid transparent; border-radius: 0.35rem; outline: none;">\n            </label>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 15px;">\n                <div tabindex="0" title="Cancel" class="cancel-button-zuUX6 action-button-eprQG button-container-zVLH6" id="{{ modalId }}-cancel" style="cursor: pointer; padding: 10px 20px; border-radius: 4px; background-color: rgba(255,255,255,0.1);">\n                    <div class="label-wbfsE" style="color: #ccc;">Cancel</div>\n                </div>\n                <div tabindex="0" title="Submit" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-save" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; background-color: var(--accent-color, var(--primary-accent-color, #735bf2));">\n                    <div class="label-wbfsE" style="color: white; font-weight: bold;">Submit</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
   // src/components/modals/alert-modal.html
-  var alert_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75);">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 550px; height: auto; max-height: 80vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; padding: 25px;">\n            <div class="title-container-v2mmF" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 12px; color: white;">{{ title }}</div>\n            <div style="font-size: 0.95rem; color: #ddd; margin-bottom: 25px; line-height: 1.5; white-space: pre-wrap;">{{ message }}</div>\n            \n            <div class="buttons-container-e_JoR" style="display: flex; justify-content: flex-end; gap: 12px;">\n                {{ buttonsHtml }}\n            </div>\n        </div>\n    </div>\n</div>\n';
+  var alert_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">\n    <div class="modal-dialog-container-DZMKq" style="width: 90%; max-width: 660px; height: auto; max-height: 85vh; display: flex !important; flex-direction: column !important; background: #16152b; border-radius: 0.75rem; overflow: hidden !important; box-shadow: 0 10px 40px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box !important;">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex !important; flex-direction: column !important; max-height: 85vh !important; box-sizing: border-box !important; min-height: 0 !important; flex: 1 1 auto !important; overflow: hidden !important;">\n            <div class="title-container-v2mmF" style="padding: 20px 24px 14px 24px; font-size: 1.25rem; font-weight: bold; color: white; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0 !important; box-sizing: border-box !important;">{{ title }}</div>\n            \n            <div class="body-container-H80dD modal-dialog-message-scroll" tabindex="0" style="padding: 18px 24px; overflow-y: auto !important; overflow-x: hidden !important; flex: 1 1 auto !important; min-height: 0 !important; max-height: 52vh !important; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.35) rgba(0,0,0,0.2); box-sizing: border-box !important; overscroll-behavior: contain; outline: none;">\n                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">\n                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.6; font-size: 0.95rem; color: #ddd; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text;">{{ message }}</div>\n                </div>\n            </div>\n            \n            <div class="buttons-container-e_JoR" style="padding: 14px 24px 18px 24px; display: flex !important; justify-content: flex-end !important; align-items: center !important; gap: 10px !important; flex-wrap: wrap !important; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); flex-shrink: 0 !important; box-sizing: border-box !important;">\n                {{ buttonsHtml }}\n            </div>\n        </div>\n    </div>\n    <style>\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar {\n            width: 8px !important;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-track {\n            background: rgba(0, 0, 0, 0.25) !important;\n            border-radius: 4px;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb {\n            background: rgba(255, 255, 255, 0.35) !important;\n            border-radius: 4px;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb:hover {\n            background: rgba(255, 255, 255, 0.6) !important;\n        }\n    </style>\n</div>\n';
 
   // src/components/modals/toast.html
-  var toast_default = '<div tabindex="-1" class="toast-item-container-nG0uk button-container-zVLH6 {{ status }}" id="{{ id }}" style="margin-bottom: 10px; display: flex; align-items: center; padding: 12px 18px; border-radius: 6px; background-color: #1f1d36; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 4px solid var(--primary-accent-color, #735bf2); transition: all 0.3s ease;">\n    <div class="icon-container-rjAiH" style="margin-right: 12px; display: flex; align-items: center;">\n        <svg class="icon-Y4I_O" style="width: 20px; height: 20px; fill: none; stroke: currentcolor; stroke-width: 50;" viewBox="0 0 512 512">\n            <path d="M421 128 197 384l-96-96" style="stroke-linecap: round; stroke-linejoin: round;"></path>\n        </svg>\n    </div>\n    <div class="info-container-xD9V6">\n        <div class="title-container-VFReJ" style="font-weight: bold; font-size: 0.95rem;">{{ title }}</div>\n        <div class="message-container-znkCj" style="font-size: 0.85rem; color: #bbb; margin-top: 2px;">{{ message }}</div>\n    </div>\n</div>\n';
+  var toast_default = '<div tabindex="-1" class="toast-item-container-nG0uk button-container-zVLH6 {{ status }}" id="{{ id }}" style="margin-bottom: 10px; display: flex; align-items: center; padding: 12px 18px; border-radius: 6px; background-color: #1f1d36; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 4px solid var(--accent-color, var(--primary-accent-color, #735bf2)); transition: all 0.3s ease;">\n    <div class="icon-container-rjAiH" style="margin-right: 12px; display: flex; align-items: center;">\n        <svg class="icon-Y4I_O" style="width: 20px; height: 20px; fill: none; stroke: currentcolor; stroke-width: 50;" viewBox="0 0 512 512">\n            <path d="M421 128 197 384l-96-96" style="stroke-linecap: round; stroke-linejoin: round;"></path>\n        </svg>\n    </div>\n    <div class="info-container-xD9V6">\n        <div class="title-container-VFReJ" style="font-weight: bold; font-size: 0.95rem;">{{ title }}</div>\n        <div class="message-container-znkCj" style="font-size: 0.85rem; color: #bbb; margin-top: 2px;">{{ message }}</div>\n    </div>\n</div>\n';
 
   // src/components/modals/modalManager.ts
   var modalManager = {
@@ -740,12 +584,12 @@
       const checkedClass = isChecked ? "checked" : "";
       const label = setting.title || setting.label || setting.key;
       return `
-        <div class="option-vFOAS" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-sizing: border-box;">
-            <div class="heading-dYMDt" style="flex: 1; padding-right: 20px; min-width: 0;">
-                <div class="label-qI6Vh" style="font-size: 1.05rem; font-weight: 600; color: #fff; line-height: 1.4;">${escapeHtml(label)}</div>
+        <div class="enhanced-option" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-sizing: border-box;">
+            <div class="enhanced-option-heading" style="flex: 1; padding-right: 20px; min-width: 0;">
+                <div class="enhanced-option-label" style="font-size: 1.05rem; font-weight: 600; color: #fff; line-height: 1.4;">${escapeHtml(label)}</div>
                 ${setting.description ? `<div style="font-size: 0.85rem; color: #a0a0a0; margin-top: 4px; line-height: 1.4;">${escapeHtml(setting.description)}</div>` : ""}
             </div>
-            <div class="content-P2T0i" style="flex-shrink: 0;">
+            <div class="enhanced-option-content" style="flex-shrink: 0;">
                 <div tabindex="0" class="toggle-container-lZfHP button-container-zVLH6 plugin-setting-toggle ${checkedClass}" data-key="${escapeHtml(setting.key)}" style="outline: none; cursor: pointer;">
                     <div class="toggle-toOWM"></div>
                 </div>
@@ -755,12 +599,12 @@
     _buildInput: (setting, currentValue) => {
       const label = setting.title || setting.label || setting.key;
       return `
-        <div class="option-vFOAS" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-sizing: border-box;">
-            <div class="heading-dYMDt" style="flex: 1; padding-right: 20px; min-width: 0;">
-                <div class="label-qI6Vh" style="font-size: 1.05rem; font-weight: 600; color: #fff; line-height: 1.4;">${escapeHtml(label)}</div>
+        <div class="enhanced-option" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-sizing: border-box;">
+            <div class="enhanced-option-heading" style="flex: 1; padding-right: 20px; min-width: 0;">
+                <div class="enhanced-option-label" style="font-size: 1.05rem; font-weight: 600; color: #fff; line-height: 1.4;">${escapeHtml(label)}</div>
                 ${setting.description ? `<div style="font-size: 0.85rem; color: #a0a0a0; margin-top: 4px; line-height: 1.4;">${escapeHtml(setting.description)}</div>` : ""}
             </div>
-            <div class="content-P2T0i" style="flex-shrink: 0; width: 50%; max-width: 300px;">
+            <div class="enhanced-option-content" style="flex-shrink: 0; width: 50%; max-width: 300px;">
                 <label class="search-bar-k7MXd search-bar-container-p4tSt" style="width: 100%; padding: 0; margin: 0; display: block;">
                     <input data-key="${escapeHtml(setting.key)}" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh text-input-hnLiz plugin-setting-input" type="text" placeholder="${escapeHtml(label)}" value="${escapeHtml(currentValue)}" style="width: 100%; box-sizing: border-box; height: 42px; padding: 0 15px; background-color: rgba(255, 255, 255, 0.08); color: white; border: 1px solid transparent; border-radius: 0.35rem; outline: none;">
                 </label>
@@ -777,12 +621,12 @@
         });
       }
       return `
-        <div class="option-vFOAS" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-sizing: border-box;">
-            <div class="heading-dYMDt" style="flex: 1; padding-right: 20px; min-width: 0;">
-                <div class="label-qI6Vh" style="font-size: 1.05rem; font-weight: 600; color: #fff; line-height: 1.4;">${escapeHtml(label)}</div>
+        <div class="enhanced-option" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-sizing: border-box;">
+            <div class="enhanced-option-heading" style="flex: 1; padding-right: 20px; min-width: 0;">
+                <div class="enhanced-option-label" style="font-size: 1.05rem; font-weight: 600; color: #fff; line-height: 1.4;">${escapeHtml(label)}</div>
                 ${setting.description ? `<div style="font-size: 0.85rem; color: #a0a0a0; margin-top: 4px; line-height: 1.4;">${escapeHtml(setting.description)}</div>` : ""}
             </div>
-            <div class="content-P2T0i" style="flex-shrink: 0; width: 50%; max-width: 300px;">
+            <div class="enhanced-option-content" style="flex-shrink: 0; width: 50%; max-width: 300px;">
                 <select data-key="${escapeHtml(setting.key)}" class="search-input-bAgAh text-input-hnLiz plugin-setting-select" style="width: 100%; padding: 0 15px; cursor: pointer; background-color: rgba(255, 255, 255, 0.08); color: white; border: 1px solid transparent; border-radius: 0.35rem; outline: none; appearance: auto; box-sizing: border-box; height: 42px;">
                     ${optionsHtml}
                 </select>
@@ -829,7 +673,7 @@
         let buttonsHtml = "";
         btnList.forEach((btnText, index) => {
           const isPrimary = index === 0;
-          const bgStyle = isPrimary ? "background-color: var(--primary-accent-color, #735bf2); color: white;" : "background-color: rgba(255,255,255,0.1); color: #ccc;";
+          const bgStyle = isPrimary ? alertType === "danger" ? "background-color: var(--danger-color, #dc2626); color: white;" : "background-color: var(--accent-color, var(--primary-accent-color, #735bf2)); color: white;" : "background-color: rgba(255,255,255,0.1); color: #ccc;";
           buttonsHtml += `
                     <div tabindex="0" class="button-container-zVLH6 alert-dialog-btn" data-index="${index}" style="cursor: pointer; padding: 10px 22px; border-radius: 4px; font-weight: 600; ${bgStyle}">
                         <div class="label-wbfsE">${escapeHtml(btnText)}</div>
@@ -848,7 +692,25 @@
           resolve(-1);
           return;
         }
+        const scrollContainer = modal.querySelector(".modal-dialog-message-scroll");
+        if (scrollContainer) {
+          try {
+            scrollContainer.focus();
+          } catch (_) {
+          }
+          scrollContainer.addEventListener("wheel", (e) => {
+            e.stopPropagation();
+          }, { passive: true });
+        }
+        modal.addEventListener("wheel", (e) => {
+          if (scrollContainer && !scrollContainer.contains(e.target)) {
+            scrollContainer.scrollTop += e.deltaY;
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, { passive: false });
         const closeWithResult = (resIndex) => {
+          window.removeEventListener("keydown", keyHandler);
           modal.remove();
           resolve(resIndex);
         };
@@ -860,7 +722,6 @@
         });
         const keyHandler = (e) => {
           if (e.key === "Escape") {
-            window.removeEventListener("keydown", keyHandler);
             closeWithResult(btnList.length > 1 ? 1 : 0);
           }
         };
@@ -905,6 +766,1030 @@
       }, 4e3);
     }
   };
+
+  // src/components/theme-item/themeItem.ts
+  function createThemeCard(fileName, meta, isApplied, onApply) {
+    const buttonClass = isApplied ? "uninstall-button-container-oV4Yo disabled" : "install-button-container-yfcq5";
+    const label = isApplied ? "Applied" : "Apply";
+    const deleteDisplay = fileName.toLowerCase() === "default" ? "none" : "flex";
+    const themeDisplayName = meta && meta.name && meta.name.trim().length > 0 ? meta.name.trim() : fileName;
+    const descriptionBlock = meta.description ? `<b>Description:</b> ${escapeHtml(meta.description)}<br>` : "";
+    const authorBlock = meta.author ? `<b>Author:</b> ${escapeHtml(meta.author)}` : "";
+    const html = TemplateCache.render(theme_item_default, {
+      fileName: escapeHtml(fileName),
+      name: escapeHtml(meta.name),
+      version: escapeHtml(meta.version || ""),
+      descriptionBlock,
+      authorBlock,
+      buttonClass,
+      label,
+      deleteDisplay
+    });
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html.trim();
+    const card = wrapper.firstElementChild;
+    const applyBtn = card.querySelector(".theme-apply-btn");
+    if (applyBtn) {
+      applyBtn.onclick = function() {
+        if (applyBtn.classList.contains("disabled")) return;
+        onApply(fileName);
+      };
+    }
+    const deleteBtn = card.querySelector(".theme-delete-btn");
+    if (deleteBtn && fileName.toLowerCase() !== "default") {
+      const handleDelete = async (e) => {
+        e.stopPropagation();
+        const result = await modalManager.showAlert(
+          "danger",
+          "Delete Theme",
+          `Are you sure you want to delete "${themeDisplayName}" (${fileName})?
+
+This will permanently remove the theme file from your themes folder.`,
+          ["Delete", "Cancel"]
+        );
+        if (result !== 0) return;
+        if (applyBtn?.classList.contains("disabled")) {
+          applyThemeUI("Default");
+        }
+        postEnhancedMessage("deleteMod", {
+          modType: "theme",
+          fileName
+        });
+        card.remove();
+        modalManager.showToast(
+          "theme-deleted",
+          "Theme Deleted",
+          `Deleted ${themeDisplayName}.`,
+          "info"
+        );
+      };
+      deleteBtn.onclick = handleDelete;
+      deleteBtn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleDelete(e);
+        }
+      });
+    }
+    return card;
+  }
+
+  // src/components/marketplace-tab/marketplace-tab.html
+  var marketplace_tab_default = '<div class="marketplace-inline-view" style="width: 100%; box-sizing: border-box;">\n    <div style="margin-bottom: 1rem;">\n        <label title="Search themes/plugins" style="display: flex; align-items: center; background: var(--surface-background-color, rgba(255, 255, 255, 0.06)); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--border-radius, 0.75rem); padding: 0.65rem 1rem; width: 100%; box-sizing: border-box;">\n            <input id="marketplace-search-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh" type="text" placeholder="Search themes and plugins..." value="" style="flex: 1; background: transparent; border: none; outline: none; color: var(--foreground-color-primary, #fff); font-size: 1rem;">\n            <svg viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem; fill: rgba(255, 255, 255, 0.6); margin-left: 0.5rem; flex-shrink: 0;">\n                <path d="M456.882 415.7999999999997l-93.791-89.45c22.605-28.67 34.784-63.57 34.686-99.44 0-91.54-78.142-166.07-174.125-166.07s-174.125 74.53-174.125 166.17c0 91.54 78.142 166.07 174.125 166.07 37.586 0 74.161-11.61 104.256-33.08l93.79 89.45c3.535 3.04 7.91 5.05 12.604 5.79 4.696 0.74 9.515 0.18 13.887-1.61 4.374-1.79 8.117-4.74 10.788-8.49 2.671-3.76 4.157-8.17 4.284-12.7 0.108-6.11-2.165-12.04-6.379-16.64m-357.62-188.79c-0.01-29.43 11.453-57.8 32.162-79.61 20.709-21.82 49.183-35.49 79.884-38.39 30.7-2.9 61.433 5.2 86.221 22.72 24.787 17.52 41.858 43.2 47.891 72.05 6.034 28.86 0.598 58.83-15.249 84.07s-40.972 43.96-70.489 52.53c-29.518 8.55-61.317 6.33-89.213-6.24s-49.895-34.57-61.718-61.75c-6.258-14.38-9.483-29.81-9.488-45.38" style="fill: currentcolor;"></path>\n            </svg>\n        </label>\n    </div>\n\n    <div tabindex="0" title="Submit your themes and plugins here" style="margin-bottom: 1.25rem; text-align: center;">\n        <a href="https://github.com/REVENGE977/stremio-enhanced-registry" target="_blank" rel="noreferrer" class="enhanced-link" style="display: block; text-decoration: none;">\n            <span class="enhanced-link-label">Submit your themes and plugins here</span>\n        </a>\n    </div>\n\n    <div id="mods-list" style="display: flex; flex-direction: column; gap: 1rem; width: 100%; box-sizing: border-box;">\n        <div id="marketplace-loading" style="padding: 2.5rem; text-align: center; color: rgba(255, 255, 255, 0.7); font-size: 1.05rem;">\n            Loading community plugins &amp; themes...\n        </div>\n    </div>\n</div>\n';
+
+  // src/components/marketplace-tab/marketplaceTab.ts
+  function getMarketplaceTabHtml() {
+    return TemplateCache.render(marketplace_tab_default, {});
+  }
+
+  // src/components/marketplace-item/marketplace-item.html
+  var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; box-sizing: border-box; margin: 0 0 1rem 0; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-logo-box" style="width: 4.5rem; height: 4.5rem; flex-shrink: 0; margin-right: 1.25rem; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n        {{ logoBlock }}\n    </div>\n\n    <div class="marketplace-info-container" style="flex: 1; min-width: 0; padding-right: 1.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n            <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n            <span style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;">v{{ version }}</span>\n            <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n        </div>\n        <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n            <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n            <div><b>Author:</b> {{ author }}</div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: auto; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; margin-left: 1rem;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
+
+  // src/components/marketplace-item/marketplaceItem.ts
+  function createMarketplaceCard(mod, type, isInstalled, onAction) {
+    let logoBlock = "";
+    if (mod.preview) {
+      logoBlock = `
+            <a href="${escapeHtml(mod.preview)}" target="_blank" rel="noreferrer" style="cursor: zoom-in; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+                <img class="logo-WrsGF" src="${escapeHtml(mod.preview)}" alt="${escapeHtml(mod.name)} Preview" loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;">
+            </a>`;
+    } else if (type === "Theme") {
+      logoBlock = `
+            <svg viewBox="0 0 24 24" style="width: 2.2rem; height: 2.2rem; fill: currentcolor;">
+                <path d="M4 3h16a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 9h6a1 1 0 0 1 1 1v3h1v6h-4v-6h1v-2H5a1 1 0 0 1-1-1v-2h2v1zm11.732 1.732l1.768-1.768 1.768 1.768a2.5 2.5 0 1 1-3.536 0z"></path>
+            </svg>`;
+    } else {
+      logoBlock = `
+            <svg viewBox="0 0 24 24" style="width: 2.2rem; height: 2.2rem; fill: currentcolor;">
+                <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.49 0 2.7-1.21 2.7-2.7s-1.21-2.7-2.7-2.7z"></path>
+            </svg>`;
+    }
+    let repoBlock = "";
+    if (mod.repo) {
+      repoBlock = `
+            <a href="${escapeHtml(mod.repo)}" target="_blank" rel="noreferrer" class="marketplace-repo-btn" style="cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; padding: 0.55rem 1rem; border-radius: 0.35rem; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); font-size: 0.85rem; font-weight: 500; transition: background 0.2s;">
+                <svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: currentcolor; margin-right: 0.4rem; flex-shrink: 0;">
+                    <path d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z" />
+                </svg>
+                <span>Open repository</span>
+            </a>`;
+    }
+    const actionbtnTitle = isInstalled ? "Uninstall" : "Install";
+    const actionbtnClass = isInstalled ? "uninstall-button-container-oV4Yo" : "install-button-container-yfcq5";
+    const html = TemplateCache.render(marketplace_item_default, {
+      name: escapeHtml(mod.name),
+      version: escapeHtml(mod.version || "1.0.0"),
+      type,
+      description: escapeHtml(mod.description),
+      author: escapeHtml(mod.author),
+      actionbtnTitle,
+      actionbtnClass,
+      download: escapeHtml(mod.download),
+      logoBlock,
+      repoBlock
+    });
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html.trim();
+    const card = wrapper.querySelector(".marketplace-item-card") || wrapper.firstElementChild;
+    const btn = card.querySelector(".modActionBtn");
+    if (btn) {
+      btn.onclick = async () => {
+        const currentTitle = btn.getAttribute("title");
+        const willInstall = currentTitle === "Install";
+        await onAction(mod, type, willInstall, btn);
+      };
+    }
+    return card;
+  }
+
+  // src/marketplace/marketplaceManager.ts
+  var REGISTRY_URL = "https://raw.githubusercontent.com/REVENGE977/stremio-enhanced-registry/refs/heads/main/registry.json";
+  var currentEnhancedData = {
+    plugins: [],
+    themes: [],
+    activeTheme: null
+  };
+  var cachedRegistry = null;
+  function updateMarketplaceData(data) {
+    currentEnhancedData = data;
+    syncMarketplaceInstalledState();
+  }
+  function getFileNameFromUrl(url) {
+    try {
+      const parsed = new URL(url);
+      const parts = parsed.pathname.split("/");
+      return parts[parts.length - 1] || "";
+    } catch (_) {
+      const clean = url.split("?")[0].split("#")[0];
+      return clean.substring(clean.lastIndexOf("/") + 1);
+    }
+  }
+  function isPluginInstalled(fileName) {
+    const fn = fileName.toLowerCase();
+    return (currentEnhancedData.plugins || []).some((p) => (p.fileName || "").toLowerCase() === fn);
+  }
+  function isThemeInstalled(fileName) {
+    const fn = fileName.toLowerCase();
+    return (currentEnhancedData.themes || []).some((t) => (t.fileName || "").toLowerCase() === fn);
+  }
+  async function fetchRegistry() {
+    if (cachedRegistry) return cachedRegistry;
+    console.log("[Enhanced Marketplace] Fetching registry from:", REGISTRY_URL);
+    const response = await fetch(REGISTRY_URL);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch marketplace registry: HTTP ${response.status}`);
+    }
+    const text = await response.text();
+    const data = JSON.parse(text);
+    cachedRegistry = {
+      plugins: Array.isArray(data.plugins) ? data.plugins : [],
+      themes: Array.isArray(data.themes) ? data.themes : []
+    };
+    console.log(`[Enhanced Marketplace] Loaded registry with ${cachedRegistry.plugins.length} plugins and ${cachedRegistry.themes.length} themes.`);
+    return cachedRegistry;
+  }
+  function setupSearchBar() {
+    const searchInput = document.getElementById("marketplace-search-input");
+    const modsList = document.getElementById("mods-list");
+    if (!searchInput || !modsList) return;
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.trim().toLowerCase();
+      const items = modsList.querySelectorAll(".marketplace-item-card, .addon-container-lC5KN");
+      items.forEach((item) => {
+        const name = (item.querySelector(".marketplace-title") || item.querySelector(".name-container-qIAg8"))?.textContent?.toLowerCase() || "";
+        const desc = item.textContent?.toLowerCase() || "";
+        const matches = !query || name.includes(query) || desc.includes(query);
+        item.style.display = matches ? "" : "none";
+      });
+    });
+  }
+  function syncMarketplaceInstalledState() {
+    const modsList = document.getElementById("mods-list");
+    if (!modsList) return;
+    modsList.querySelectorAll(".modActionBtn").forEach((btn) => {
+      const link = btn.getAttribute("data-link") || "";
+      const type = btn.getAttribute("data-type");
+      if (!link || !type) return;
+      const fileName = getFileNameFromUrl(link);
+      const installed = type === "Plugin" ? isPluginInstalled(fileName) : isThemeInstalled(fileName);
+      const label = btn.querySelector(".label-OnWh2") || btn;
+      if (installed) {
+        btn.classList.remove("install-button-container-yfcq5");
+        btn.classList.add("uninstall-button-container-oV4Yo");
+        btn.setAttribute("title", "Uninstall");
+        label.textContent = "Uninstall";
+      } else {
+        btn.classList.remove("uninstall-button-container-oV4Yo");
+        btn.classList.add("install-button-container-yfcq5");
+        btn.setAttribute("title", "Install");
+        label.textContent = "Install";
+      }
+    });
+  }
+  async function renderMarketplaceInline(forceReload = false) {
+    const container = document.getElementById("enhanced-marketplace-content");
+    if (!container) return;
+    if (!forceReload && container.getAttribute("data-loaded") === "true") {
+      syncMarketplaceInstalledState();
+      return;
+    }
+    if (container.getAttribute("data-loading") === "true") return;
+    container.setAttribute("data-loading", "true");
+    container.removeAttribute("data-loaded");
+    container.innerHTML = getMarketplaceTabHtml();
+    setupSearchBar();
+    const modsList = document.getElementById("mods-list");
+    if (!modsList) {
+      container.removeAttribute("data-loading");
+      return;
+    }
+    try {
+      const registry = await fetchRegistry();
+      if (!document.body.contains(modsList)) return;
+      modsList.innerHTML = "";
+      if ((!registry.plugins || registry.plugins.length === 0) && (!registry.themes || registry.themes.length === 0)) {
+        modsList.innerHTML = `
+                <div style="padding: 2.5rem; text-align: center; color: rgba(255,255,255,0.7); font-size: 1.05rem;">
+                    No plugins or themes found in the community registry.
+                </div>
+            `;
+        container.setAttribute("data-loaded", "true");
+        return;
+      }
+      const handleAction = async (mod, type, willInstall, btn) => {
+        const fileName = getFileNameFromUrl(mod.download);
+        const label = btn.querySelector(".label-OnWh2") || btn;
+        if (willInstall) {
+          const prevText = label.textContent;
+          label.textContent = "Installing...";
+          btn.style.pointerEvents = "none";
+          try {
+            const res = await fetch(mod.download);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const content = await res.text();
+            postEnhancedMessage("installMod", {
+              modType: type.toLowerCase(),
+              fileName,
+              content
+            });
+            btn.classList.remove("install-button-container-yfcq5");
+            btn.classList.add("uninstall-button-container-oV4Yo");
+            btn.setAttribute("title", "Uninstall");
+            label.textContent = "Uninstall";
+          } catch (err) {
+            console.error("[Enhanced Marketplace] Install failed:", err);
+            alert(`Failed to install ${mod.name}: ${err?.message || err}`);
+            label.textContent = prevText;
+          } finally {
+            btn.style.pointerEvents = "";
+          }
+        } else {
+          const prevText = label.textContent;
+          label.textContent = "Uninstalling...";
+          btn.style.pointerEvents = "none";
+          try {
+            postEnhancedMessage("deleteMod", {
+              modType: type.toLowerCase(),
+              fileName
+            });
+            btn.classList.remove("uninstall-button-container-oV4Yo");
+            btn.classList.add("install-button-container-yfcq5");
+            btn.setAttribute("title", "Install");
+            label.textContent = "Install";
+          } catch (err) {
+            console.error("[Enhanced Marketplace] Uninstall failed:", err);
+            alert(`Failed to uninstall ${mod.name}: ${err?.message || err}`);
+            label.textContent = prevText;
+          } finally {
+            btn.style.pointerEvents = "";
+          }
+        }
+      };
+      for (const plugin of registry.plugins) {
+        const fileName = getFileNameFromUrl(plugin.download);
+        const installed = isPluginInstalled(fileName);
+        const card = createMarketplaceCard(plugin, "Plugin", installed, handleAction);
+        modsList.appendChild(card);
+      }
+      for (const theme of registry.themes) {
+        const fileName = getFileNameFromUrl(theme.download);
+        const installed = isThemeInstalled(fileName);
+        const card = createMarketplaceCard(theme, "Theme", installed, handleAction);
+        modsList.appendChild(card);
+      }
+      container.setAttribute("data-loaded", "true");
+    } catch (err) {
+      console.error("[Enhanced Marketplace] Failed to load registry:", err);
+      if (!document.body.contains(modsList)) return;
+      modsList.innerHTML = `
+            <div style="padding: 2.5rem; text-align: center; color: #ff6b6b; font-size: 1rem;">
+                Failed to load community marketplace: ${err?.message || err}<br><br>
+                <button id="marketplace-retry-btn" style="padding: 0.5rem 1rem; border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; border: none;">
+                    Retry
+                </button>
+            </div>
+        `;
+      document.getElementById("marketplace-retry-btn")?.addEventListener("click", () => {
+        cachedRegistry = null;
+        renderMarketplaceInline(true);
+      });
+    } finally {
+      container.removeAttribute("data-loading");
+    }
+  }
+
+  // src/updates/updateManager.ts
+  var currentEnhancedData2 = { plugins: [], themes: [], activeTheme: null };
+  var DEFAULT_CLIENT_VERSION = "1.2.2-enhanced.3";
+  var CLIENT_RELEASES_URL = "https://github.com/REVENGE977/stremio-linux-shell/releases/latest";
+  var CLIENT_VERSION_SOURCES = [
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/Cargo.toml",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
+    },
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/VERSION",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
+    },
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/Cargo.toml",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
+    },
+    {
+      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/VERSION",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
+    }
+  ];
+  var CLIENT_RELEASE_SOURCES = [
+    {
+      apiUrl: "https://api.github.com/repos/REVENGE977/stremio-linux-shell/releases/latest",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
+    },
+    {
+      apiUrl: "https://api.github.com/repos/REVENGE977/stremio-linux-shell-enhanced/releases/latest",
+      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
+    }
+  ];
+  var latestClientVersionCache = null;
+  var clientUpdateCheckInProgress = false;
+  function updateUpdateManagerData(data) {
+    currentEnhancedData2 = data;
+  }
+  function getCurrentClientVersion() {
+    return currentEnhancedData2.clientVersion || window.__INITIAL_ENHANCED_DATA__?.clientVersion || DEFAULT_CLIENT_VERSION;
+  }
+  function getLatestClientVersion() {
+    return latestClientVersionCache;
+  }
+  function parseClientVersion(version) {
+    const cleaned = version.trim().replace(/^v/i, "");
+    const [basePart, ...rest] = cleaned.split(/-enhanced\.?/i);
+    const base = (basePart || "").split("-")[0].split(".").map((n) => parseInt(n, 10) || 0);
+    let enhanced = [0];
+    if (rest.length > 0 && rest[0]) {
+      enhanced = rest[0].split(".").map((n) => parseInt(n, 10) || 0);
+    } else {
+      const dashMatch = cleaned.match(/-(\d+(?:\.\d+)*)$/);
+      if (dashMatch && dashMatch[1]) {
+        enhanced = dashMatch[1].split(".").map((n) => parseInt(n, 10) || 0);
+      }
+    }
+    return { base, enhanced };
+  }
+  function isNewerVersion(version1, version2) {
+    if (!version1 || !version2) return false;
+    const v1 = parseClientVersion(version1);
+    const v2 = parseClientVersion(version2);
+    const maxBaseLength = Math.max(v1.base.length, v2.base.length);
+    for (let i = 0; i < maxBaseLength; i++) {
+      const a = v1.base[i] ?? 0;
+      const b = v2.base[i] ?? 0;
+      if (a > b) return true;
+      if (a < b) return false;
+    }
+    const maxEnhancedLength = Math.max(v1.enhanced.length, v2.enhanced.length);
+    for (let i = 0; i < maxEnhancedLength; i++) {
+      const a = v1.enhanced[i] ?? 0;
+      const b = v2.enhanced[i] ?? 0;
+      if (a > b) return true;
+      if (a < b) return false;
+    }
+    return false;
+  }
+  function extractMetadataFromText(content) {
+    const blockMatch = content.match(/\/\*\*([\s\S]*?)\*\//);
+    if (!blockMatch) return null;
+    const result = {};
+    const tagRegex = /@(\w+)\s+([^\n\r]+)/g;
+    for (const match of blockMatch[1].matchAll(tagRegex)) {
+      const rawKey = match[1];
+      const rawValue = match[2];
+      const keyLower = rawKey.toLowerCase();
+      let key = rawKey;
+      if (keyLower === "updateurl") key = "updateUrl";
+      else if (keyLower === "name") key = "name";
+      else if (keyLower === "description") key = "description";
+      else if (keyLower === "version") key = "version";
+      else if (keyLower === "author") key = "author";
+      if (result[key] === void 0) {
+        result[key] = rawValue.trim();
+      }
+    }
+    if (!result.name || !result.version) {
+      return null;
+    }
+    return {
+      name: result.name,
+      description: result.description || "",
+      version: result.version || "1.0.0",
+      author: result.author || "Unknown",
+      updateUrl: result.updateUrl
+    };
+  }
+  async function getRegistryModVersion(itemFile, type) {
+    try {
+      const registry = await fetchRegistry();
+      const list = type === "plugin" ? registry.plugins : registry.themes;
+      const fnLower = itemFile.toLowerCase();
+      const baseName = fnLower.replace(/\.plugin\.js$/, "").replace(/\.theme\.css$/, "").replace(/\.js$/, "");
+      const found = list.find((m) => {
+        const dl = (m.download || "").toLowerCase();
+        return dl.endsWith(fnLower) || dl.includes(`/${baseName}.`);
+      });
+      if (found && found.version && found.download) {
+        return { version: found.version, download: found.download };
+      }
+    } catch (err) {
+      console.warn("[Enhanced Update] Failed to check registry version:", err);
+    }
+    return null;
+  }
+  async function checkUpdateData(itemFile, type) {
+    const plugins = currentEnhancedData2.plugins && currentEnhancedData2.plugins.length > 0 ? currentEnhancedData2.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
+    const themes = currentEnhancedData2.themes && currentEnhancedData2.themes.length > 0 ? currentEnhancedData2.themes : window.__INITIAL_ENHANCED_DATA__?.themes || [];
+    const list = type === "plugin" ? plugins : themes;
+    const installed = list.find((i) => (i.fileName || "").toLowerCase() === itemFile.toLowerCase());
+    if (!installed) return null;
+    let installedVersion = installed.version || "1.0.0";
+    let updateUrl = installed.updateUrl || installed.update_url;
+    const content = type === "plugin" ? installed.content : installed.css;
+    if ((!updateUrl || updateUrl === "none") && content) {
+      const parsed = extractMetadataFromText(content);
+      if (parsed?.updateUrl && parsed.updateUrl !== "none") {
+        updateUrl = parsed.updateUrl;
+      }
+      if (parsed?.version) {
+        installedVersion = parsed.version;
+      }
+    }
+    if (updateUrl && updateUrl !== "none") {
+      try {
+        console.log(`[Enhanced Update] Checking updateUrl for ${itemFile}: ${updateUrl}`);
+        const res = await fetch(updateUrl);
+        if (res.ok) {
+          const responseText = await res.text();
+          const newMeta = extractMetadataFromText(responseText);
+          if (newMeta && newMeta.version && isNewerVersion(newMeta.version, installedVersion)) {
+            console.log(`[Enhanced Update] Found newer version for ${itemFile}: ${installedVersion} -> ${newMeta.version}`);
+            const regInfo = await getRegistryModVersion(itemFile, type);
+            return {
+              hasUpdate: true,
+              newContent: responseText,
+              newMetaData: newMeta,
+              installedMetaData: installed,
+              registryVersion: regInfo?.version || null,
+              updateUrl
+            };
+          }
+          const trimmed = responseText.trim();
+          if (/^v?\d+(\.\d+)+$/.test(trimmed) && isNewerVersion(trimmed, installedVersion)) {
+            console.log(`[Enhanced Update] Found newer version text for ${itemFile}: ${installedVersion} -> ${trimmed}`);
+            const regInfo = await getRegistryModVersion(itemFile, type);
+            if (regInfo?.download) {
+              const dlRes = await fetch(regInfo.download);
+              if (dlRes.ok) {
+                const newContent = await dlRes.text();
+                const newMeta2 = extractMetadataFromText(newContent) || {
+                  name: installed.name,
+                  version: trimmed,
+                  description: installed.description,
+                  author: installed.author
+                };
+                return {
+                  hasUpdate: true,
+                  newContent,
+                  newMetaData: newMeta2,
+                  installedMetaData: installed,
+                  registryVersion: regInfo.version,
+                  updateUrl: regInfo.download
+                };
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[Enhanced Update] Error checking updateUrl for ${itemFile}:`, err);
+      }
+    }
+    try {
+      const regInfo = await getRegistryModVersion(itemFile, type);
+      if (regInfo && isNewerVersion(regInfo.version, installedVersion)) {
+        console.log(`[Enhanced Update] Found newer version in registry for ${itemFile}: ${installedVersion} -> ${regInfo.version}`);
+        const dlRes = await fetch(regInfo.download);
+        if (dlRes.ok) {
+          const newContent = await dlRes.text();
+          const newMeta = extractMetadataFromText(newContent) || {
+            name: installed.name,
+            version: regInfo.version,
+            description: installed.description,
+            author: installed.author
+          };
+          return {
+            hasUpdate: true,
+            newContent,
+            newMetaData: newMeta,
+            installedMetaData: installed,
+            registryVersion: regInfo.version,
+            updateUrl: regInfo.download
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`[Enhanced Update] Error checking registry for ${itemFile}:`, err);
+    }
+    return { hasUpdate: false, installedMetaData: installed };
+  }
+  var inFlightChecks = /* @__PURE__ */ new Set();
+  async function checkForItemUpdatesUI(itemFile, type) {
+    const updateButton = document.getElementById(`${itemFile}-update`);
+    if (!updateButton) return false;
+    if (inFlightChecks.has(itemFile)) return false;
+    inFlightChecks.add(itemFile);
+    try {
+      const updateData = await checkUpdateData(itemFile, type);
+      if (!updateData || !updateData.hasUpdate || !updateData.newContent || !updateData.newMetaData) {
+        updateButton.style.display = "none";
+        return false;
+      }
+      updateButton.style.display = "inline-flex";
+      updateButton.setAttribute("title", `Update available: v${updateData.newMetaData.version}`);
+      const label = updateButton.querySelector(".label-OnWh2") || updateButton;
+      label.textContent = `Update (v${updateData.newMetaData.version})`;
+      updateButton.onclick = async (e) => {
+        e.stopPropagation();
+        if (type === "plugin" && updateData.registryVersion !== updateData.newMetaData.version) {
+          const result = await modalManager.showAlert(
+            "warning",
+            "Confirm Update",
+            `This update for ${updateData.installedMetaData?.name || itemFile} (v${updateData.newMetaData.version}) isn't submitted to the registry (Community Marketplace) yet, and thus has not been confirmed safe.
+
+Are you sure you want to update? It's recommended to read the source code of the update before updating.`,
+            ["Yes", "No", "View Source Code"]
+          );
+          if (result === 0) {
+            await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
+          } else if (result === 2 && updateData.updateUrl) {
+            try {
+              window.open(updateData.updateUrl, "_blank");
+            } catch (_) {
+            }
+          }
+        } else {
+          await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
+        }
+      };
+      return true;
+    } catch (err) {
+      console.error(`[Enhanced Update] Error updating UI for ${itemFile}:`, err);
+      return false;
+    } finally {
+      inFlightChecks.delete(itemFile);
+    }
+  }
+  async function applyUpdate(type, itemFile, newContent, newMetaData) {
+    const updateButton = document.getElementById(`${itemFile}-update`);
+    const label = updateButton?.querySelector(".label-OnWh2") || updateButton;
+    if (label) label.textContent = "Updating...";
+    if (updateButton) updateButton.style.pointerEvents = "none";
+    try {
+      postEnhancedMessage("installMod", {
+        modType: type,
+        fileName: itemFile,
+        content: newContent
+      });
+      if (updateButton) {
+        updateButton.style.display = "none";
+        updateButton.style.pointerEvents = "";
+      }
+      const card = document.querySelector(`[name="${itemFile}-box"]`);
+      if (card) {
+        const versionEl = card.querySelector(".version-container-zdPyN");
+        if (versionEl && newMetaData.version) {
+          versionEl.textContent = newMetaData.version;
+          versionEl.setAttribute("title", newMetaData.version);
+        }
+      }
+      if (type === "theme") {
+        const currentActive = currentEnhancedData2.activeTheme ? currentEnhancedData2.activeTheme.toLowerCase() : null;
+        if (currentActive === itemFile.toLowerCase()) {
+          window.StremioEnhancedAPI?.applyTheme(itemFile);
+        }
+      }
+      modalManager.showToast(
+        "update-success",
+        "Update Successful",
+        `Updated ${newMetaData.name || itemFile} to v${newMetaData.version || ""}${type === "plugin" ? ". Reload may be required for some plugin changes." : ""}`,
+        "success"
+      );
+    } catch (err) {
+      console.error(`[Enhanced Update] Failed to apply update for ${itemFile}:`, err);
+      if (label) label.textContent = "Update";
+      if (updateButton) updateButton.style.pointerEvents = "";
+      alert(`Failed to update ${itemFile}: ${err?.message || err}`);
+    }
+  }
+  async function checkForAllUpdates(isManual = false) {
+    if (isManual) {
+      modalManager.showToast(
+        "check-updates-progress",
+        "Checking for Updates",
+        "Checking for plugin and theme updates...",
+        "info"
+      );
+    }
+    const checkBtn = document.getElementById("checkforupdatesBtn");
+    if (checkBtn) {
+      checkBtn.style.pointerEvents = "none";
+      checkBtn.textContent = "Checking...";
+    }
+    let updateCount = 0;
+    try {
+      const plugins = currentEnhancedData2.plugins && currentEnhancedData2.plugins.length > 0 ? currentEnhancedData2.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
+      for (const p of plugins) {
+        const hasUp = await checkForItemUpdatesUI(p.fileName, "plugin");
+        if (hasUp) updateCount++;
+      }
+      const themes = currentEnhancedData2.themes && currentEnhancedData2.themes.length > 0 ? currentEnhancedData2.themes : window.__INITIAL_ENHANCED_DATA__?.themes || [];
+      for (const t of themes) {
+        const hasUp = await checkForItemUpdatesUI(t.fileName, "theme");
+        if (hasUp) updateCount++;
+      }
+      if (isManual) {
+        if (updateCount > 0) {
+          modalManager.showToast(
+            "check-updates-result",
+            "Updates Available",
+            `Found ${updateCount} update(s). Look for the yellow Update buttons.`,
+            "success"
+          );
+        } else {
+          modalManager.showToast(
+            "check-updates-result",
+            "Up to Date",
+            "All installed plugins and themes are up to date.",
+            "info"
+          );
+        }
+      }
+    } finally {
+      if (checkBtn) {
+        checkBtn.style.pointerEvents = "";
+        checkBtn.textContent = "Check for Updates";
+      }
+    }
+  }
+  function extractVersionToken(raw) {
+    if (!raw) return null;
+    const match = raw.trim().match(/\bv?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?)\b/i);
+    return match && match[1] ? match[1] : null;
+  }
+  function extractClientVersionFromRemote(content) {
+    const trimmed = content.trim();
+    if (!trimmed) return null;
+    const pkgSectionMatch = trimmed.match(/\[package\]([\s\S]*?)(?:\r?\n\s*\[|$)/);
+    if (pkgSectionMatch) {
+      const verMatch = pkgSectionMatch[1].match(/^\s*version\s*=\s*"([^"]+)"/m);
+      if (verMatch && verMatch[1]) {
+        return verMatch[1].trim().replace(/^v/i, "");
+      }
+    }
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const fromVersion = extractVersionToken(typeof parsed.version === "string" ? parsed.version : null);
+        if (fromVersion) return fromVersion;
+        const fromReleaseName = extractVersionToken(typeof parsed.name === "string" ? parsed.name : null);
+        if (fromReleaseName) return fromReleaseName;
+        const fromTagName = extractVersionToken(typeof parsed.tag_name === "string" ? parsed.tag_name : null);
+        if (fromTagName) return fromTagName;
+      } catch (_) {
+      }
+    }
+    for (const line of trimmed.split(/\r?\n/)) {
+      const l = line.trim();
+      if (!l || l.startsWith("#")) continue;
+      if (/^v?\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?$/.test(l)) {
+        return l.replace(/^v/i, "");
+      }
+    }
+    return null;
+  }
+  async function fetchLatestClientVersion(currentVersion) {
+    let bestCandidate = null;
+    const compareAgainst = currentVersion || getCurrentClientVersion();
+    for (const source of CLIENT_VERSION_SOURCES) {
+      try {
+        const res = await fetch(source.url, { cache: "no-store" });
+        if (!res.ok) continue;
+        const text = await res.text();
+        const version = extractClientVersionFromRemote(text);
+        if (version) {
+          if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
+            bestCandidate = { version, releaseUrl: source.releaseUrl };
+          }
+          if (isNewerVersion(version, compareAgainst)) {
+            latestClientVersionCache = bestCandidate;
+            return latestClientVersionCache;
+          }
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Enhanced Client Update] Failed to fetch ${source.url}:`, err);
+      }
+    }
+    for (const source of CLIENT_RELEASE_SOURCES) {
+      try {
+        const res = await fetch(source.apiUrl, { cache: "no-store" });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data || data.draft) continue;
+        const version = extractVersionToken(typeof data.name === "string" ? data.name : null) || extractVersionToken(typeof data.tag_name === "string" ? data.tag_name : null);
+        if (version) {
+          const releaseUrl = typeof data.html_url === "string" && data.html_url.trim() ? data.html_url.trim() : source.releaseUrl;
+          if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
+            bestCandidate = { version, releaseUrl };
+          }
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Enhanced Client Update] Failed to fetch latest release from ${source.apiUrl}:`, err);
+      }
+    }
+    if (bestCandidate) {
+      latestClientVersionCache = bestCandidate;
+    }
+    return bestCandidate;
+  }
+  async function checkClientUpdate(isManual = false) {
+    if (clientUpdateCheckInProgress) return false;
+    clientUpdateCheckInProgress = true;
+    const checkBtn = document.getElementById("checkclientupdatesBtn");
+    if (checkBtn) {
+      checkBtn.style.pointerEvents = "none";
+      checkBtn.textContent = "Checking...";
+    }
+    try {
+      const currentVersion = getCurrentClientVersion();
+      const skippedVersion = currentEnhancedData2.skippedClientVersion ?? window.__INITIAL_ENHANCED_DATA__?.skippedClientVersion ?? null;
+      const remote = await fetchLatestClientVersion(currentVersion);
+      if (!remote) {
+        if (isManual) {
+          modalManager.showToast(
+            "client-update-error",
+            "Update Check Failed",
+            "Could not fetch the latest client version from GitHub.",
+            "fail"
+          );
+        }
+        return false;
+      }
+      const hasUpdate = isNewerVersion(remote.version, currentVersion);
+      if (!hasUpdate) {
+        if (isManual) {
+          modalManager.showToast(
+            "client-up-to-date",
+            "Client Up to Date",
+            `You are running the latest version (v${currentVersion}).`,
+            "info"
+          );
+        }
+        return false;
+      }
+      if (!isManual && skippedVersion === remote.version) {
+        console.log(`[Enhanced Client Update] Skipping v${remote.version} (marked as skipped by user).`);
+        return true;
+      }
+      const curParsed = parseClientVersion(currentVersion);
+      const remParsed = parseClientVersion(remote.version);
+      const curBaseStr = curParsed.base.join(".");
+      const remBaseStr = remParsed.base.join(".");
+      const curEnhNum = curParsed.enhanced[0] ?? 0;
+      const remEnhNum = remParsed.enhanced[0] ?? 0;
+      const details = `A new version of Stremio Linux Shell Enhanced is available!
+
+Installed Version: v${currentVersion} (Base ${curBaseStr}, Enhanced build #${curEnhNum})
+Latest Version: v${remote.version} (Base ${remBaseStr}, Enhanced build #${remEnhNum})
+
+Would you like to open the GitHub Releases page to download the update?`;
+      const choice = await modalManager.showAlert(
+        "info",
+        "Client Update Available",
+        details,
+        ["Download / Open Release Page", "Skip This Version", "Later"]
+      );
+      if (choice === 0) {
+        try {
+          window.open(remote.releaseUrl, "_blank");
+        } catch (_) {
+        }
+      } else if (choice === 1) {
+        currentEnhancedData2.skippedClientVersion = remote.version;
+        postEnhancedMessage("skipClientVersion", { version: remote.version });
+        modalManager.showToast(
+          "client-update-skipped",
+          "Version Skipped",
+          `Skipped client update v${remote.version}.`,
+          "info"
+        );
+      }
+      return true;
+    } catch (err) {
+      console.error("[Enhanced Client Update] Error checking for client updates:", err);
+      if (isManual) {
+        modalManager.showToast(
+          "client-update-error",
+          "Update Check Failed",
+          "An unexpected error occurred while checking for client updates.",
+          "fail"
+        );
+      }
+      return false;
+    } finally {
+      clientUpdateCheckInProgress = false;
+      if (checkBtn) {
+        checkBtn.style.pointerEvents = "";
+        checkBtn.textContent = "Check for Client Updates";
+      }
+    }
+  }
+
+  // src/themes/themeManager.ts
+  var headMutationObserver = null;
+  var currentEnhancedData3 = { plugins: [], themes: [], activeTheme: null };
+  function updateThemeManagerData(data) {
+    currentEnhancedData3 = data;
+  }
+  function applyThemeCSS(fileName) {
+    let activeStyle = document.getElementById("activeTheme");
+    if (fileName === "Default" || !fileName) {
+      if (activeStyle) activeStyle.remove();
+      try {
+        localStorage.setItem("currentTheme", "Default");
+      } catch (_) {
+      }
+      return;
+    }
+    const targetName = fileName.toLowerCase();
+    const themesList = currentEnhancedData3.themes && currentEnhancedData3.themes.length > 0 ? currentEnhancedData3.themes : window.__INITIAL_ENHANCED_DATA__?.themes || [];
+    const foundTheme = themesList.find((t) => (t.fileName || "").toLowerCase() === targetName);
+    if (!foundTheme || !foundTheme.css) {
+      console.warn("[Enhanced] Theme CSS not found for:", fileName);
+      return;
+    }
+    try {
+      localStorage.setItem("currentTheme", foundTheme.fileName);
+    } catch (_) {
+    }
+    if (!activeStyle) {
+      activeStyle = document.createElement("style");
+      activeStyle.id = "activeTheme";
+    }
+    if (activeStyle.textContent !== foundTheme.css) {
+      activeStyle.textContent = foundTheme.css;
+    }
+    attachThemeToHead(activeStyle);
+  }
+  function attachThemeToHead(styleEl) {
+    const activeStyle = styleEl || document.getElementById("activeTheme");
+    if (!activeStyle) return;
+    if (document.head) {
+      if (activeStyle.parentElement !== document.head || document.head.lastElementChild !== activeStyle) {
+        document.head.appendChild(activeStyle);
+      }
+      setupHeadObserver();
+    } else if (document.documentElement) {
+      if (activeStyle.parentElement !== document.documentElement) {
+        document.documentElement.appendChild(activeStyle);
+      }
+      setupDocObserver();
+    }
+  }
+  function setupDocObserver() {
+    if (window.__enhancedDocObserver) return;
+    window.__enhancedDocObserver = new MutationObserver(() => {
+      if (document.head) {
+        window.__enhancedDocObserver.disconnect();
+        window.__enhancedDocObserver = null;
+        attachThemeToHead();
+      }
+    });
+    window.__enhancedDocObserver.observe(document.documentElement, { childList: true });
+  }
+  function setupHeadObserver() {
+    if (headMutationObserver) return;
+    if (!document.head) return;
+    headMutationObserver = new MutationObserver(() => {
+      const activeStyle = document.getElementById("activeTheme");
+      if (!activeStyle) return;
+      if (document.head.lastElementChild !== activeStyle) {
+        headMutationObserver?.disconnect();
+        document.head.appendChild(activeStyle);
+        headMutationObserver?.observe(document.head, { childList: true });
+      }
+    });
+    headMutationObserver.observe(document.head, { childList: true });
+  }
+  function ensureActiveTheme() {
+    if (!currentEnhancedData3.activeTheme || currentEnhancedData3.activeTheme === "Default") return;
+    applyThemeCSS(currentEnhancedData3.activeTheme);
+  }
+  function applyThemeUI(fileName) {
+    currentEnhancedData3.activeTheme = fileName === "Default" ? null : fileName;
+    const listContainer = document.getElementById("enhanced-themes-list");
+    if (listContainer) {
+      const currentActive = currentEnhancedData3.activeTheme ? currentEnhancedData3.activeTheme.toLowerCase() : null;
+      listContainer.querySelectorAll(".theme-apply-btn").forEach((btn) => {
+        const targetTheme = (btn.getAttribute("data-theme") || "").toLowerCase();
+        const isThisApplied = !currentActive && targetTheme === "default" || currentActive && targetTheme === currentActive;
+        if (isThisApplied) {
+          btn.className = "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn";
+          const lbl = btn.querySelector(".label-OnWh2");
+          if (lbl) lbl.textContent = "Applied";
+        } else {
+          btn.className = "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
+          const lbl = btn.querySelector(".label-OnWh2");
+          if (lbl) lbl.textContent = "Apply";
+        }
+      });
+    }
+    applyThemeCSS(fileName);
+    try {
+      localStorage.setItem("currentTheme", fileName);
+    } catch (_) {
+    }
+  }
+  function renderThemesList(onApplyTheme) {
+    const listContainer = document.getElementById("enhanced-themes-list");
+    if (!listContainer) return;
+    const currentActive = currentEnhancedData3.activeTheme ? currentEnhancedData3.activeTheme.toLowerCase() : null;
+    const existingBtns = listContainer.querySelectorAll(".theme-apply-btn");
+    const expectedCount = (currentEnhancedData3.themes ? currentEnhancedData3.themes.length : 0) + 1;
+    if (existingBtns.length > 0 && existingBtns.length === expectedCount) {
+      currentEnhancedData3.themes?.forEach((theme) => {
+        const card = listContainer.querySelector(`[name="${theme.fileName}-box"]`);
+        if (card) {
+          const versionEl = card.querySelector(".version-container-zdPyN");
+          if (versionEl && theme.version) {
+            versionEl.textContent = theme.version;
+            versionEl.setAttribute("title", theme.version);
+          }
+        }
+        checkForItemUpdatesUI(theme.fileName, "theme");
+      });
+      existingBtns.forEach((btn) => {
+        const targetTheme = (btn.getAttribute("data-theme") || "").toLowerCase();
+        const isThisApplied = !currentActive && targetTheme === "default" || currentActive && targetTheme === currentActive;
+        if (isThisApplied) {
+          btn.className = "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn";
+          const lbl = btn.querySelector(".label-OnWh2");
+          if (lbl) lbl.textContent = "Applied";
+        } else {
+          btn.className = "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
+          const lbl = btn.querySelector(".label-OnWh2");
+          if (lbl) lbl.textContent = "Apply";
+        }
+      });
+      return;
+    }
+    listContainer.innerHTML = "";
+    const isDefaultActive = !currentActive || currentActive === "default";
+    listContainer.appendChild(createThemeCard("Default", {
+      name: "Default",
+      version: "Built-in",
+      author: "Stremio",
+      description: "Default Stremio theme"
+    }, isDefaultActive, onApplyTheme));
+    if (currentEnhancedData3.themes && currentEnhancedData3.themes.length > 0) {
+      currentEnhancedData3.themes.forEach((theme) => {
+        const isApplied = currentActive === (theme.fileName || "").toLowerCase();
+        listContainer.appendChild(createThemeCard(theme.fileName, theme, isApplied, onApplyTheme));
+        checkForItemUpdatesUI(theme.fileName, "theme");
+      });
+    }
+  }
+
+  // src/components/plugin-item/plugin-item.html
+  var plugin_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 plugin-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1.2rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="-1" id="{{ fileName }}-settings" title="Plugin settings" class="nav-tab-button-tW6qT nav-tab-button-container-dYhs0 button-container-zVLH6 plugin-settings-btn" style="display: {{ settingsDisplay }}; cursor: pointer; margin-right: 0.75rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); transition: background-color 0.2s;">\n                <svg class="icon-TzPrK" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;" viewBox="0 0 512 512">\n                    <path d="M464 250c0-2.7-1-5-3-7l-6-3-26-4-3-2-2-3-1-9v-4l2-2 23-13 5-5v-8l-4-11c-.7-2-2.3-3.7-5-5-2-1.3-4.3-1.7-7-.7l-25 5-4-1-2-2-5-8c-.6-1.1-.8-2.4-.6-3.7.2-1.3.7-2.4 1.6-3.3l17-19 2-7c.7-2.7 0-5-2-7l-7-9c-1.6-2.1-4-3.5-6.6-3.9-2.6-.4-5.3.3-7.4 1.9l-22 13c-.9.9-2.2 1.4-3.5 1.4s-2.6-.5-3.5-1.4l-7-7-2-2v-4l9-24c1.1-2.3 1.3-4.9.6-7.3-.8-2.4-2.4-4.4-4.6-5.7l-10-6c-2-2-4.3-2.3-7-1-2.7.7-5 2-7 4l-16 20-2 2h-4l-9-4-3-2-1-3v-26c.7-2.7 0-5-2-7-1.3-2.7-3.3-4-6-4l-12-2c-2-.7-4.3-.4-7 1l-4 6-9 25-2 3h-13c-1.3.7-2.3.4-3-1l-2-2-9-25c0-2-1.3-4-4-6l-7-1-12 2c-2.7 0-4.7 1.3-6 4-2 2-2.7 4.3-2 7v26l-1 3-3 2-9 4c-2.7.7-4.7 0-6-2l-17-20c-.7-2-2.7-3.3-6-4-2-.7-4.3-.3-7 1l-10 6-5 5v8l10 24v3c0 2-.7 3-2 3l-7 6c-.4.5-.9 1-1.5 1.3-.6.3-1.2.6-1.8.7-.7.1-1.3.1-2-.1-.6-.2-1.2-.5-1.7-.8l-22-14-7-1-7 3-7 9c-1.8 1.9-2.9 4.4-2.9 7s1 5.1 2.9 7l18 20 1 3-1 3-5 9-2 2h-4l-25-4c-2.4-.7-4.9-.4-7.2.7s-3.9 3.1-4.8 5.3l-4 11v7c1.3 3.3 3 5.3 5 6l23 13 2 2v5l-2 8-1 3-3 2-26 4c-2.5.2-4.8 1.4-6.4 3.3-1.7 1.8-2.6 4.3-2.6 6.7v12c0 2.5.9 4.9 2.6 6.7s3.9 3.1 6.4 3.3l26 4 3 2 1 3 2 9v4l-2 2-23 13-5 5v8l4 11c.7 2 2.3 3.7 5 5 2 1.3 4.3 1.7 7 .7l25-5 4 1 2 2 5 8c.7 1.1 1.1 2.3 1.1 3.6 0 1.3-.4 2.5-1.1 3.5l-17 20c-1.7 1.7-2.7 3.9-2.9 6.3-.2 2.4.5 4.8 1.9 6.7l7 9c1.6 2.1 4 3.5 6.6 3.9 2.6.4 5.3-.4 7.4-2l22-13c1.1-.8 2.4-1.1 3.7-.9 1.3.2 2.5.9 3.3 1.9l7 6 2 3v3l-9 24c-1.1 2.3-1.3 4.9-.5 7.3.7 2.4 2.4 4.4 4.5 5.7l10 6c1.1.7 2.4 1.2 3.7 1.5 1.3.2 2.7.2 4-.1 1.3-.3 2.6-.8 3.6-1.6 1.1-.8 2-1.7 2.7-2.8l16-20 5-2 10 4 3 2 1 3v26c-.7 2.7 0 5 2 7 1.3 2.7 3.3 4 6 4l12 2c2.3.2 4.7-.4 6.6-1.7 2-1.3 3.5-3.1 4.4-5.3l9-25 2-2c1.3-1.3 2.3-1.7 3-1.3h10l3 1 2 2 9 25c.7 2 2 3.7 4 5 1.9 1.3 4.3 1.9 6.7 1.7l12-2c2.7-.7 4.7-2 6-4.7.7-2.7.7-5.3.7-7.3v-26l1-3 3-2 9-3c3.3-.7 5.3-.3 6 1.3l17 20c1.4 2 3.5 3.4 5.9 4 2.4.6 4.9.2 7.1-1l10-6 5-5v-8l-10-24v-3l2-3 7-6 4-2 3 1 22 13c2.7 1.3 5 1 7-1l7-9c1-1.3 1.7-2.7 2-4.3.3-1.6.2-3.3-.4-4.8l-17-20-2-3 1-4 5-9 3-2 3-1 25 5c1.2.5 2.6.7 3.9.7 1.3 0 2.6-.4 3.8-1 1.2-.6 2.3-1.4 3.2-2.3.9-1 1.6-2.1 2.1-3.4l3-11v-8l-5-5-23-13-3-2v-5l2-8 1-3 3-2 26-4c2.5-.2 4.8-1.4 6.5-3.3 1.6-1.8 2.5-4.3 2.5-6.7v-12zm-282 94c-1.3 2-3.3 3.7-6 5-2 1.4-4.3 2.3-6.8 2.6-2.4.3-4.9 0-7.2-.8l-6-4c-22.7-24.9-35.3-57.3-35.3-91s12.6-66.1 35.3-91l7-4 7-1c2.5.3 4.9 1.2 7 2.6 2.1 1.4 3.8 3.3 4.9 5.4l46 80c1.4 2.4 2.1 5.2 2.1 8s-.7 5.6-2.1 8l-46 80zm74 47c-10 0-19.3-1-28-3-3.7-.7-7-2.7-9.4-5.6-2.4-2.9-3.7-6.6-3.6-10.3l2-7 46-80 6-6 8-2h92c2.5-.1 5 .4 7.2 1.5s4.2 2.6 5.8 4.6l3 7 1 7c-17 55-68 94-128 94zm7-164l-45-80-2-7c-1.1-3.6 0-7.2 2.2-10.1 2.2-2.9 5.3-5 8.8-5.9 32.7-6.8 66.7-1.2 95.5 15.6 28.8 16.8 50.4 43.7 60.5 75.5l1 7c-.7 3.7-2.7 7-5.6 9.4-2.9 2.4-6.6 3.7-10.4 3.7h-92c-2.7.7-5.3 0-8-2l-6-6.2z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete plugin" class="button-container-zVLH6 plugin-delete-btn" style="display: flex; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="toggle-container-lZfHP button-container-zVLH6 plugin-toggle {{ checkedClass }}" data-plugin="{{ fileName }}" style="outline: none; cursor: pointer;">\n                <div class="toggle-toOWM"></div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
   // src/components/plugin-item/pluginItem.ts
   function createPluginCard(fileName, meta, isEnabled, onToggle) {
@@ -976,13 +1861,52 @@
         });
       };
     }
+    const deleteBtn = card.querySelector(".plugin-delete-btn");
+    if (deleteBtn) {
+      const handleDelete = async (e) => {
+        e.stopPropagation();
+        const result = await modalManager.showAlert(
+          "danger",
+          "Delete Plugin",
+          `Are you sure you want to delete "${pluginDisplayName}" (${fileName})?
+
+This will permanently remove the plugin file from your plugins folder.`,
+          ["Delete", "Cancel"]
+        );
+        if (result !== 0) return;
+        const wasEnabled = toggle?.classList.contains("checked") ?? isEnabled;
+        unloadPlugin(fileName);
+        window.StremioEnhancedAPI?.clearRegisteredSettings?.(fileName);
+        if (wasEnabled) {
+          showReloadWarning();
+        }
+        postEnhancedMessage("deleteMod", {
+          modType: "plugin",
+          fileName
+        });
+        card.remove();
+        modalManager.showToast(
+          "plugin-deleted",
+          "Plugin Deleted",
+          `Deleted ${pluginDisplayName}.`,
+          "info"
+        );
+      };
+      deleteBtn.onclick = handleDelete;
+      deleteBtn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleDelete(e);
+        }
+      });
+    }
     return card;
   }
 
   // src/plugins/pluginManager.ts
-  var currentEnhancedData = { plugins: [], themes: [], activeTheme: null };
+  var currentEnhancedData4 = { plugins: [], themes: [], activeTheme: null };
   function updatePluginManagerData(data) {
-    currentEnhancedData = data;
+    currentEnhancedData4 = data;
   }
   function loadPlugin(fileName) {
     const scriptId = `plugin-${fileName}`;
@@ -995,7 +1919,7 @@
       }
       return;
     }
-    const pluginsList = currentEnhancedData.plugins && currentEnhancedData.plugins.length > 0 ? currentEnhancedData.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
+    const pluginsList = currentEnhancedData4.plugins && currentEnhancedData4.plugins.length > 0 ? currentEnhancedData4.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
     const plugin = pluginsList.find((p) => p.fileName === fileName);
     if (!plugin || !plugin.content) {
       console.warn("[Enhanced] Cannot load plugin, content missing for:", fileName);
@@ -1030,7 +1954,7 @@
     }
   }
   function loadEnabledPlugins() {
-    const pluginsList = currentEnhancedData.plugins && currentEnhancedData.plugins.length > 0 ? currentEnhancedData.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
+    const pluginsList = currentEnhancedData4.plugins && currentEnhancedData4.plugins.length > 0 ? currentEnhancedData4.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
     pluginsList.forEach((plugin) => {
       if (plugin.enabled) {
         loadPlugin(plugin.fileName);
@@ -1046,7 +1970,7 @@
     p.style.cssText = "color: white; margin-top: 1rem; font-size: 0.95rem; line-height: 1.4;";
     p.appendChild(document.createTextNode("Reload is required to disable plugins. Click "));
     const link = document.createElement("a");
-    link.style.cssText = "color: var(--primary-accent-color, #735bf2); cursor: pointer; font-weight: bold; text-decoration: underline;";
+    link.style.cssText = "color: var(--accent-color, var(--primary-accent-color, #735bf2)); cursor: pointer; font-weight: bold; text-decoration: underline;";
     link.textContent = "here";
     link.onclick = function() {
       location.reload();
@@ -1055,13 +1979,32 @@
     p.appendChild(document.createTextNode(" to reload."));
     pluginsCat.appendChild(p);
   }
+  function toggleAllPlugins() {
+    const pluginsList = currentEnhancedData4.plugins && currentEnhancedData4.plugins.length > 0 ? currentEnhancedData4.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
+    if (pluginsList.length === 0) return;
+    const anyEnabled = pluginsList.some((p) => !!p.enabled);
+    const shouldEnableAll = !anyEnabled;
+    const api = window.StremioEnhancedAPI;
+    pluginsList.forEach((plugin) => {
+      if (!!plugin.enabled === shouldEnableAll) return;
+      if (api && typeof api.togglePlugin === "function") {
+        api.togglePlugin(plugin.fileName, shouldEnableAll);
+      }
+      if (!shouldEnableAll && api && typeof api.clearRegisteredSettings === "function") {
+        api.clearRegisteredSettings(plugin.fileName);
+      }
+    });
+    document.querySelectorAll("#enhanced-plugins-list .plugin-toggle").forEach((toggle) => {
+      toggle.classList.toggle("checked", shouldEnableAll);
+    });
+  }
   function renderPluginsList(onTogglePlugin) {
     const listContainer = document.getElementById("enhanced-plugins-list");
     if (!listContainer) return;
     const existingToggles = listContainer.querySelectorAll(".plugin-toggle");
-    const expectedCount = currentEnhancedData.plugins ? currentEnhancedData.plugins.length : 0;
+    const expectedCount = currentEnhancedData4.plugins ? currentEnhancedData4.plugins.length : 0;
     if (existingToggles.length > 0 && expectedCount > 0 && existingToggles.length === expectedCount) {
-      currentEnhancedData.plugins.forEach((plugin) => {
+      currentEnhancedData4.plugins.forEach((plugin) => {
         const pluginBaseName = plugin.fileName.replace(/\.plugin\.js$/, "").replace(/\.js$/, "");
         const schemas = window.__pluginSchemas || {};
         const schema = schemas[plugin.fileName] || schemas[pluginBaseName];
@@ -1091,8 +2034,8 @@
       return;
     }
     listContainer.innerHTML = "";
-    if (currentEnhancedData.plugins && currentEnhancedData.plugins.length > 0) {
-      currentEnhancedData.plugins.forEach((plugin) => {
+    if (currentEnhancedData4.plugins && currentEnhancedData4.plugins.length > 0) {
+      currentEnhancedData4.plugins.forEach((plugin) => {
         listContainer.appendChild(createPluginCard(plugin.fileName, plugin, !!plugin.enabled, onTogglePlugin));
         checkForItemUpdatesUI(plugin.fileName, "plugin");
       });
@@ -1460,1111 +2403,6 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       }
     } finally {
       isCheckingServer = false;
-    }
-  }
-
-  // src/components/settings/settingsInjector.ts
-  function checkSettings() {
-    if (!location.href.includes("#/settings")) return;
-    if (document.getElementById("enhanced")) return;
-    waitForElement('[class*="sections-container"]', 1e4).then((sectionsContainer) => {
-      if (document.getElementById("enhanced")) return;
-      postEnhancedMessage("getData");
-      injectNav();
-      injectSection(sectionsContainer);
-    }).catch((err) => {
-      console.warn("[Enhanced] Waiting for sections container:", err);
-    });
-  }
-  function injectNav() {
-    waitForElement('[title="Shortcuts"]', 5e3).then((shortcutsNav) => {
-      if (document.getElementById("enhanced-nav-btn")) return;
-      const menu = shortcutsNav.parentElement;
-      if (!menu) return;
-      const enhancedNav = document.createElement("div");
-      enhancedNav.className = shortcutsNav.className;
-      enhancedNav.setAttribute("tabindex", "0");
-      enhancedNav.setAttribute("title", "Enhanced");
-      enhancedNav.setAttribute("data-section", "enhanced");
-      enhancedNav.id = "enhanced-nav-btn";
-      enhancedNav.textContent = "Enhanced";
-      enhancedNav.style.cursor = "pointer";
-      enhancedNav.style.outline = "none";
-      enhancedNav.style.fontSize = "1.1rem";
-      enhancedNav.addEventListener("click", () => {
-        const target = document.getElementById("enhanced");
-        if (target) {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-          setActiveNav(enhancedNav);
-        }
-      });
-      shortcutsNav.insertAdjacentElement("afterend", enhancedNav);
-      const targetSection = document.getElementById("enhanced");
-      if (targetSection) {
-        setupScrollObserver(enhancedNav, targetSection);
-      }
-    }).catch((err) => {
-      console.warn("[Enhanced] Shortcuts nav item not found:", err);
-    });
-  }
-  function setActiveNav(navBtn) {
-    const menu = navBtn.parentElement;
-    if (!menu) return;
-    let selectedClass = "selected-S7SeK";
-    menu.querySelectorAll("*").forEach((el) => {
-      el.classList.forEach((cls) => {
-        if (cls.includes("selected")) {
-          selectedClass = cls;
-          el.classList.remove(cls);
-        }
-      });
-    });
-    navBtn.classList.add(selectedClass);
-  }
-  function setupScrollObserver(navBtn, section) {
-    const observer2 = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setActiveNav(navBtn);
-        } else {
-          navBtn.classList.forEach((cls) => {
-            if (cls.includes("selected")) navBtn.classList.remove(cls);
-          });
-        }
-      });
-    }, { threshold: 0.1 });
-    observer2.observe(section);
-  }
-  function injectSection(sectionsContainer) {
-    const html = TemplateCache.render(settings_section_default, {
-      themeIcon: THEME_ICON,
-      pluginIcon: PLUGIN_ICON,
-      marketplaceIcon: MARKETPLACE_ICON,
-      serverIcon: SERVER_ICON,
-      updateIcon: UPDATE_ICON
-    });
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = html.trim();
-    const sectionDiv = wrapper.firstElementChild;
-    const sampleSection = document.querySelector('[class*="section-"]');
-    if (sampleSection) {
-      sectionDiv.className = sampleSection.className;
-      const sampleLabel = sampleSection.querySelector(':scope > [class*="label-"]');
-      const titleDiv = sectionDiv.querySelector(".label-wXG3e");
-      if (titleDiv) {
-        if (sampleLabel) {
-          titleDiv.className = sampleLabel.className;
-        }
-        titleDiv.style.fontSize = "1.8rem";
-        titleDiv.style.fontWeight = "700";
-        titleDiv.style.lineHeight = "3.4rem";
-        titleDiv.style.marginBottom = "2rem";
-      }
-    }
-    const openThemesBtn = sectionDiv.querySelector("#openthemesfolderBtn");
-    if (openThemesBtn) {
-      openThemesBtn.onclick = () => {
-        if (typeof window.StremioEnhancedAPI?.openThemesFolder === "function") {
-          window.StremioEnhancedAPI.openThemesFolder();
-        } else {
-          postEnhancedMessage("openThemesFolder");
-        }
-      };
-    }
-    const openPluginsBtn = sectionDiv.querySelector("#openpluginsfolderBtn");
-    if (openPluginsBtn) {
-      openPluginsBtn.onclick = () => {
-        if (typeof window.StremioEnhancedAPI?.openPluginsFolder === "function") {
-          window.StremioEnhancedAPI.openPluginsFolder();
-        } else {
-          postEnhancedMessage("openPluginsFolder");
-        }
-      };
-    }
-    const browseMarketplaceBtn = sectionDiv.querySelector("#browsePluginsThemesBtn");
-    if (browseMarketplaceBtn) {
-      browseMarketplaceBtn.onclick = () => {
-        browseMarketplace();
-      };
-    }
-    const openServerFolderBtn = sectionDiv.querySelector("#openserverfolderBtn");
-    if (openServerFolderBtn) {
-      openServerFolderBtn.onclick = () => {
-        openStreamingServerFolder();
-      };
-    }
-    const checkServerUpdatesBtn = sectionDiv.querySelector("#checkserverupdatesBtn");
-    if (checkServerUpdatesBtn) {
-      checkServerUpdatesBtn.onclick = () => {
-        checkServerJsUpdateAndSetup(true).then(() => {
-          const updated = getCurrentServerStatus();
-          if (serverStatusInfo) renderServerInfo(updated);
-        });
-      };
-    }
-    const serverStatusInfo = sectionDiv.querySelector("#enhanced-server-status-info");
-    const renderServerInfo = (status) => {
-      if (!serverStatusInfo) return;
-      if (!status || !status.exists) {
-        serverStatusInfo.innerHTML = `<span style="color: #ff6b6b; font-weight: 600;">Status:</span> Not installed / missing (server.js required)`;
-      } else {
-        const ver = status.currentVersion ? `v${status.currentVersion.replace(/^v/, "")}` : "Installed";
-        const runningBadge = status.running ? '<span style="color: #51cf66;">\u25CF Running</span>' : '<span style="color: #fcc419;">\u25CF Stopped</span>';
-        const actionBtn = status.running && window.location.hostname !== "127.0.0.1" ? `<button id="enhanced-switch-to-local-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #5c7cfa; color: #fff; border: none; border-radius: 4px; font-weight: 600;">Switch to Local Server (127.0.0.1)</button>` : !status.running ? `<button id="enhanced-start-server-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #51cf66; color: #111; border: none; border-radius: 4px; font-weight: 600;">Start Server</button>` : "";
-        serverStatusInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Status:</span> ${ver} (${runningBadge}) &bull; <span style="color: #888; font-size: 0.85rem;">${status.serverDir}</span>${actionBtn}`;
-        const startBtn = serverStatusInfo.querySelector("#enhanced-start-server-btn");
-        if (startBtn) {
-          startBtn.onclick = async () => {
-            startBtn.textContent = "Starting...";
-            await startStreamingServer();
-            const updated = await getServerStatus();
-            renderServerInfo(updated);
-          };
-        }
-        const switchLocalBtn = serverStatusInfo.querySelector("#enhanced-switch-to-local-btn");
-        if (switchLocalBtn) {
-          switchLocalBtn.onclick = () => {
-            reloadToLocalStreamingServer();
-          };
-        }
-      }
-    };
-    if (serverStatusInfo) {
-      renderServerInfo(getCurrentServerStatus());
-      getServerStatus().then(renderServerInfo);
-    }
-    const clientVersionInfo = sectionDiv.querySelector("#enhanced-client-version-info");
-    const renderClientVersionInfo = () => {
-      if (!clientVersionInfo) return;
-      const currentVer = getCurrentClientVersion();
-      const latest = getLatestClientVersion();
-      if (!latest) {
-        clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}`;
-        return;
-      }
-      const hasUpdate = isNewerVersion(latest.version, currentVer);
-      const badge = hasUpdate ? `<span style="color: #fcc419; font-weight: 600;">\u25CF Update available: v${escapeHtml(latest.version)}</span>` : `<span style="color: #51cf66;">\u25CF Up to date (v${escapeHtml(latest.version)})</span>`;
-      clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}`;
-    };
-    const checkClientUpdatesBtn = sectionDiv.querySelector("#checkclientupdatesBtn");
-    if (checkClientUpdatesBtn) {
-      checkClientUpdatesBtn.onclick = async () => {
-        await checkClientUpdate(true);
-        renderClientVersionInfo();
-      };
-    }
-    const openClientReleasesBtn = sectionDiv.querySelector("#openclientreleasesBtn");
-    if (openClientReleasesBtn) {
-      openClientReleasesBtn.onclick = () => {
-        const url = getLatestClientVersion()?.releaseUrl || CLIENT_RELEASES_URL;
-        try {
-          window.open(url, "_blank");
-        } catch (_) {
-        }
-      };
-    }
-    if (clientVersionInfo) {
-      renderClientVersionInfo();
-      if (!getLatestClientVersion()) {
-        fetchLatestClientVersion().then(() => renderClientVersionInfo());
-      }
-    }
-    sectionsContainer.appendChild(sectionDiv);
-    renderThemesList((fileName) => {
-      window.StremioEnhancedAPI.applyTheme(fileName);
-    });
-    renderPluginsList((fileName, enabled) => {
-      window.StremioEnhancedAPI.togglePlugin(fileName, enabled);
-    });
-    const navBtn = document.getElementById("enhanced-nav-btn");
-    if (navBtn) {
-      setupScrollObserver(navBtn, sectionDiv);
-    }
-  }
-
-  // src/marketplace/marketplaceManager.ts
-  var REGISTRY_URL = "https://raw.githubusercontent.com/REVENGE977/stremio-enhanced-registry/refs/heads/main/registry.json";
-  var currentEnhancedData2 = {
-    plugins: [],
-    themes: [],
-    activeTheme: null
-  };
-  var cachedRegistry = null;
-  function updateMarketplaceData(data) {
-    currentEnhancedData2 = data;
-  }
-  function getFileNameFromUrl(url) {
-    try {
-      const parsed = new URL(url);
-      const parts = parsed.pathname.split("/");
-      return parts[parts.length - 1] || "";
-    } catch (_) {
-      const clean = url.split("?")[0].split("#")[0];
-      return clean.substring(clean.lastIndexOf("/") + 1);
-    }
-  }
-  function isPluginInstalled(fileName) {
-    const fn = fileName.toLowerCase();
-    return (currentEnhancedData2.plugins || []).some((p) => (p.fileName || "").toLowerCase() === fn);
-  }
-  function isThemeInstalled(fileName) {
-    const fn = fileName.toLowerCase();
-    return (currentEnhancedData2.themes || []).some((t) => (t.fileName || "").toLowerCase() === fn);
-  }
-  async function fetchRegistry() {
-    if (cachedRegistry) return cachedRegistry;
-    console.log("[Enhanced Marketplace] Fetching registry from:", REGISTRY_URL);
-    const response = await fetch(REGISTRY_URL);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch marketplace registry: HTTP ${response.status}`);
-    }
-    const text = await response.text();
-    const data = JSON.parse(text);
-    cachedRegistry = {
-      plugins: Array.isArray(data.plugins) ? data.plugins : [],
-      themes: Array.isArray(data.themes) ? data.themes : []
-    };
-    console.log(`[Enhanced Marketplace] Loaded registry with ${cachedRegistry.plugins.length} plugins and ${cachedRegistry.themes.length} themes.`);
-    return cachedRegistry;
-  }
-  function setupSearchBar() {
-    const searchInput = document.querySelector(".search-input-bAgAh");
-    const modsList = document.getElementById("mods-list");
-    if (!searchInput || !modsList) return;
-    searchInput.addEventListener("input", () => {
-      const query = searchInput.value.trim().toLowerCase();
-      const items = modsList.querySelectorAll(".marketplace-item-card, .addon-container-lC5KN");
-      items.forEach((item) => {
-        const name = (item.querySelector(".marketplace-title") || item.querySelector(".name-container-qIAg8"))?.textContent?.toLowerCase() || "";
-        const desc = item.textContent?.toLowerCase() || "";
-        const matches = !query || name.includes(query) || desc.includes(query);
-        item.style.display = matches ? "" : "none";
-      });
-    });
-  }
-  function goBackToSettings() {
-    location.hash = "#/";
-    setTimeout(() => {
-      location.hash = "#/settings";
-      setTimeout(() => {
-        checkSettings();
-      }, 100);
-    }, 50);
-  }
-  async function browseMarketplace() {
-    const settingsContent = document.querySelector('[class*="settings-content-"]') || document.querySelector('[class*="sections-container"]')?.parentElement;
-    if (!settingsContent) {
-      console.warn("[Enhanced Marketplace] Settings content container not found.");
-      return;
-    }
-    if (settingsContent.parentElement) {
-      settingsContent.parentElement.style.height = "100%";
-      settingsContent.parentElement.style.overflow = "hidden";
-    }
-    settingsContent.style.position = "relative";
-    settingsContent.style.height = "100%";
-    settingsContent.style.width = "100%";
-    settingsContent.style.overflow = "hidden";
-    settingsContent.innerHTML = getMarketplaceTabHtml();
-    const scrollContainer = document.querySelector(".marketplace-tab-view");
-    if (scrollContainer) {
-      scrollContainer.focus();
-    }
-    const backBtn = document.getElementById("marketplace-back-btn");
-    if (backBtn) {
-      backBtn.onclick = goBackToSettings;
-    }
-    const horizontalNavs = document.querySelectorAll('[class*="horizontal-nav-bar"]');
-    if (horizontalNavs.length > 1) {
-      const targetNav = horizontalNavs[1];
-      targetNav.innerHTML = `
-            <div tabindex="-1" class="button-container-xT9_L back-button-container-lDB1N button-container-zVLH6" id="back-btn" style="cursor: pointer;">
-                <svg class="icon-T8MU6" viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem;">
-                    <path d="M328.61 106.469L185.08 243.358l143.53 136.889" style="stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 48; fill: none;"></path>
-                </svg>
-            </div>
-        `;
-      document.getElementById("back-btn")?.addEventListener("click", goBackToSettings);
-    }
-    setupSearchBar();
-    const modsList = document.getElementById("mods-list");
-    if (!modsList) return;
-    try {
-      const registry = await fetchRegistry();
-      modsList.innerHTML = "";
-      if ((!registry.plugins || registry.plugins.length === 0) && (!registry.themes || registry.themes.length === 0)) {
-        modsList.innerHTML = `
-                <div style="padding: 2.5rem; text-align: center; color: rgba(255,255,255,0.7); font-size: 1.05rem;">
-                    No plugins or themes found in the community registry.
-                </div>
-            `;
-        return;
-      }
-      const handleAction = async (mod, type, willInstall, btn) => {
-        const fileName = getFileNameFromUrl(mod.download);
-        const label = btn.querySelector(".label-OnWh2") || btn;
-        if (willInstall) {
-          const prevText = label.textContent;
-          label.textContent = "Installing...";
-          btn.style.pointerEvents = "none";
-          try {
-            const res = await fetch(mod.download);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const content = await res.text();
-            postEnhancedMessage("installMod", {
-              modType: type.toLowerCase(),
-              fileName,
-              content
-            });
-            btn.classList.remove("install-button-container-yfcq5");
-            btn.classList.add("uninstall-button-container-oV4Yo");
-            btn.setAttribute("title", "Uninstall");
-            label.textContent = "Uninstall";
-          } catch (err) {
-            console.error("[Enhanced Marketplace] Install failed:", err);
-            alert(`Failed to install ${mod.name}: ${err?.message || err}`);
-            label.textContent = prevText;
-          } finally {
-            btn.style.pointerEvents = "";
-          }
-        } else {
-          const prevText = label.textContent;
-          label.textContent = "Uninstalling...";
-          btn.style.pointerEvents = "none";
-          try {
-            postEnhancedMessage("deleteMod", {
-              modType: type.toLowerCase(),
-              fileName
-            });
-            btn.classList.remove("uninstall-button-container-oV4Yo");
-            btn.classList.add("install-button-container-yfcq5");
-            btn.setAttribute("title", "Install");
-            label.textContent = "Install";
-          } catch (err) {
-            console.error("[Enhanced Marketplace] Uninstall failed:", err);
-            alert(`Failed to uninstall ${mod.name}: ${err?.message || err}`);
-            label.textContent = prevText;
-          } finally {
-            btn.style.pointerEvents = "";
-          }
-        }
-      };
-      for (const plugin of registry.plugins) {
-        const fileName = getFileNameFromUrl(plugin.download);
-        const installed = isPluginInstalled(fileName);
-        const card = createMarketplaceCard(plugin, "Plugin", installed, handleAction);
-        modsList.appendChild(card);
-      }
-      for (const theme of registry.themes) {
-        const fileName = getFileNameFromUrl(theme.download);
-        const installed = isThemeInstalled(fileName);
-        const card = createMarketplaceCard(theme, "Theme", installed, handleAction);
-        modsList.appendChild(card);
-      }
-    } catch (err) {
-      console.error("[Enhanced Marketplace] Failed to load registry:", err);
-      modsList.innerHTML = `
-            <div style="padding: 2.5rem; text-align: center; color: #ff6b6b; font-size: 1rem;">
-                Failed to load community marketplace: ${err?.message || err}<br><br>
-                <button id="marketplace-retry-btn" style="padding: 0.5rem 1rem; border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; border: none;">
-                    Retry
-                </button>
-            </div>
-        `;
-      document.getElementById("marketplace-retry-btn")?.addEventListener("click", () => {
-        cachedRegistry = null;
-        browseMarketplace();
-      });
-    }
-  }
-
-  // src/updates/updateManager.ts
-  var currentEnhancedData3 = { plugins: [], themes: [], activeTheme: null };
-  var DEFAULT_CLIENT_VERSION = "1.2.2-enhanced.3";
-  var CLIENT_RELEASES_URL = "https://github.com/REVENGE977/stremio-linux-shell/releases/latest";
-  var CLIENT_VERSION_SOURCES = [
-    {
-      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/Cargo.toml",
-      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
-    },
-    {
-      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell/refs/heads/main/VERSION",
-      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
-    },
-    {
-      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/Cargo.toml",
-      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
-    },
-    {
-      url: "https://raw.githubusercontent.com/REVENGE977/stremio-linux-shell-enhanced/refs/heads/main/VERSION",
-      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
-    }
-  ];
-  var CLIENT_RELEASE_SOURCES = [
-    {
-      apiUrl: "https://api.github.com/repos/REVENGE977/stremio-linux-shell/releases/latest",
-      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell/releases/latest"
-    },
-    {
-      apiUrl: "https://api.github.com/repos/REVENGE977/stremio-linux-shell-enhanced/releases/latest",
-      releaseUrl: "https://github.com/REVENGE977/stremio-linux-shell-enhanced/releases/latest"
-    }
-  ];
-  var latestClientVersionCache = null;
-  var clientUpdateCheckInProgress = false;
-  function updateUpdateManagerData(data) {
-    currentEnhancedData3 = data;
-  }
-  function getCurrentClientVersion() {
-    return currentEnhancedData3.clientVersion || window.__INITIAL_ENHANCED_DATA__?.clientVersion || DEFAULT_CLIENT_VERSION;
-  }
-  function getLatestClientVersion() {
-    return latestClientVersionCache;
-  }
-  function parseClientVersion(version) {
-    const cleaned = version.trim().replace(/^v/i, "");
-    const [basePart, ...rest] = cleaned.split(/-enhanced\.?/i);
-    const base = (basePart || "").split("-")[0].split(".").map((n) => parseInt(n, 10) || 0);
-    let enhanced = [0];
-    if (rest.length > 0 && rest[0]) {
-      enhanced = rest[0].split(".").map((n) => parseInt(n, 10) || 0);
-    } else {
-      const dashMatch = cleaned.match(/-(\d+(?:\.\d+)*)$/);
-      if (dashMatch && dashMatch[1]) {
-        enhanced = dashMatch[1].split(".").map((n) => parseInt(n, 10) || 0);
-      }
-    }
-    return { base, enhanced };
-  }
-  function isNewerVersion(version1, version2) {
-    if (!version1 || !version2) return false;
-    const v1 = parseClientVersion(version1);
-    const v2 = parseClientVersion(version2);
-    const maxBaseLength = Math.max(v1.base.length, v2.base.length);
-    for (let i = 0; i < maxBaseLength; i++) {
-      const a = v1.base[i] ?? 0;
-      const b = v2.base[i] ?? 0;
-      if (a > b) return true;
-      if (a < b) return false;
-    }
-    const maxEnhancedLength = Math.max(v1.enhanced.length, v2.enhanced.length);
-    for (let i = 0; i < maxEnhancedLength; i++) {
-      const a = v1.enhanced[i] ?? 0;
-      const b = v2.enhanced[i] ?? 0;
-      if (a > b) return true;
-      if (a < b) return false;
-    }
-    return false;
-  }
-  function extractMetadataFromText(content) {
-    const blockMatch = content.match(/\/\*\*([\s\S]*?)\*\//);
-    if (!blockMatch) return null;
-    const result = {};
-    const tagRegex = /@(\w+)\s+([^\n\r]+)/g;
-    for (const match of blockMatch[1].matchAll(tagRegex)) {
-      const rawKey = match[1];
-      const rawValue = match[2];
-      const keyLower = rawKey.toLowerCase();
-      let key = rawKey;
-      if (keyLower === "updateurl") key = "updateUrl";
-      else if (keyLower === "name") key = "name";
-      else if (keyLower === "description") key = "description";
-      else if (keyLower === "version") key = "version";
-      else if (keyLower === "author") key = "author";
-      if (result[key] === void 0) {
-        result[key] = rawValue.trim();
-      }
-    }
-    if (!result.name || !result.version) {
-      return null;
-    }
-    return {
-      name: result.name,
-      description: result.description || "",
-      version: result.version || "1.0.0",
-      author: result.author || "Unknown",
-      updateUrl: result.updateUrl
-    };
-  }
-  async function getRegistryModVersion(itemFile, type) {
-    try {
-      const registry = await fetchRegistry();
-      const list = type === "plugin" ? registry.plugins : registry.themes;
-      const fnLower = itemFile.toLowerCase();
-      const baseName = fnLower.replace(/\.plugin\.js$/, "").replace(/\.theme\.css$/, "").replace(/\.js$/, "");
-      const found = list.find((m) => {
-        const dl = (m.download || "").toLowerCase();
-        return dl.endsWith(fnLower) || dl.includes(`/${baseName}.`);
-      });
-      if (found && found.version && found.download) {
-        return { version: found.version, download: found.download };
-      }
-    } catch (err) {
-      console.warn("[Enhanced Update] Failed to check registry version:", err);
-    }
-    return null;
-  }
-  async function checkUpdateData(itemFile, type) {
-    const plugins = currentEnhancedData3.plugins && currentEnhancedData3.plugins.length > 0 ? currentEnhancedData3.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
-    const themes = currentEnhancedData3.themes && currentEnhancedData3.themes.length > 0 ? currentEnhancedData3.themes : window.__INITIAL_ENHANCED_DATA__?.themes || [];
-    const list = type === "plugin" ? plugins : themes;
-    const installed = list.find((i) => (i.fileName || "").toLowerCase() === itemFile.toLowerCase());
-    if (!installed) return null;
-    let installedVersion = installed.version || "1.0.0";
-    let updateUrl = installed.updateUrl || installed.update_url;
-    const content = type === "plugin" ? installed.content : installed.css;
-    if ((!updateUrl || updateUrl === "none") && content) {
-      const parsed = extractMetadataFromText(content);
-      if (parsed?.updateUrl && parsed.updateUrl !== "none") {
-        updateUrl = parsed.updateUrl;
-      }
-      if (parsed?.version) {
-        installedVersion = parsed.version;
-      }
-    }
-    if (updateUrl && updateUrl !== "none") {
-      try {
-        console.log(`[Enhanced Update] Checking updateUrl for ${itemFile}: ${updateUrl}`);
-        const res = await fetch(updateUrl);
-        if (res.ok) {
-          const responseText = await res.text();
-          const newMeta = extractMetadataFromText(responseText);
-          if (newMeta && newMeta.version && isNewerVersion(newMeta.version, installedVersion)) {
-            console.log(`[Enhanced Update] Found newer version for ${itemFile}: ${installedVersion} -> ${newMeta.version}`);
-            const regInfo = await getRegistryModVersion(itemFile, type);
-            return {
-              hasUpdate: true,
-              newContent: responseText,
-              newMetaData: newMeta,
-              installedMetaData: installed,
-              registryVersion: regInfo?.version || null,
-              updateUrl
-            };
-          }
-          const trimmed = responseText.trim();
-          if (/^v?\d+(\.\d+)+$/.test(trimmed) && isNewerVersion(trimmed, installedVersion)) {
-            console.log(`[Enhanced Update] Found newer version text for ${itemFile}: ${installedVersion} -> ${trimmed}`);
-            const regInfo = await getRegistryModVersion(itemFile, type);
-            if (regInfo?.download) {
-              const dlRes = await fetch(regInfo.download);
-              if (dlRes.ok) {
-                const newContent = await dlRes.text();
-                const newMeta2 = extractMetadataFromText(newContent) || {
-                  name: installed.name,
-                  version: trimmed,
-                  description: installed.description,
-                  author: installed.author
-                };
-                return {
-                  hasUpdate: true,
-                  newContent,
-                  newMetaData: newMeta2,
-                  installedMetaData: installed,
-                  registryVersion: regInfo.version,
-                  updateUrl: regInfo.download
-                };
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.warn(`[Enhanced Update] Error checking updateUrl for ${itemFile}:`, err);
-      }
-    }
-    try {
-      const regInfo = await getRegistryModVersion(itemFile, type);
-      if (regInfo && isNewerVersion(regInfo.version, installedVersion)) {
-        console.log(`[Enhanced Update] Found newer version in registry for ${itemFile}: ${installedVersion} -> ${regInfo.version}`);
-        const dlRes = await fetch(regInfo.download);
-        if (dlRes.ok) {
-          const newContent = await dlRes.text();
-          const newMeta = extractMetadataFromText(newContent) || {
-            name: installed.name,
-            version: regInfo.version,
-            description: installed.description,
-            author: installed.author
-          };
-          return {
-            hasUpdate: true,
-            newContent,
-            newMetaData: newMeta,
-            installedMetaData: installed,
-            registryVersion: regInfo.version,
-            updateUrl: regInfo.download
-          };
-        }
-      }
-    } catch (err) {
-      console.warn(`[Enhanced Update] Error checking registry for ${itemFile}:`, err);
-    }
-    return { hasUpdate: false, installedMetaData: installed };
-  }
-  var inFlightChecks = /* @__PURE__ */ new Set();
-  async function checkForItemUpdatesUI(itemFile, type) {
-    const updateButton = document.getElementById(`${itemFile}-update`);
-    if (!updateButton) return false;
-    if (inFlightChecks.has(itemFile)) return false;
-    inFlightChecks.add(itemFile);
-    try {
-      const updateData = await checkUpdateData(itemFile, type);
-      if (!updateData || !updateData.hasUpdate || !updateData.newContent || !updateData.newMetaData) {
-        updateButton.style.display = "none";
-        return false;
-      }
-      updateButton.style.display = "inline-flex";
-      updateButton.setAttribute("title", `Update available: v${updateData.newMetaData.version}`);
-      const label = updateButton.querySelector(".label-OnWh2") || updateButton;
-      label.textContent = `Update (v${updateData.newMetaData.version})`;
-      updateButton.onclick = async (e) => {
-        e.stopPropagation();
-        if (type === "plugin" && updateData.registryVersion !== updateData.newMetaData.version) {
-          const result = await modalManager.showAlert(
-            "warning",
-            "Confirm Update",
-            `This update for ${updateData.installedMetaData?.name || itemFile} (v${updateData.newMetaData.version}) isn't submitted to the registry (Community Marketplace) yet, and thus has not been confirmed safe.
-
-Are you sure you want to update? It's recommended to read the source code of the update before updating.`,
-            ["Yes", "No", "View Source Code"]
-          );
-          if (result === 0) {
-            await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
-          } else if (result === 2 && updateData.updateUrl) {
-            try {
-              window.open(updateData.updateUrl, "_blank");
-            } catch (_) {
-            }
-          }
-        } else {
-          await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
-        }
-      };
-      return true;
-    } catch (err) {
-      console.error(`[Enhanced Update] Error updating UI for ${itemFile}:`, err);
-      return false;
-    } finally {
-      inFlightChecks.delete(itemFile);
-    }
-  }
-  async function applyUpdate(type, itemFile, newContent, newMetaData) {
-    const updateButton = document.getElementById(`${itemFile}-update`);
-    const label = updateButton?.querySelector(".label-OnWh2") || updateButton;
-    if (label) label.textContent = "Updating...";
-    if (updateButton) updateButton.style.pointerEvents = "none";
-    try {
-      postEnhancedMessage("installMod", {
-        modType: type,
-        fileName: itemFile,
-        content: newContent
-      });
-      if (updateButton) {
-        updateButton.style.display = "none";
-        updateButton.style.pointerEvents = "";
-      }
-      const card = document.querySelector(`[name="${itemFile}-box"]`);
-      if (card) {
-        const versionEl = card.querySelector(".version-container-zdPyN");
-        if (versionEl && newMetaData.version) {
-          versionEl.textContent = newMetaData.version;
-          versionEl.setAttribute("title", newMetaData.version);
-        }
-      }
-      if (type === "theme") {
-        const currentActive = currentEnhancedData3.activeTheme ? currentEnhancedData3.activeTheme.toLowerCase() : null;
-        if (currentActive === itemFile.toLowerCase()) {
-          window.StremioEnhancedAPI?.applyTheme(itemFile);
-        }
-      }
-      modalManager.showToast(
-        "update-success",
-        "Update Successful",
-        `Updated ${newMetaData.name || itemFile} to v${newMetaData.version || ""}${type === "plugin" ? ". Reload may be required for some plugin changes." : ""}`,
-        "success"
-      );
-    } catch (err) {
-      console.error(`[Enhanced Update] Failed to apply update for ${itemFile}:`, err);
-      if (label) label.textContent = "Update";
-      if (updateButton) updateButton.style.pointerEvents = "";
-      alert(`Failed to update ${itemFile}: ${err?.message || err}`);
-    }
-  }
-  async function checkForAllUpdates(isManual = false) {
-    if (isManual) {
-      modalManager.showToast(
-        "check-updates-progress",
-        "Checking for Updates",
-        "Checking for plugin and theme updates...",
-        "info"
-      );
-    }
-    const checkBtn = document.getElementById("checkforupdatesBtn");
-    if (checkBtn) {
-      checkBtn.style.pointerEvents = "none";
-      checkBtn.textContent = "Checking...";
-    }
-    let updateCount = 0;
-    try {
-      const plugins = currentEnhancedData3.plugins && currentEnhancedData3.plugins.length > 0 ? currentEnhancedData3.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
-      for (const p of plugins) {
-        const hasUp = await checkForItemUpdatesUI(p.fileName, "plugin");
-        if (hasUp) updateCount++;
-      }
-      const themes = currentEnhancedData3.themes && currentEnhancedData3.themes.length > 0 ? currentEnhancedData3.themes : window.__INITIAL_ENHANCED_DATA__?.themes || [];
-      for (const t of themes) {
-        const hasUp = await checkForItemUpdatesUI(t.fileName, "theme");
-        if (hasUp) updateCount++;
-      }
-      if (isManual) {
-        if (updateCount > 0) {
-          modalManager.showToast(
-            "check-updates-result",
-            "Updates Available",
-            `Found ${updateCount} update(s). Look for the yellow Update buttons.`,
-            "success"
-          );
-        } else {
-          modalManager.showToast(
-            "check-updates-result",
-            "Up to Date",
-            "All installed plugins and themes are up to date.",
-            "info"
-          );
-        }
-      }
-    } finally {
-      if (checkBtn) {
-        checkBtn.style.pointerEvents = "";
-        checkBtn.textContent = "Check for Updates";
-      }
-    }
-  }
-  function extractVersionToken(raw) {
-    if (!raw) return null;
-    const match = raw.trim().match(/\bv?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?)\b/i);
-    return match && match[1] ? match[1] : null;
-  }
-  function extractClientVersionFromRemote(content) {
-    const trimmed = content.trim();
-    if (!trimmed) return null;
-    const pkgSectionMatch = trimmed.match(/\[package\]([\s\S]*?)(?:\r?\n\s*\[|$)/);
-    if (pkgSectionMatch) {
-      const verMatch = pkgSectionMatch[1].match(/^\s*version\s*=\s*"([^"]+)"/m);
-      if (verMatch && verMatch[1]) {
-        return verMatch[1].trim().replace(/^v/i, "");
-      }
-    }
-    if (trimmed.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        const fromVersion = extractVersionToken(typeof parsed.version === "string" ? parsed.version : null);
-        if (fromVersion) return fromVersion;
-        const fromReleaseName = extractVersionToken(typeof parsed.name === "string" ? parsed.name : null);
-        if (fromReleaseName) return fromReleaseName;
-        const fromTagName = extractVersionToken(typeof parsed.tag_name === "string" ? parsed.tag_name : null);
-        if (fromTagName) return fromTagName;
-      } catch (_) {
-      }
-    }
-    for (const line of trimmed.split(/\r?\n/)) {
-      const l = line.trim();
-      if (!l || l.startsWith("#")) continue;
-      if (/^v?\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9._-]+)?$/.test(l)) {
-        return l.replace(/^v/i, "");
-      }
-    }
-    return null;
-  }
-  async function fetchLatestClientVersion(currentVersion) {
-    let bestCandidate = null;
-    const compareAgainst = currentVersion || getCurrentClientVersion();
-    for (const source of CLIENT_VERSION_SOURCES) {
-      try {
-        const res = await fetch(source.url, { cache: "no-store" });
-        if (!res.ok) continue;
-        const text = await res.text();
-        const version = extractClientVersionFromRemote(text);
-        if (version) {
-          if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
-            bestCandidate = { version, releaseUrl: source.releaseUrl };
-          }
-          if (isNewerVersion(version, compareAgainst)) {
-            latestClientVersionCache = bestCandidate;
-            return latestClientVersionCache;
-          }
-          break;
-        }
-      } catch (err) {
-        console.warn(`[Enhanced Client Update] Failed to fetch ${source.url}:`, err);
-      }
-    }
-    for (const source of CLIENT_RELEASE_SOURCES) {
-      try {
-        const res = await fetch(source.apiUrl, { cache: "no-store" });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (!data || data.draft) continue;
-        const version = extractVersionToken(typeof data.name === "string" ? data.name : null) || extractVersionToken(typeof data.tag_name === "string" ? data.tag_name : null);
-        if (version) {
-          const releaseUrl = typeof data.html_url === "string" && data.html_url.trim() ? data.html_url.trim() : source.releaseUrl;
-          if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
-            bestCandidate = { version, releaseUrl };
-          }
-          break;
-        }
-      } catch (err) {
-        console.warn(`[Enhanced Client Update] Failed to fetch latest release from ${source.apiUrl}:`, err);
-      }
-    }
-    if (bestCandidate) {
-      latestClientVersionCache = bestCandidate;
-    }
-    return bestCandidate;
-  }
-  async function checkClientUpdate(isManual = false) {
-    if (clientUpdateCheckInProgress) return false;
-    clientUpdateCheckInProgress = true;
-    const checkBtn = document.getElementById("checkclientupdatesBtn");
-    if (checkBtn) {
-      checkBtn.style.pointerEvents = "none";
-      checkBtn.textContent = "Checking...";
-    }
-    try {
-      const currentVersion = getCurrentClientVersion();
-      const skippedVersion = currentEnhancedData3.skippedClientVersion ?? window.__INITIAL_ENHANCED_DATA__?.skippedClientVersion ?? null;
-      const remote = await fetchLatestClientVersion(currentVersion);
-      if (!remote) {
-        if (isManual) {
-          modalManager.showToast(
-            "client-update-error",
-            "Update Check Failed",
-            "Could not fetch the latest client version from GitHub.",
-            "fail"
-          );
-        }
-        return false;
-      }
-      const hasUpdate = isNewerVersion(remote.version, currentVersion);
-      if (!hasUpdate) {
-        if (isManual) {
-          modalManager.showToast(
-            "client-up-to-date",
-            "Client Up to Date",
-            `You are running the latest version (v${currentVersion}).`,
-            "info"
-          );
-        }
-        return false;
-      }
-      if (!isManual && skippedVersion === remote.version) {
-        console.log(`[Enhanced Client Update] Skipping v${remote.version} (marked as skipped by user).`);
-        return true;
-      }
-      const curParsed = parseClientVersion(currentVersion);
-      const remParsed = parseClientVersion(remote.version);
-      const curBaseStr = curParsed.base.join(".");
-      const remBaseStr = remParsed.base.join(".");
-      const curEnhNum = curParsed.enhanced[0] ?? 0;
-      const remEnhNum = remParsed.enhanced[0] ?? 0;
-      const details = `A new version of Stremio Linux Shell Enhanced is available!
-
-Installed Version: v${currentVersion} (Base ${curBaseStr}, Enhanced build #${curEnhNum})
-Latest Version: v${remote.version} (Base ${remBaseStr}, Enhanced build #${remEnhNum})
-
-Would you like to open the GitHub Releases page to download the update?`;
-      const choice = await modalManager.showAlert(
-        "info",
-        "Client Update Available",
-        details,
-        ["Download / Open Release Page", "Skip This Version", "Later"]
-      );
-      if (choice === 0) {
-        try {
-          window.open(remote.releaseUrl, "_blank");
-        } catch (_) {
-        }
-      } else if (choice === 1) {
-        currentEnhancedData3.skippedClientVersion = remote.version;
-        postEnhancedMessage("skipClientVersion", { version: remote.version });
-        modalManager.showToast(
-          "client-update-skipped",
-          "Version Skipped",
-          `Skipped client update v${remote.version}.`,
-          "info"
-        );
-      }
-      return true;
-    } catch (err) {
-      console.error("[Enhanced Client Update] Error checking for client updates:", err);
-      if (isManual) {
-        modalManager.showToast(
-          "client-update-error",
-          "Update Check Failed",
-          "An unexpected error occurred while checking for client updates.",
-          "fail"
-        );
-      }
-      return false;
-    } finally {
-      clientUpdateCheckInProgress = false;
-      if (checkBtn) {
-        checkBtn.style.pointerEvents = "";
-        checkBtn.textContent = "Check for Client Updates";
-      }
-    }
-  }
-
-  // src/themes/themeManager.ts
-  var headMutationObserver = null;
-  var currentEnhancedData4 = { plugins: [], themes: [], activeTheme: null };
-  function updateThemeManagerData(data) {
-    currentEnhancedData4 = data;
-  }
-  function applyThemeCSS(fileName) {
-    let activeStyle = document.getElementById("activeTheme");
-    if (fileName === "Default" || !fileName) {
-      if (activeStyle) activeStyle.remove();
-      try {
-        localStorage.setItem("currentTheme", "Default");
-      } catch (_) {
-      }
-      return;
-    }
-    const targetName = fileName.toLowerCase();
-    const themesList = currentEnhancedData4.themes && currentEnhancedData4.themes.length > 0 ? currentEnhancedData4.themes : window.__INITIAL_ENHANCED_DATA__?.themes || [];
-    const foundTheme = themesList.find((t) => (t.fileName || "").toLowerCase() === targetName);
-    if (!foundTheme || !foundTheme.css) {
-      console.warn("[Enhanced] Theme CSS not found for:", fileName);
-      return;
-    }
-    try {
-      localStorage.setItem("currentTheme", foundTheme.fileName);
-    } catch (_) {
-    }
-    if (!activeStyle) {
-      activeStyle = document.createElement("style");
-      activeStyle.id = "activeTheme";
-    }
-    if (activeStyle.textContent !== foundTheme.css) {
-      activeStyle.textContent = foundTheme.css;
-    }
-    attachThemeToHead(activeStyle);
-  }
-  function attachThemeToHead(styleEl) {
-    const activeStyle = styleEl || document.getElementById("activeTheme");
-    if (!activeStyle) return;
-    if (document.head) {
-      if (activeStyle.parentElement !== document.head || document.head.lastElementChild !== activeStyle) {
-        document.head.appendChild(activeStyle);
-      }
-      setupHeadObserver();
-    } else if (document.documentElement) {
-      if (activeStyle.parentElement !== document.documentElement) {
-        document.documentElement.appendChild(activeStyle);
-      }
-      setupDocObserver();
-    }
-  }
-  function setupDocObserver() {
-    if (window.__enhancedDocObserver) return;
-    window.__enhancedDocObserver = new MutationObserver(() => {
-      if (document.head) {
-        window.__enhancedDocObserver.disconnect();
-        window.__enhancedDocObserver = null;
-        attachThemeToHead();
-      }
-    });
-    window.__enhancedDocObserver.observe(document.documentElement, { childList: true });
-  }
-  function setupHeadObserver() {
-    if (headMutationObserver) return;
-    if (!document.head) return;
-    headMutationObserver = new MutationObserver(() => {
-      const activeStyle = document.getElementById("activeTheme");
-      if (!activeStyle) return;
-      if (document.head.lastElementChild !== activeStyle) {
-        headMutationObserver?.disconnect();
-        document.head.appendChild(activeStyle);
-        headMutationObserver?.observe(document.head, { childList: true });
-      }
-    });
-    headMutationObserver.observe(document.head, { childList: true });
-  }
-  function ensureActiveTheme() {
-    if (!currentEnhancedData4.activeTheme || currentEnhancedData4.activeTheme === "Default") return;
-    applyThemeCSS(currentEnhancedData4.activeTheme);
-  }
-  function applyThemeUI(fileName) {
-    currentEnhancedData4.activeTheme = fileName === "Default" ? null : fileName;
-    const listContainer = document.getElementById("enhanced-themes-list");
-    if (listContainer) {
-      const currentActive = currentEnhancedData4.activeTheme ? currentEnhancedData4.activeTheme.toLowerCase() : null;
-      listContainer.querySelectorAll(".theme-apply-btn").forEach((btn) => {
-        const targetTheme = (btn.getAttribute("data-theme") || "").toLowerCase();
-        const isThisApplied = !currentActive && targetTheme === "default" || currentActive && targetTheme === currentActive;
-        if (isThisApplied) {
-          btn.className = "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Applied";
-        } else {
-          btn.className = "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Apply";
-        }
-      });
-    }
-    applyThemeCSS(fileName);
-    try {
-      localStorage.setItem("currentTheme", fileName);
-    } catch (_) {
-    }
-  }
-  function renderThemesList(onApplyTheme) {
-    const listContainer = document.getElementById("enhanced-themes-list");
-    if (!listContainer) return;
-    const currentActive = currentEnhancedData4.activeTheme ? currentEnhancedData4.activeTheme.toLowerCase() : null;
-    const existingBtns = listContainer.querySelectorAll(".theme-apply-btn");
-    const expectedCount = (currentEnhancedData4.themes ? currentEnhancedData4.themes.length : 0) + 1;
-    if (existingBtns.length > 0 && existingBtns.length === expectedCount) {
-      currentEnhancedData4.themes?.forEach((theme) => {
-        const card = listContainer.querySelector(`[name="${theme.fileName}-box"]`);
-        if (card) {
-          const versionEl = card.querySelector(".version-container-zdPyN");
-          if (versionEl && theme.version) {
-            versionEl.textContent = theme.version;
-            versionEl.setAttribute("title", theme.version);
-          }
-        }
-        checkForItemUpdatesUI(theme.fileName, "theme");
-      });
-      existingBtns.forEach((btn) => {
-        const targetTheme = (btn.getAttribute("data-theme") || "").toLowerCase();
-        const isThisApplied = !currentActive && targetTheme === "default" || currentActive && targetTheme === currentActive;
-        if (isThisApplied) {
-          btn.className = "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Applied";
-        } else {
-          btn.className = "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Apply";
-        }
-      });
-      return;
-    }
-    listContainer.innerHTML = "";
-    const isDefaultActive = !currentActive || currentActive === "default";
-    listContainer.appendChild(createThemeCard("Default", {
-      name: "Default",
-      version: "Built-in",
-      author: "Stremio",
-      description: "Default Stremio theme"
-    }, isDefaultActive, onApplyTheme));
-    if (currentEnhancedData4.themes && currentEnhancedData4.themes.length > 0) {
-      currentEnhancedData4.themes.forEach((theme) => {
-        const isApplied = currentActive === (theme.fileName || "").toLowerCase();
-        listContainer.appendChild(createThemeCard(theme.fileName, theme, isApplied, onApplyTheme));
-        checkForItemUpdatesUI(theme.fileName, "theme");
-      });
     }
   }
 
@@ -3651,6 +3489,388 @@ Would you like to open the GitHub Releases page to download the update?`;
         return origDecodingInfo(configuration);
       };
     }
+  }
+
+  // src/components/settings/settingsStyles.ts
+  var SETTINGS_STYLE_ID = "enhanced-settings-style";
+  var SETTINGS_STYLES = `
+.enhanced-page-container { display: none; }
+.enhanced-open .enhanced-page-container { display: block; }
+.enhanced-open [class*="pane-"] > :not(.enhanced-page-container) { display: none !important; }
+
+#enhanced[data-show="themes"] > .enhanced-category:not([data-category="themes"]),
+#enhanced[data-show="plugins"] > .enhanced-category:not([data-category="plugins"]),
+#enhanced[data-show="marketplace"] > .enhanced-category:not([data-category="marketplace"]),
+#enhanced[data-show="server"] > .enhanced-category:not([data-category="server"]),
+#enhanced[data-show="updates"] > .enhanced-category:not([data-category="updates"]) { display: none; }
+
+.enhanced-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 0.75rem;
+    border-radius: var(--border-radius, 0.75rem);
+    background: var(--surface-background-color, var(--overlay-color, rgba(255, 255, 255, 0.05)));
+}
+.enhanced-option-heading { flex: 1; min-width: 0; }
+.enhanced-option-label {
+    color: var(--foreground-color-primary, var(--primary-foreground-color, rgba(255, 255, 255, 0.9)));
+    font-size: 1rem;
+}
+.enhanced-option-content { flex: none; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+.enhanced-option-content .button,
+.enhanced-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 1.2rem;
+    border-radius: 2rem;
+    background: var(--surface-background-color, var(--overlay-color, rgba(255, 255, 255, 0.08)));
+    color: var(--foreground-color-primary, var(--primary-foreground-color, #fff));
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    transition: background 0.2s;
+}
+.enhanced-option-content .button:hover,
+.enhanced-button:hover { background: var(--accent-color, var(--primary-accent-color, #7b5bf5)); }
+
+.enhanced-link {
+    display: block;
+    padding: 0.8rem 1rem;
+    border-radius: var(--border-radius, 0.75rem);
+    background: var(--surface-background-color, var(--overlay-color, rgba(255, 255, 255, 0.05)));
+    cursor: pointer;
+}
+.enhanced-link a { color: inherit; text-decoration: none; }
+.enhanced-link-label { color: var(--foreground-color-primary, var(--primary-foreground-color, #fff)); font-weight: 600; }
+.enhanced-link:hover { background: var(--accent-color, var(--primary-accent-color, #7b5bf5)); }
+`;
+
+  // src/utils/icons.ts
+  var THEME_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 512 512">
+    <path d="M204.3 5C104.9 24.4 24.4 104.9 5 204.3c-26.1 133.4 75.3 247.9 203 247.9 24.3 0 44-19.7 44-44 0-11.4-4.3-21.8-11.4-29.6-7-7.8-11.6-18.1-11.6-29.4 0-24.3 19.7-44 44-44h52.8c97 0 175.2-78.2 175.2-175.2C501 77.2 360.5-25.3 204.3 5zM112 256c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64-96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm128 0c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64 96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32z"></path>
+</svg>`;
+  var PLUGIN_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
+    <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.49 0 2.7-1.21 2.7-2.7s-1.21-2.7-2.7-2.7z"></path>
+</svg>`;
+  var MARKETPLACE_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
+    <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-1.99.9-1.99 2L3 20c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12zm-7-8c-1.66 0-3-1.34-3-3H7c0 2.76 2.24 5 5 5s5-2.24 5-5h-2c0 1.66-1.34 3-3 3z"></path>
+</svg>`;
+  var SERVER_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
+    <path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zm-1 5h-2v-2h2v2zm-4 0h-2v-2h2v2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 5h-2V6h2v2zm-4 0h-2V6h2v2z"></path>
+</svg>`;
+  var UPDATE_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
+    <path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12zM12.5 8v4.25l3.5 2.08-.72 1.21L11 13V8h1.5z"></path>
+</svg>`;
+
+  // src/components/settings/settingsInjector.ts
+  var SELECTORS = {
+    SETTINGS_CONTENT: '[class*="settings-content-"]',
+    NAV_MENU: '[class*="settings-content-"] > nav',
+    NAV_GROUP: '[class*="settings-content-"] > nav > div[class*="group-"]',
+    SETTINGS_PANE: '[class*="settings-content-"] > [class*="pane-"]',
+    SETTINGS_PAGE_CONTAINER: '[class*="settings-content-"] > [class*="pane-"] > [class*="page-container-"]',
+    SETTINGS_PAGE: '[class*="settings-content-"] > [class*="pane-"] > [class*="page-container-"] > [class*="page-"]',
+    SETTINGS_GROUP: '[class*="page-container-"] > [class*="page-"] > section[class*="group-"]'
+  };
+  var ENHANCED_ROUTE = "#/settings/enhanced";
+  var DEFAULT_SELECTED_CLASS = "selected-S7SeK";
+  var classOf = (el) => el?.getAttribute("class") ?? "";
+  function selectedClass() {
+    for (const item of Array.from(document.querySelectorAll(`${SELECTORS.NAV_MENU} a`))) {
+      const found = Array.from(item.classList).find((c) => c.startsWith("selected-"));
+      if (found) return found;
+    }
+    return DEFAULT_SELECTED_CLASS;
+  }
+  function injectSettingsStyles() {
+    if (document.getElementById(SETTINGS_STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = SETTINGS_STYLE_ID;
+    style.textContent = SETTINGS_STYLES;
+    (document.head || document.documentElement).appendChild(style);
+  }
+  function applyRouteState() {
+    const content = document.querySelector(SELECTORS.SETTINGS_CONTENT);
+    if (!content) return false;
+    const match = location.hash.match(/^#\/settings\/enhanced(?:\/([a-z]+))?/);
+    const current = match ? match[1] || "themes" : "";
+    const selected = selectedClass();
+    content.classList.toggle("enhanced-open", !!match);
+    const page = document.getElementById("enhanced");
+    if (page) page.setAttribute("data-show", current);
+    for (const link of Array.from(document.querySelectorAll("[data-enhanced-item]"))) {
+      link.classList.toggle(selected, link.getAttribute("data-enhanced-item") === current);
+    }
+    if (match) {
+      for (const link of Array.from(document.querySelectorAll(`${SELECTORS.NAV_MENU} a:not([data-enhanced-item])`))) {
+        link.classList.remove(selected);
+      }
+      if (current === "marketplace") {
+        renderMarketplaceInline();
+      }
+    }
+    return !!match;
+  }
+  function updateRoute() {
+    const isEnhancedRoute = applyRouteState();
+    if (isEnhancedRoute) {
+      requestAnimationFrame(() => {
+        applyRouteState();
+      });
+    }
+  }
+  function createCategory(id, categoryKey, title, sampleGroup) {
+    const category = document.createElement("div");
+    category.id = id;
+    category.className = `${classOf(sampleGroup)} enhanced-category`.trim();
+    category.setAttribute("data-category", categoryKey);
+    const heading = document.createElement("div");
+    heading.className = classOf(sampleGroup?.firstElementChild);
+    const headingTitle = document.createElement("h2");
+    headingTitle.className = classOf(sampleGroup?.querySelector("h2"));
+    headingTitle.textContent = title;
+    heading.appendChild(headingTitle);
+    category.appendChild(heading);
+    return category;
+  }
+  function createOptionButton(id, title) {
+    const btn = document.createElement("div");
+    btn.setAttribute("tabindex", "0");
+    btn.setAttribute("title", title);
+    btn.className = "enhanced-button button-container-zVLH6 button";
+    btn.id = id;
+    btn.textContent = title;
+    return btn;
+  }
+  function createOptionRow(buttons) {
+    const option = document.createElement("div");
+    option.className = "enhanced-option";
+    const content = document.createElement("div");
+    content.className = "enhanced-option-content";
+    buttons.forEach((btn) => content.appendChild(btn));
+    option.appendChild(content);
+    return option;
+  }
+  function buildNavGroup() {
+    return waitForElement(SELECTORS.NAV_GROUP, 1e4).then(() => {
+      if (!location.href.includes("#/settings")) return;
+      if (document.querySelector("[data-enhanced-nav]")) return;
+      const nav = document.querySelector(SELECTORS.NAV_MENU);
+      const groups = Array.from(document.querySelectorAll(SELECTORS.NAV_GROUP));
+      const sampleGroup = groups[0];
+      const sampleItem = sampleGroup?.querySelector("a");
+      if (!nav || !sampleGroup || !sampleItem) return;
+      const group = document.createElement("div");
+      group.className = classOf(sampleGroup);
+      group.setAttribute("data-enhanced-nav", "");
+      const label = document.createElement("div");
+      label.className = classOf(sampleGroup.firstElementChild);
+      label.textContent = "Stremio Enhanced";
+      group.appendChild(label);
+      const itemClass = Array.from(sampleItem.classList).filter((c) => !c.startsWith("selected-")).join(" ");
+      const iconClass = classOf(sampleItem.querySelector("svg"));
+      const labelClass = classOf(sampleItem.querySelector("div"));
+      const items = [
+        { id: "themes", label: "Themes", icon: THEME_ICON },
+        { id: "plugins", label: "Plugins", icon: PLUGIN_ICON },
+        { id: "marketplace", label: "Marketplace", icon: MARKETPLACE_ICON },
+        { id: "server", label: "Streaming Server", icon: SERVER_ICON },
+        { id: "updates", label: "Client Updates", icon: UPDATE_ICON }
+      ];
+      for (const item of items) {
+        const link = document.createElement("a");
+        link.className = itemClass;
+        link.href = `${ENHANCED_ROUTE}/${item.id}`;
+        link.setAttribute("data-enhanced-item", item.id);
+        link.innerHTML = item.icon;
+        const svg = link.querySelector("svg");
+        if (svg) {
+          if (iconClass) svg.setAttribute("class", iconClass);
+          svg.style.removeProperty("width");
+          svg.style.removeProperty("height");
+        }
+        const text = document.createElement("div");
+        text.className = labelClass;
+        text.textContent = item.label;
+        link.appendChild(text);
+        group.appendChild(link);
+      }
+      nav.insertBefore(group, groups[groups.length - 1]);
+      updateRoute();
+    }).catch((err) => {
+      console.warn("[Enhanced] Failed to add settings nav group:", err);
+    });
+  }
+  function buildSettingsPage() {
+    return waitForElement(SELECTORS.SETTINGS_PAGE, 1e4).then(() => {
+      if (!location.href.includes("#/settings")) return;
+      if (document.getElementById("enhanced")) return;
+      injectSettingsStyles();
+      const pane = document.querySelector(SELECTORS.SETTINGS_PANE);
+      const stremioContainer = document.querySelector(SELECTORS.SETTINGS_PAGE_CONTAINER);
+      const stremioPage = document.querySelector(SELECTORS.SETTINGS_PAGE);
+      if (!pane || !stremioPage) return;
+      const stremioHead = stremioPage.firstElementChild;
+      const sampleGroup = document.querySelector(SELECTORS.SETTINGS_GROUP);
+      const container = document.createElement("div");
+      container.className = `${classOf(stremioContainer)} enhanced-page-container`.trim();
+      const page = document.createElement("div");
+      page.className = classOf(stremioPage);
+      page.id = "enhanced";
+      const head = document.createElement("div");
+      head.className = classOf(stremioHead);
+      const heading = document.createElement("h1");
+      heading.className = classOf(stremioHead?.querySelector("h1"));
+      heading.textContent = "Stremio Enhanced";
+      head.appendChild(heading);
+      page.appendChild(head);
+      const themesCategory = createCategory("enhanced-themes-category", "themes", "Themes", sampleGroup);
+      const openThemesBtn = createOptionButton("openthemesfolderBtn", "Open Themes Folder");
+      openThemesBtn.onclick = () => {
+        window.StremioEnhancedAPI.openThemesFolder();
+      };
+      themesCategory.appendChild(createOptionRow([openThemesBtn]));
+      const themesList = document.createElement("div");
+      themesList.id = "enhanced-themes-list";
+      themesCategory.appendChild(themesList);
+      page.appendChild(themesCategory);
+      const pluginsCategory = createCategory("enhanced-plugins-category", "plugins", "Plugins", sampleGroup);
+      const openPluginsBtn = createOptionButton("openpluginsfolderBtn", "Open Plugins Folder");
+      openPluginsBtn.onclick = () => {
+        window.StremioEnhancedAPI.openPluginsFolder();
+      };
+      const toggleAllPluginsBtn = createOptionButton("toggleallpluginsBtn", "Toggle All Plugins");
+      toggleAllPluginsBtn.onclick = () => {
+        toggleAllPlugins();
+      };
+      pluginsCategory.appendChild(createOptionRow([openPluginsBtn, toggleAllPluginsBtn]));
+      const pluginsList = document.createElement("div");
+      pluginsList.id = "enhanced-plugins-list";
+      pluginsCategory.appendChild(pluginsList);
+      page.appendChild(pluginsCategory);
+      const marketplaceCategory = createCategory("enhanced-marketplace-category", "marketplace", "Community Marketplace", sampleGroup);
+      const marketplaceContent = document.createElement("div");
+      marketplaceContent.id = "enhanced-marketplace-content";
+      marketplaceCategory.appendChild(marketplaceContent);
+      page.appendChild(marketplaceCategory);
+      const serverCategory = createCategory("enhanced-server-category", "server", "Streaming Server", sampleGroup);
+      const openServerBtn = createOptionButton("openserverfolderBtn", "Open Server Folder");
+      openServerBtn.setAttribute("title", "Open Streaming Server Folder");
+      const checkServerUpdatesBtn = createOptionButton("checkserverupdatesBtn", "Check for Server Updates");
+      const serverStatusInfo = document.createElement("div");
+      serverStatusInfo.id = "enhanced-server-status-info";
+      serverStatusInfo.style.cssText = "font-size: 0.9rem; color: #a0a0a0; margin-top: 0.5rem; margin-left: 0.2rem;";
+      const renderServerInfo = (status) => {
+        if (!status || !status.exists) {
+          serverStatusInfo.innerHTML = `<span style="color: #ff6b6b; font-weight: 600;">Status:</span> Not installed / missing (server.js required)`;
+        } else {
+          const ver = status.currentVersion ? `v${status.currentVersion.replace(/^v/, "")}` : "Installed";
+          const runningBadge = status.running ? '<span style="color: #51cf66;">\u25CF Running</span>' : '<span style="color: #fcc419;">\u25CF Stopped</span>';
+          const actionBtn = status.running && window.location.hostname !== "127.0.0.1" ? `<button id="enhanced-switch-to-local-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #5c7cfa; color: #fff; border: none; border-radius: 4px; font-weight: 600;">Switch to Local Server (127.0.0.1)</button>` : !status.running ? `<button id="enhanced-start-server-btn" style="margin-left: 0.8rem; cursor: pointer; padding: 0.3rem 0.8rem; background: #51cf66; color: #111; border: none; border-radius: 4px; font-weight: 600;">Start Server</button>` : "";
+          serverStatusInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Status:</span> ${ver} (${runningBadge}) &bull; <span style="color: #888; font-size: 0.85rem;">${status.serverDir}</span>${actionBtn}`;
+          const startBtn = serverStatusInfo.querySelector("#enhanced-start-server-btn");
+          if (startBtn) {
+            startBtn.onclick = async () => {
+              startBtn.textContent = "Starting...";
+              await startStreamingServer();
+              const updated = await getServerStatus();
+              renderServerInfo(updated);
+            };
+          }
+          const switchLocalBtn = serverStatusInfo.querySelector("#enhanced-switch-to-local-btn");
+          if (switchLocalBtn) {
+            switchLocalBtn.onclick = () => {
+              reloadToLocalStreamingServer();
+            };
+          }
+        }
+      };
+      openServerBtn.onclick = () => {
+        openStreamingServerFolder();
+      };
+      checkServerUpdatesBtn.onclick = () => {
+        checkServerJsUpdateAndSetup(true).then(() => {
+          renderServerInfo(getCurrentServerStatus());
+        });
+      };
+      serverCategory.appendChild(createOptionRow([openServerBtn, checkServerUpdatesBtn]));
+      serverCategory.appendChild(serverStatusInfo);
+      page.appendChild(serverCategory);
+      const updatesCategory = createCategory("enhanced-updates-category", "updates", "Client Updates", sampleGroup);
+      const checkClientUpdatesBtn = createOptionButton("checkclientupdatesBtn", "Check for Client Updates");
+      const openClientReleasesBtn = createOptionButton("openclientreleasesBtn", "View Releases");
+      openClientReleasesBtn.setAttribute("title", "View Releases on GitHub");
+      const clientVersionInfo = document.createElement("div");
+      clientVersionInfo.id = "enhanced-client-version-info";
+      clientVersionInfo.style.cssText = "font-size: 0.9rem; color: #a0a0a0; margin-top: 0.5rem; margin-left: 0.2rem;";
+      const renderClientVersionInfo = () => {
+        const currentVer = getCurrentClientVersion();
+        const latest = getLatestClientVersion();
+        if (!latest) {
+          clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}`;
+          return;
+        }
+        const hasUpdate = isNewerVersion(latest.version, currentVer);
+        const badge = hasUpdate ? `<span style="color: #fcc419; font-weight: 600;">\u25CF Update available: v${escapeHtml(latest.version)}</span>` : `<span style="color: #51cf66;">\u25CF Up to date (v${escapeHtml(latest.version)})</span>`;
+        clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}`;
+      };
+      checkClientUpdatesBtn.onclick = async () => {
+        await checkClientUpdate(true);
+        renderClientVersionInfo();
+      };
+      openClientReleasesBtn.onclick = () => {
+        const url = getLatestClientVersion()?.releaseUrl || CLIENT_RELEASES_URL;
+        try {
+          window.open(url, "_blank");
+        } catch (_) {
+        }
+      };
+      updatesCategory.appendChild(createOptionRow([checkClientUpdatesBtn, openClientReleasesBtn]));
+      updatesCategory.appendChild(clientVersionInfo);
+      page.appendChild(updatesCategory);
+      container.appendChild(page);
+      pane.appendChild(container);
+      renderServerInfo(getCurrentServerStatus());
+      getServerStatus().then(renderServerInfo);
+      renderClientVersionInfo();
+      if (!getLatestClientVersion()) {
+        fetchLatestClientVersion().then(() => renderClientVersionInfo());
+      }
+      renderThemesList((fileName) => {
+        window.StremioEnhancedAPI.applyTheme(fileName);
+      });
+      renderPluginsList((fileName, enabled) => {
+        window.StremioEnhancedAPI.togglePlugin(fileName, enabled);
+      });
+      updateRoute();
+    }).catch((err) => {
+      console.warn("[Enhanced] Waiting for settings page:", err);
+    });
+  }
+  var isBuilding = false;
+  var buildStartedAt = 0;
+  function checkSettings() {
+    if (!location.href.includes("#/settings")) {
+      isBuilding = false;
+      return;
+    }
+    updateRoute();
+    if (document.getElementById("enhanced") && document.querySelector("[data-enhanced-nav]")) return;
+    if (isBuilding && Date.now() - buildStartedAt < 1e4) return;
+    isBuilding = true;
+    buildStartedAt = Date.now();
+    document.getElementById("enhanced")?.closest(".enhanced-page-container")?.remove();
+    document.querySelector("[data-enhanced-nav]")?.remove();
+    postEnhancedMessage("getData");
+    Promise.allSettled([buildSettingsPage(), buildNavGroup()]).finally(() => {
+      isBuilding = false;
+    });
   }
 
   // src/index.ts

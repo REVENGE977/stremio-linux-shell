@@ -1,12 +1,33 @@
-<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75);">
-    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 550px; height: auto; max-height: 80vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">
-        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; padding: 25px;">
-            <div class="title-container-v2mmF" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 12px; color: white;">{{ title }}</div>
-            <div style="font-size: 0.95rem; color: #ddd; margin-bottom: 25px; line-height: 1.5; white-space: pre-wrap;">{{ message }}</div>
+<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">
+    <div class="modal-dialog-container-DZMKq" style="width: 90%; max-width: 660px; height: auto; max-height: 85vh; display: flex !important; flex-direction: column !important; background: #16152b; border-radius: 0.75rem; overflow: hidden !important; box-shadow: 0 10px 40px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box !important;">
+        <div class="modal-dialog-content-Xgv7Z" style="display: flex !important; flex-direction: column !important; max-height: 85vh !important; box-sizing: border-box !important; min-height: 0 !important; flex: 1 1 auto !important; overflow: hidden !important;">
+            <div class="title-container-v2mmF" style="padding: 20px 24px 14px 24px; font-size: 1.25rem; font-weight: bold; color: white; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0 !important; box-sizing: border-box !important;">{{ title }}</div>
             
-            <div class="buttons-container-e_JoR" style="display: flex; justify-content: flex-end; gap: 12px;">
+            <div class="body-container-H80dD modal-dialog-message-scroll" tabindex="0" style="padding: 18px 24px; overflow-y: auto !important; overflow-x: hidden !important; flex: 1 1 auto !important; min-height: 0 !important; max-height: 52vh !important; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.35) rgba(0,0,0,0.2); box-sizing: border-box !important; overscroll-behavior: contain; outline: none;">
+                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">
+                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.6; font-size: 0.95rem; color: #ddd; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text;">{{ message }}</div>
+                </div>
+            </div>
+            
+            <div class="buttons-container-e_JoR" style="padding: 14px 24px 18px 24px; display: flex !important; justify-content: flex-end !important; align-items: center !important; gap: 10px !important; flex-wrap: wrap !important; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); flex-shrink: 0 !important; box-sizing: border-box !important;">
                 {{ buttonsHtml }}
             </div>
         </div>
     </div>
+    <style>
+        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar {
+            width: 8px !important;
+        }
+        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.25) !important;
+            border-radius: 4px;
+        }
+        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.35) !important;
+            border-radius: 4px;
+        }
+        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.6) !important;
+        }
+    </style>
 </div>

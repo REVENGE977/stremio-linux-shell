@@ -74,17 +74,7 @@ export function injectFallbackStyles(): void {
             background-color: transparent !important;
         }
 
-               #enhanced-nav-btn {
-            user-select: none;
-            font-size: 1.1rem !important;
-        }
-        #enhanced > .label-wXG3e, #enhanced > [class*="label-"] {
-            font-size: 1.8rem !important;
-            font-weight: 700 !important;
-            line-height: 3.4rem !important;
-            margin-bottom: 2rem !important;
-        }
-        .theme-apply-btn, .plugin-toggle, #openthemesfolderBtn, #openpluginsfolderBtn, #browsePluginsThemesBtn, .modActionBtn, .marketplace-repo-btn {
+        .theme-apply-btn, .plugin-toggle, #toggleallpluginsBtn, #openthemesfolderBtn, #openpluginsfolderBtn, #openserverfolderBtn, #checkserverupdatesBtn, .modActionBtn, .marketplace-repo-btn {
             transition: all 0.2s ease-in-out;
         }
         .modActionBtn {
@@ -109,41 +99,6 @@ export function injectFallbackStyles(): void {
             background: rgba(255, 255, 255, 0.16) !important;
             color: #fff !important;
         }
-        #marketplace-back-btn:hover {
-            background: rgba(255, 255, 255, 0.16) !important;
-        }
-        .marketplace-tab-view {
-            position: absolute !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            min-height: 0 !important;
-            max-height: 100% !important;
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-            -webkit-overflow-scrolling: touch !important;
-            overscroll-behavior-y: contain !important;
-            box-sizing: border-box !important;
-            scrollbar-width: thin !important;
-            scrollbar-color: rgba(255, 255, 255, 0.25) transparent !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar {
-            width: 8px !important;
-            display: block !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar-track {
-            background: transparent !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 0.25) !important;
-            border-radius: 4px !important;
-        }
-        .marketplace-tab-view::-webkit-scrollbar-thumb:hover {
-            background-color: var(--primary-accent-color, #735bf2) !important;
-        }
         .logo-WrsGF {
             max-width: 100%;
             max-height: 100%;
@@ -152,8 +107,16 @@ export function injectFallbackStyles(): void {
         .plugin-toggle, .plugin-setting-toggle {
             cursor: pointer;
         }
+        .plugin-settings-btn:hover {
+            background-color: rgba(255, 255, 255, 0.16) !important;
+        }
+        .plugin-delete-btn:hover,
+        .theme-delete-btn:hover {
+            background-color: rgba(220, 38, 38, 0.22) !important;
+            color: #ff6b6b !important;
+        }
         .theme-apply-btn.install-button-container-yfcq5 {
-            background-color: var(--primary-accent-color, #735bf2);
+            background-color: var(--action-background-color, var(--action-color, var(--accent-color, var(--primary-accent-color, #735bf2))));
             color: #fff;
         }
         .theme-apply-btn.install-button-container-yfcq5:hover {
@@ -177,7 +140,7 @@ export function injectFallbackStyles(): void {
             zoom: 0.72;
         }
         html.stremio-pip-mode .pip-plugin-button {
-            color: var(--primary-accent-color, #7b5bf5) !important;
+            color: var(--accent-color, var(--primary-accent-color, #7b5bf5)) !important;
         }
         html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
         html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {

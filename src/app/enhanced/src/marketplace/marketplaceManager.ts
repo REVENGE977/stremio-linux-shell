@@ -2,7 +2,6 @@ import { getMarketplaceTabHtml } from '../components/marketplace-tab/marketplace
 import { createMarketplaceCard } from '../components/marketplace-item/marketplaceItem';
 import { EnhancedData, MarketplaceMod, MarketplaceRegistry } from '../types';
 import { postEnhancedMessage } from '../utils/dom';
-import { checkSettings } from '../components/settings/settingsInjector';
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/REVENGE977/stremio-enhanced-registry/refs/heads/main/registry.json';
 
@@ -16,6 +15,7 @@ let cachedRegistry: MarketplaceRegistry | null = null;
 
 export function updateMarketplaceData(data: EnhancedData): void {
     currentEnhancedData = data;
+    syncMarketplaceInstalledState();
 }
 
 export function getFileNameFromUrl(url: string): string {
@@ -57,7 +57,7 @@ export async function fetchRegistry(): Promise<MarketplaceRegistry> {
 }
 
 function setupSearchBar(): void {
-    const searchInput = document.querySelector<HTMLInputElement>('.search-input-bAgAh');
+    const searchInput = document.getElementById('marketplace-search-input') as HTMLInputElement | null;
     const modsList = document.getElementById('mods-list');
     if (!searchInput || !modsList) return;
 
@@ -75,68 +75,58 @@ function setupSearchBar(): void {
     });
 }
 
-function goBackToSettings(): void {
-    location.hash = '#/';
-    setTimeout(() => {
-        location.hash = '#/settings';
-        setTimeout(() => {
-            checkSettings();
-        }, 100);
-    }, 50);
+export function syncMarketplaceInstalledState(): void {
+    const modsList = document.getElementById('mods-list');
+    if (!modsList) return;
+
+    modsList.querySelectorAll<HTMLElement>('.modActionBtn').forEach(btn => {
+        const link = btn.getAttribute('data-link') || '';
+        const type = btn.getAttribute('data-type');
+        if (!link || !type) return;
+
+        const fileName = getFileNameFromUrl(link);
+        const installed = type === 'Plugin' ? isPluginInstalled(fileName) : isThemeInstalled(fileName);
+        const label = btn.querySelector('.label-OnWh2') || btn;
+
+        if (installed) {
+            btn.classList.remove('install-button-container-yfcq5');
+            btn.classList.add('uninstall-button-container-oV4Yo');
+            btn.setAttribute('title', 'Uninstall');
+            label.textContent = 'Uninstall';
+        } else {
+            btn.classList.remove('uninstall-button-container-oV4Yo');
+            btn.classList.add('install-button-container-yfcq5');
+            btn.setAttribute('title', 'Install');
+            label.textContent = 'Install';
+        }
+    });
 }
 
-export async function browseMarketplace(): Promise<void> {
-    const settingsContent = document.querySelector<HTMLElement>('[class*="settings-content-"]') ||
-        document.querySelector<HTMLElement>('[class*="sections-container"]')?.parentElement;
+export async function renderMarketplaceInline(forceReload = false): Promise<void> {
+    const container = document.getElementById('enhanced-marketplace-content');
+    if (!container) return;
 
-    if (!settingsContent) {
-        console.warn('[Enhanced Marketplace] Settings content container not found.');
+    if (!forceReload && container.getAttribute('data-loaded') === 'true') {
+        syncMarketplaceInstalledState();
         return;
     }
+    if (container.getAttribute('data-loading') === 'true') return;
 
-    if (settingsContent.parentElement) {
-        settingsContent.parentElement.style.height = '100%';
-        settingsContent.parentElement.style.overflow = 'hidden';
-    }
-    settingsContent.style.position = 'relative';
-    settingsContent.style.height = '100%';
-    settingsContent.style.width = '100%';
-    settingsContent.style.overflow = 'hidden';
-
-    settingsContent.innerHTML = getMarketplaceTabHtml();
-
-    const scrollContainer = document.querySelector<HTMLElement>('.marketplace-tab-view');
-    if (scrollContainer) {
-        scrollContainer.focus();
-    }
-
-    // Hook up back button in the tab header
-    const backBtn = document.getElementById('marketplace-back-btn');
-    if (backBtn) {
-        backBtn.onclick = goBackToSettings;
-    }
-
-    // Hook up horizontal nav back button if available
-    const horizontalNavs = document.querySelectorAll('[class*="horizontal-nav-bar"]');
-    if (horizontalNavs.length > 1) {
-        const targetNav = horizontalNavs[1] as HTMLElement;
-        targetNav.innerHTML = `
-            <div tabindex="-1" class="button-container-xT9_L back-button-container-lDB1N button-container-zVLH6" id="back-btn" style="cursor: pointer;">
-                <svg class="icon-T8MU6" viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem;">
-                    <path d="M328.61 106.469L185.08 243.358l143.53 136.889" style="stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 48; fill: none;"></path>
-                </svg>
-            </div>
-        `;
-        document.getElementById('back-btn')?.addEventListener('click', goBackToSettings);
-    }
+    container.setAttribute('data-loading', 'true');
+    container.removeAttribute('data-loaded');
+    container.innerHTML = getMarketplaceTabHtml();
 
     setupSearchBar();
 
     const modsList = document.getElementById('mods-list');
-    if (!modsList) return;
+    if (!modsList) {
+        container.removeAttribute('data-loading');
+        return;
+    }
 
     try {
         const registry = await fetchRegistry();
+        if (!document.body.contains(modsList)) return;
         modsList.innerHTML = '';
 
         if ((!registry.plugins || registry.plugins.length === 0) && (!registry.themes || registry.themes.length === 0)) {
@@ -145,6 +135,7 @@ export async function browseMarketplace(): Promise<void> {
                     No plugins or themes found in the community registry.
                 </div>
             `;
+            container.setAttribute('data-loaded', 'true');
             return;
         }
 
@@ -209,7 +200,6 @@ export async function browseMarketplace(): Promise<void> {
             }
         };
 
-        // Render plugins
         for (const plugin of registry.plugins) {
             const fileName = getFileNameFromUrl(plugin.download);
             const installed = isPluginInstalled(fileName);
@@ -217,15 +207,17 @@ export async function browseMarketplace(): Promise<void> {
             modsList.appendChild(card);
         }
 
-        // Render themes
         for (const theme of registry.themes) {
             const fileName = getFileNameFromUrl(theme.download);
             const installed = isThemeInstalled(fileName);
             const card = createMarketplaceCard(theme, 'Theme', installed, handleAction);
             modsList.appendChild(card);
         }
+
+        container.setAttribute('data-loaded', 'true');
     } catch (err: any) {
         console.error('[Enhanced Marketplace] Failed to load registry:', err);
+        if (!document.body.contains(modsList)) return;
         modsList.innerHTML = `
             <div style="padding: 2.5rem; text-align: center; color: #ff6b6b; font-size: 1rem;">
                 Failed to load community marketplace: ${err?.message || err}<br><br>
@@ -236,7 +228,16 @@ export async function browseMarketplace(): Promise<void> {
         `;
         document.getElementById('marketplace-retry-btn')?.addEventListener('click', () => {
             cachedRegistry = null;
-            browseMarketplace();
+            renderMarketplaceInline(true);
         });
+    } finally {
+        container.removeAttribute('data-loading');
     }
+}
+
+export async function browseMarketplace(): Promise<void> {
+    if (!location.hash.startsWith('#/settings/enhanced/marketplace')) {
+        location.hash = '#/settings/enhanced/marketplace';
+    }
+    await renderMarketplaceInline();
 }

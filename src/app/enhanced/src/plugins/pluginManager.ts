@@ -86,13 +86,40 @@ export function showReloadWarning(): void {
     p.appendChild(document.createTextNode('Reload is required to disable plugins. Click '));
 
     const link = document.createElement('a');
-    link.style.cssText = 'color: var(--primary-accent-color, #735bf2); cursor: pointer; font-weight: bold; text-decoration: underline;';
+    link.style.cssText = 'color: var(--accent-color, var(--primary-accent-color, #735bf2)); cursor: pointer; font-weight: bold; text-decoration: underline;';
     link.textContent = 'here';
     link.onclick = function () { location.reload(); };
     p.appendChild(link);
 
     p.appendChild(document.createTextNode(' to reload.'));
     pluginsCat.appendChild(p);
+}
+
+export function toggleAllPlugins(): void {
+    const pluginsList = (currentEnhancedData.plugins && currentEnhancedData.plugins.length > 0)
+        ? currentEnhancedData.plugins
+        : (((window as any).__INITIAL_ENHANCED_DATA__?.plugins) || []);
+
+    if (pluginsList.length === 0) return;
+
+    const anyEnabled = pluginsList.some((p: PluginUiData) => !!p.enabled);
+    const shouldEnableAll = !anyEnabled;
+    const api = (window as any).StremioEnhancedAPI;
+
+    pluginsList.forEach((plugin: PluginUiData) => {
+        if (!!plugin.enabled === shouldEnableAll) return;
+
+        if (api && typeof api.togglePlugin === 'function') {
+            api.togglePlugin(plugin.fileName, shouldEnableAll);
+        }
+        if (!shouldEnableAll && api && typeof api.clearRegisteredSettings === 'function') {
+            api.clearRegisteredSettings(plugin.fileName);
+        }
+    });
+
+    document.querySelectorAll<HTMLElement>('#enhanced-plugins-list .plugin-toggle').forEach(toggle => {
+        toggle.classList.toggle('checked', shouldEnableAll);
+    });
 }
 
 export function renderPluginsList(onTogglePlugin: (fileName: string, enabled: boolean) => void): void {

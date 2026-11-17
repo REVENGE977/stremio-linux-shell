@@ -1,8 +1,9 @@
 import pluginItemTemplate from './plugin-item.html';
 import { TemplateCache } from '../../utils/templateCache';
-import { escapeHtml } from '../../utils/dom';
+import { escapeHtml, postEnhancedMessage } from '../../utils/dom';
 import { PluginUiData, MetaData } from '../../types';
 import { modalManager } from '../modals/modalManager';
+import { unloadPlugin, showReloadWarning } from '../../plugins/pluginManager';
 
 export function createPluginCard(
     fileName: string,
@@ -86,6 +87,48 @@ export function createPluginCard(
                 });
             });
         };
+    }
+
+    const deleteBtn = card.querySelector<HTMLElement>('.plugin-delete-btn');
+    if (deleteBtn) {
+        const handleDelete = async (e: Event) => {
+            e.stopPropagation();
+            const result = await modalManager.showAlert(
+                'danger',
+                'Delete Plugin',
+                `Are you sure you want to delete "${pluginDisplayName}" (${fileName})?\n\nThis will permanently remove the plugin file from your plugins folder.`,
+                ['Delete', 'Cancel']
+            );
+            if (result !== 0) return;
+
+            const wasEnabled = toggle?.classList.contains('checked') ?? isEnabled;
+            unloadPlugin(fileName);
+            (window as any).StremioEnhancedAPI?.clearRegisteredSettings?.(fileName);
+            if (wasEnabled) {
+                showReloadWarning();
+            }
+
+            postEnhancedMessage('deleteMod', {
+                modType: 'plugin',
+                fileName
+            });
+
+            card.remove();
+            modalManager.showToast(
+                'plugin-deleted',
+                'Plugin Deleted',
+                `Deleted ${pluginDisplayName}.`,
+                'info'
+            );
+        };
+
+        deleteBtn.onclick = handleDelete;
+        deleteBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleDelete(e);
+            }
+        });
     }
 
     return card;
