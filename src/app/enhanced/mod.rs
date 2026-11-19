@@ -58,6 +58,10 @@ where
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 /// Persistent settings stored in `settings.json`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -70,6 +74,8 @@ pub struct Settings {
     pub enabled_plugins: HashMap<String, bool>,
     #[serde(default, alias = "active_theme")]
     pub active_theme: Option<String>,
+    #[serde(default = "default_true", alias = "thumbnail_preview")]
+    pub thumbnail_preview: bool,
 }
 
 impl Default for Settings {
@@ -77,6 +83,7 @@ impl Default for Settings {
         Self {
             enabled_plugins: HashMap::new(),
             active_theme: None,
+            thumbnail_preview: true,
         }
     }
 }
@@ -153,6 +160,13 @@ pub enum EnhancedAction {
     StartPipResize {
         direction: u32,
     },
+    RequestThumbnail {
+        time: f64,
+        max_width: Option<u32>,
+    },
+    SetThumbnailPreview {
+        enabled: bool,
+    },
 }
 
 /// Serialized plugin information for the web UI.
@@ -193,6 +207,7 @@ pub struct EnhancedUiData {
     pub server_status: ServerStatusUiData,
     pub client_version: String,
     pub skipped_client_version: Option<String>,
+    pub thumbnail_preview: bool,
 }
 
 /// The main manager that handles loading plugins/themes and tracking settings.
@@ -272,6 +287,12 @@ impl EnhancedManager {
         self.settings.active_theme = file_name.map(str::to_string);
         self.save_settings();
         self.active_theme().map(|t| t.content.clone())
+    }
+
+    /// Enable or disable ThumbFast seek-bar thumbnail previews.
+    pub fn set_thumbnail_preview(&mut self, enabled: bool) {
+        self.settings.thumbnail_preview = enabled;
+        self.save_settings();
     }
 
     /// Open the themes directory in the default file manager.
@@ -457,6 +478,7 @@ impl EnhancedManager {
             server_status: self.get_server_status(server_running),
             client_version: env!("CARGO_PKG_VERSION").to_string(),
             skipped_client_version,
+            thumbnail_preview: self.settings.thumbnail_preview,
         }
     }
 
@@ -744,6 +766,25 @@ mod tests {
             EnhancedAction::DeleteMod { mod_type, file_name } => {
                 assert_eq!(mod_type, "theme");
                 assert_eq!(file_name, "dark.css");
+            }
+            _ => panic!("Wrong action"),
+        }
+
+        let req_thumb = r#"{"action":"requestThumbnail","time":42.5,"maxWidth":240}"#;
+        let action: EnhancedAction = serde_json::from_str(req_thumb).unwrap();
+        match action {
+            EnhancedAction::RequestThumbnail { time, max_width } => {
+                assert!((time - 42.5).abs() < f64::EPSILON);
+                assert_eq!(max_width, Some(240));
+            }
+            _ => panic!("Wrong action"),
+        }
+
+        let set_thumb = r#"{"action":"setThumbnailPreview","enabled":false}"#;
+        let action: EnhancedAction = serde_json::from_str(set_thumb).unwrap();
+        match action {
+            EnhancedAction::SetThumbnailPreview { enabled } => {
+                assert!(!enabled);
             }
             _ => panic!("Wrong action"),
         }

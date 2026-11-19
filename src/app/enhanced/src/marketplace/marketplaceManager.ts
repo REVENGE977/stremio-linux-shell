@@ -12,6 +12,72 @@ let currentEnhancedData: EnhancedData = {
 };
 
 let cachedRegistry: MarketplaceRegistry | null = null;
+const themeVersionCache = new Map<string, string | null>();
+const themeVersionInFlight = new Map<string, Promise<string | null>>();
+
+/**
+ * Extract the `@version` value from the leading metadata comment block of a theme file.
+ */
+export function extractVersionFromThemeMetadata(content: string): string | null {
+    if (!content) return null;
+    const cleanedContent = content.replace(/^\uFEFF/, '');
+
+    const blocks: string[] = [];
+    const jsdocMatch = cleanedContent.match(/\/\*\*([\s\S]*?)\*\//);
+    if (jsdocMatch) blocks.push(jsdocMatch[1]);
+    const leadingMatch = cleanedContent.trimStart().match(/^\/\*([\s\S]*?)\*\//);
+    if (leadingMatch && leadingMatch[1] !== jsdocMatch?.[1]) {
+        blocks.push(leadingMatch[1]);
+    }
+
+    for (const block of blocks) {
+        const versionMatch = block.match(/@version\s+([^\n\r*]+)/i);
+        if (versionMatch && versionMatch[1]) {
+            const version = versionMatch[1].trim().replace(/^v/i, '');
+            if (version) return version;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Fetch a theme file from its download URL and extract the version from its metadata header.
+ * Ignores any version number provided by the marketplace registry JSON.
+ */
+export async function fetchThemeVersionFromDownload(
+    downloadUrl: string,
+    forceRefresh = false
+): Promise<string | null> {
+    if (!downloadUrl) return null;
+
+    if (!forceRefresh && themeVersionCache.has(downloadUrl)) {
+        return themeVersionCache.get(downloadUrl) ?? null;
+    }
+
+    if (!forceRefresh && themeVersionInFlight.has(downloadUrl)) {
+        return themeVersionInFlight.get(downloadUrl)!;
+    }
+
+    const promise = (async () => {
+        try {
+            const res = await fetch(downloadUrl, { cache: 'no-store' });
+            if (!res.ok) return null;
+            const text = await res.text();
+            const version = extractVersionFromThemeMetadata(text);
+            themeVersionCache.set(downloadUrl, version);
+            return version;
+        } catch (err) {
+            console.warn(`[Enhanced Marketplace] Failed to fetch theme metadata from ${downloadUrl}:`, err);
+            return null;
+        } finally {
+            themeVersionInFlight.delete(downloadUrl);
+        }
+    })();
+
+    themeVersionInFlight.set(downloadUrl, promise);
+    return promise;
+}
 
 export function updateMarketplaceData(data: EnhancedData): void {
     currentEnhancedData = data;
@@ -112,6 +178,10 @@ export async function renderMarketplaceInline(forceReload = false): Promise<void
     }
     if (container.getAttribute('data-loading') === 'true') return;
 
+    if (forceReload) {
+        themeVersionCache.clear();
+    }
+
     container.setAttribute('data-loading', 'true');
     container.removeAttribute('data-loaded');
     container.innerHTML = getMarketplaceTabHtml();
@@ -210,8 +280,21 @@ export async function renderMarketplaceInline(forceReload = false): Promise<void
         for (const theme of registry.themes) {
             const fileName = getFileNameFromUrl(theme.download);
             const installed = isThemeInstalled(fileName);
-            const card = createMarketplaceCard(theme, 'Theme', installed, handleAction);
+            const hasCachedVersion = themeVersionCache.has(theme.download);
+            const cachedVersion = hasCachedVersion ? (themeVersionCache.get(theme.download) ?? null) : null;
+            const card = createMarketplaceCard(theme, 'Theme', installed, handleAction, cachedVersion);
             modsList.appendChild(card);
+
+            if (!hasCachedVersion && theme.download) {
+                fetchThemeVersionFromDownload(theme.download).then(version => {
+                    if (!version || !document.body.contains(card)) return;
+                    const versionEl = card.querySelector<HTMLElement>('.marketplace-version');
+                    if (versionEl) {
+                        versionEl.textContent = `v${version}`;
+                        versionEl.style.display = '';
+                    }
+                });
+            }
         }
 
         container.setAttribute('data-loaded', 'true');

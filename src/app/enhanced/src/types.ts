@@ -45,6 +45,7 @@ export interface EnhancedData {
     serverStatus?: ServerStatusUiData;
     clientVersion?: string;
     skippedClientVersion?: string | null;
+    thumbnailPreview?: boolean;
 }
 
 export interface SettingSchemaItem {

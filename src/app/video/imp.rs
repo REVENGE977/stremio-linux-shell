@@ -13,7 +13,12 @@ use libmpv2::{
     render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
 };
 use shellexpand::tilde;
-use std::{cell::RefCell, env, os::raw::c_void, sync::OnceLock};
+use std::{
+    cell::{Cell, RefCell},
+    env,
+    os::raw::c_void,
+    sync::OnceLock,
+};
 use tracing::{error, warn};
 
 use crate::{app::config::APP_ID, spawn_local};
@@ -32,6 +37,8 @@ enum EventCallback {
 pub struct Video {
     mpv: RefCell<Mpv>,
     render_context: RefCell<Option<RenderContext>>,
+    file_loaded: Cell<bool>,
+    video_ready_emitted: Cell<bool>,
 }
 
 impl Default for Video {
@@ -69,6 +76,8 @@ impl Default for Video {
         Self {
             mpv: RefCell::new(mpv),
             render_context: Default::default(),
+            file_loaded: Cell::new(false),
+            video_ready_emitted: Cell::new(false),
         }
     }
 }
@@ -130,6 +139,7 @@ impl ObjectImpl for Video {
                     .param_types([str::static_type(), Variant::static_type()])
                     .build(),
                 Signal::builder("playback-started").build(),
+                Signal::builder("video-ready").build(),
                 Signal::builder("playback-ended")
                     .param_types([str::static_type()])
                     .build(),
@@ -167,7 +177,20 @@ impl WidgetImpl for Video {
                             EventCallback::Events => {
                                 video.on_event(|event| match event {
                                     Event::StartFile => {
+                                        video.file_loaded.set(false);
+                                        video.video_ready_emitted.set(false);
                                         object.emit_by_name::<()>("playback-started", &[]);
+                                    }
+                                    Event::FileLoaded => {
+                                        video.file_loaded.set(true);
+                                    }
+                                    Event::PlaybackRestart => {
+                                        if video.file_loaded.get()
+                                            && !video.video_ready_emitted.get()
+                                        {
+                                            video.video_ready_emitted.set(true);
+                                            object.emit_by_name::<()>("video-ready", &[]);
+                                        }
                                     }
                                     Event::PropertyChange { name, change, .. } => {
                                         let value = match change {
@@ -185,6 +208,8 @@ impl WidgetImpl for Video {
                                         }
                                     }
                                     Event::EndFile(reason) => {
+                                        video.file_loaded.set(false);
+                                        video.video_ready_emitted.set(false);
                                         let reason = match reason {
                                             mpv_end_file_reason::Eof => "eof".to_string(),
                                             mpv_end_file_reason::Stop => "stop".to_string(),

@@ -7,7 +7,8 @@ export function createMarketplaceCard(
     mod: MarketplaceMod,
     type: 'Plugin' | 'Theme',
     isInstalled: boolean,
-    onAction: (mod: MarketplaceMod, type: 'Plugin' | 'Theme', willInstall: boolean, btn: HTMLElement) => Promise<void>
+    onAction: (mod: MarketplaceMod, type: 'Plugin' | 'Theme', willInstall: boolean, btn: HTMLElement) => Promise<void>,
+    resolvedVersion?: string | null
 ): HTMLElement {
     let logoBlock = '';
     if (mod.preview) {
@@ -41,9 +42,26 @@ export function createMarketplaceCard(
     const actionbtnTitle = isInstalled ? 'Uninstall' : 'Install';
     const actionbtnClass = isInstalled ? 'uninstall-button-container-oV4Yo' : 'install-button-container-yfcq5';
 
+    // Plugins always use the version from the marketplace registry; themes ignore registry version
+    // and only display the version extracted from the theme's download URL metadata header.
+    let versionLabel = '';
+    let versionStyle = '';
+    if (type === 'Theme') {
+        const cleanThemeVersion = resolvedVersion ? resolvedVersion.trim().replace(/^v/i, '') : '';
+        if (cleanThemeVersion) {
+            versionLabel = `v${escapeHtml(cleanThemeVersion)}`;
+        } else {
+            versionStyle = ' display: none;';
+        }
+    } else {
+        const cleanPluginVersion = (mod.version || '1.0.0').trim().replace(/^v/i, '') || '1.0.0';
+        versionLabel = `v${escapeHtml(cleanPluginVersion)}`;
+    }
+
     const html = TemplateCache.render(marketplaceItemTemplate, {
         name: escapeHtml(mod.name),
-        version: escapeHtml(mod.version || '1.0.0'),
+        versionLabel,
+        versionStyle,
         type,
         description: escapeHtml(mod.description),
         author: escapeHtml(mod.author),

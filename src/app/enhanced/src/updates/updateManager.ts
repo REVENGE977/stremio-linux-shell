@@ -1,5 +1,5 @@
 import { EnhancedData, MetaData, PluginUiData, ThemeUiData } from '../types';
-import { fetchRegistry } from '../marketplace/marketplaceManager';
+import { fetchRegistry, fetchThemeVersionFromDownload } from '../marketplace/marketplaceManager';
 import { modalManager } from '../components/modals/modalManager';
 import { postEnhancedMessage } from '../utils/dom';
 
@@ -179,8 +179,17 @@ export async function getRegistryModVersion(
             return dl.endsWith(fnLower) || dl.includes(`/${baseName}.`);
         });
 
-        if (found && found.version && found.download) {
-            return { version: found.version, download: found.download };
+        if (found && found.download) {
+            if (type === 'theme') {
+                const themeVersion = await fetchThemeVersionFromDownload(found.download);
+                if (themeVersion) {
+                    return { version: themeVersion, download: found.download };
+                }
+                return null;
+            }
+            if (found.version) {
+                return { version: found.version, download: found.download };
+            }
         }
     } catch (err) {
         console.warn('[Enhanced Update] Failed to check registry version:', err);

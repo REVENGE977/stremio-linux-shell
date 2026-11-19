@@ -1,5 +1,6 @@
 mod config;
 mod imp;
+pub mod thumbnailer;
 
 use adw::subclass::prelude::ObjectSubclassIsExt;
 use gtk::glib::{self, Variant, closure_local, object::ObjectExt};
@@ -60,6 +61,16 @@ impl Video {
     pub fn connect_playback_started<T: Fn() + 'static>(&self, callback: T) {
         self.connect_closure(
             "playback-started",
+            false,
+            closure_local!(move |_: Video| {
+                callback();
+            }),
+        );
+    }
+
+    pub fn connect_video_ready<T: Fn() + 'static>(&self, callback: T) {
+        self.connect_closure(
+            "video-ready",
             false,
             closure_local!(move |_: Video| {
                 callback();

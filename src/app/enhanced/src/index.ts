@@ -12,6 +12,7 @@ import { updateMarketplaceData } from './marketplace/marketplaceManager';
 import { updateUpdateManagerData, checkForAllUpdates, checkClientUpdate } from './updates/updateManager';
 import { checkSettings } from './components/settings/settingsInjector';
 import { setupServerManager, updateServerManagerData, checkServerJsUpdateAndSetup } from './server/serverManager';
+import { setupThumbnailPreview, updateThumbnailPreviewData } from './player/thumbnailPreview';
 import { EnhancedData } from './types';
 
 (function () {
@@ -33,6 +34,7 @@ import { EnhancedData } from './types';
     setupMediaCapabilitiesBridge();
     setupTransparencyBridge();
     setupVideoBridge();
+    setupThumbnailPreview();
     injectFallbackStyles();
 
     let currentData: EnhancedData = {
@@ -48,6 +50,7 @@ import { EnhancedData } from './types';
         updatePluginManagerData(data);
         updateMarketplaceData(data);
         updateUpdateManagerData(data);
+        updateThumbnailPreviewData(data);
         if (data.serverStatus) {
             updateServerManagerData(data.serverStatus);
         }

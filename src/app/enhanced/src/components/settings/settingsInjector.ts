@@ -1,9 +1,10 @@
 import { SETTINGS_STYLES, SETTINGS_STYLE_ID } from './settingsStyles';
 import { escapeHtml, waitForElement, postEnhancedMessage } from '../../utils/dom';
-import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON, UPDATE_ICON } from '../../utils/icons';
+import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON, UPDATE_ICON, PLAYER_ICON } from '../../utils/icons';
 import { renderThemesList } from '../../themes/themeManager';
 import { renderPluginsList, toggleAllPlugins } from '../../plugins/pluginManager';
 import { renderMarketplaceInline } from '../../marketplace/marketplaceManager';
+import { isThumbnailPreviewEnabled, syncThumbnailPreviewToggle } from '../../player/thumbnailPreview';
 import {
     openStreamingServerFolder,
     checkServerJsUpdateAndSetup,
@@ -170,6 +171,7 @@ function buildNavGroup(): Promise<void> {
                 { id: 'themes', label: 'Themes', icon: THEME_ICON },
                 { id: 'plugins', label: 'Plugins', icon: PLUGIN_ICON },
                 { id: 'marketplace', label: 'Marketplace', icon: MARKETPLACE_ICON },
+                { id: 'player', label: 'Player', icon: PLAYER_ICON },
                 { id: 'server', label: 'Streaming Server', icon: SERVER_ICON },
                 { id: 'updates', label: 'Client Updates', icon: UPDATE_ICON },
             ];
@@ -269,6 +271,58 @@ function buildSettingsPage(): Promise<void> {
             marketplaceContent.id = 'enhanced-marketplace-content';
             marketplaceCategory.appendChild(marketplaceContent);
             page.appendChild(marketplaceCategory);
+
+            // Player Category (ThumbFast Thumbnail Preview)
+            const playerCategory = createCategory('enhanced-player-category', 'player', 'Player', sampleGroup);
+            const thumbOption = document.createElement('div');
+            thumbOption.className = 'enhanced-option';
+
+            const thumbHeading = document.createElement('div');
+            thumbHeading.className = 'enhanced-option-heading';
+            const thumbLabel = document.createElement('div');
+            thumbLabel.className = 'enhanced-option-label';
+            thumbLabel.textContent = 'Thumbnail Preview (ThumbFast)';
+            const thumbDesc = document.createElement('div');
+            thumbDesc.style.cssText = 'font-size: 0.85rem; color: rgba(255, 255, 255, 0.55); margin-top: 0.25rem;';
+            thumbDesc.textContent = 'Show frame preview thumbnails when hovering or scrubbing the seek bar.';
+            thumbHeading.appendChild(thumbLabel);
+            thumbHeading.appendChild(thumbDesc);
+
+            const thumbContent = document.createElement('div');
+            thumbContent.className = 'enhanced-option-content';
+
+            const thumbToggle = document.createElement('div');
+            thumbToggle.id = 'thumbnailpreviewToggle';
+            thumbToggle.setAttribute('tabindex', '0');
+            thumbToggle.setAttribute('role', 'switch');
+            thumbToggle.setAttribute('title', 'Thumbnail Preview (ThumbFast)');
+            thumbToggle.className = `toggle-container-lZfHP button-container-zVLH6${isThumbnailPreviewEnabled() ? ' checked' : ''}`;
+            thumbToggle.setAttribute('aria-checked', isThumbnailPreviewEnabled() ? 'true' : 'false');
+            thumbToggle.style.cssText = 'outline: none; cursor: pointer;';
+
+            const thumbKnob = document.createElement('div');
+            thumbKnob.className = 'toggle-toOWM';
+            thumbToggle.appendChild(thumbKnob);
+
+            const onToggleThumbPreview = () => {
+                const next = !isThumbnailPreviewEnabled();
+                thumbToggle.classList.toggle('checked', next);
+                thumbToggle.setAttribute('aria-checked', next ? 'true' : 'false');
+                postEnhancedMessage('setThumbnailPreview', { enabled: next });
+            };
+            thumbToggle.addEventListener('click', onToggleThumbPreview);
+            thumbToggle.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onToggleThumbPreview();
+                }
+            });
+
+            thumbContent.appendChild(thumbToggle);
+            thumbOption.appendChild(thumbHeading);
+            thumbOption.appendChild(thumbContent);
+            playerCategory.appendChild(thumbOption);
+            page.appendChild(playerCategory);
 
             // Streaming Server Category
             const serverCategory = createCategory('enhanced-server-category', 'server', 'Streaming Server', sampleGroup);
@@ -383,6 +437,7 @@ function buildSettingsPage(): Promise<void> {
             renderPluginsList((fileName, enabled) => {
                 (window as any).StremioEnhancedAPI.togglePlugin(fileName, enabled);
             });
+            syncThumbnailPreviewToggle();
 
             updateRoute();
         })

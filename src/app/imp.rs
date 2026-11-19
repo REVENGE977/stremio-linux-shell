@@ -16,7 +16,10 @@ use crate::{
         },
         mpris::Mpris,
         tray::Tray,
-        video::Video,
+        video::{
+            Video,
+            thumbnailer::{DEFAULT_THUMB_MAX_WIDTH, ThumbnailCmd, spawn_thumbnail_worker},
+        },
         webview::WebView,
         window::Window,
     },
@@ -41,6 +44,7 @@ pub struct Application {
     deeplink: RefCell<Option<String>>,
     enhanced: RefCell<Option<Rc<RefCell<EnhancedManager>>>>,
     server: RefCell<Option<Rc<RefCell<crate::server::Server>>>>,
+    thumbnail_tx: RefCell<Option<flume::Sender<ThumbnailCmd>>>,
 }
 
 fn is_server_running(server: &Option<Rc<RefCell<crate::server::Server>>>) -> bool {
@@ -56,6 +60,8 @@ fn handle_enhanced_action(
     webview: &WebView,
     enhanced: &Rc<RefCell<EnhancedManager>>,
     server: &Option<Rc<RefCell<crate::server::Server>>>,
+    thumbnail_tx: &flume::Sender<ThumbnailCmd>,
+    active_stream_url: &Rc<RefCell<Option<String>>>,
     dev_mode: bool,
     action: crate::app::enhanced::EnhancedAction,
 ) {
@@ -293,6 +299,30 @@ fn handle_enhanced_action(
         crate::app::enhanced::EnhancedAction::StartPipResize { direction } => {
             window.start_pip_resize(direction);
         }
+        crate::app::enhanced::EnhancedAction::RequestThumbnail { time, max_width } => {
+            let _ = thumbnail_tx.send(ThumbnailCmd::Request {
+                time_sec: time,
+                max_width: max_width.unwrap_or(DEFAULT_THUMB_MAX_WIDTH),
+            });
+        }
+        crate::app::enhanced::EnhancedAction::SetThumbnailPreview { enabled } => {
+            let mut mgr = enhanced.borrow_mut();
+            mgr.set_thumbnail_preview(enabled);
+            let _ = thumbnail_tx.send(ThumbnailCmd::SetEnabled(enabled));
+            if enabled {
+                if let Some(url) = active_stream_url.borrow().clone() {
+                    let _ = thumbnail_tx.send(ThumbnailCmd::SetSource(Some(url)));
+                }
+            }
+            let running = is_server_running(server);
+            let data = mgr.ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
     }
 }
 
@@ -374,6 +404,22 @@ impl ApplicationImpl for Application {
         window.set_underlay(&video);
         window.set_overlay(&webview);
 
+        let (thumb_script_tx, thumb_script_rx) = flume::unbounded::<String>();
+        let initial_thumb_enabled = enhanced.borrow().settings.thumbnail_preview;
+        let (thumbnail_tx, _thumbnail_handle) =
+            spawn_thumbnail_worker(thumb_script_tx, initial_thumb_enabled);
+        let active_stream_url: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+
+        spawn_local!(clone!(
+            #[weak]
+            webview,
+            async move {
+                while let Ok(script) = thumb_script_rx.recv_async().await {
+                    webview.evaluate_javascript(&script);
+                }
+            }
+        ));
+
         video.connect_playback_started(clone!(
             #[weak]
             mpris,
@@ -382,6 +428,14 @@ impl ApplicationImpl for Application {
             }
         ));
 
+        let thumbnail_tx_ready = thumbnail_tx.clone();
+        let active_stream_url_ready = active_stream_url.clone();
+        video.connect_video_ready(move || {
+            let url = active_stream_url_ready.borrow().clone();
+            let _ = thumbnail_tx_ready.send(ThumbnailCmd::SetSource(url));
+        });
+
+        let thumbnail_tx_ended = thumbnail_tx.clone();
         video.connect_playback_ended(clone!(
             #[weak]
             window,
@@ -390,6 +444,7 @@ impl ApplicationImpl for Application {
             #[weak]
             mpris,
             move |reason| {
+                let _ = thumbnail_tx_ended.send(ThumbnailCmd::SetSource(None));
                 mpris.stop();
                 window.enable_idling();
 
@@ -418,6 +473,8 @@ impl ApplicationImpl for Application {
         let deeplink = self.deeplink.clone();
         let enhanced_for_ipc = enhanced.clone();
         let server_for_ipc = self.server.borrow().clone();
+        let thumbnail_tx_for_ipc = thumbnail_tx.clone();
+        let active_stream_url_for_ipc = active_stream_url.clone();
         let dev_mode_for_ipc = dev_mode;
         webview.connect_ipc(clone!(
             #[weak]
@@ -430,7 +487,16 @@ impl ApplicationImpl for Application {
             mpris,
             move |webview: WebView, message: &str| {
                 if let Ok(action) = serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
-                    handle_enhanced_action(&window, &webview, &enhanced_for_ipc, &server_for_ipc, dev_mode_for_ipc, action);
+                    handle_enhanced_action(
+                        &window,
+                        &webview,
+                        &enhanced_for_ipc,
+                        &server_for_ipc,
+                        &thumbnail_tx_for_ipc,
+                        &active_stream_url_for_ipc,
+                        dev_mode_for_ipc,
+                        action,
+                    );
                     return;
                 }
                 if let Ok(event) = ipc::parse_request(message) {
@@ -491,6 +557,22 @@ impl ApplicationImpl for Application {
                         IpcEvent::Mpv(event) => match event {
                             IpcEventMpv::Observe(name) => video.observe_mpv_property(name),
                             IpcEventMpv::Command((name, args)) => {
+                                match name.as_str() {
+                                    "loadfile" => {
+                                        if let Some(url) = args.first() {
+                                            *active_stream_url_for_ipc.borrow_mut() =
+                                                Some(url.clone());
+                                            let _ = thumbnail_tx_for_ipc
+                                                .send(ThumbnailCmd::SetSource(None));
+                                        }
+                                    }
+                                    "stop" => {
+                                        *active_stream_url_for_ipc.borrow_mut() = None;
+                                        let _ = thumbnail_tx_for_ipc
+                                            .send(ThumbnailCmd::SetSource(None));
+                                    }
+                                    _ => {}
+                                }
                                 video.send_mpv_command(name, args)
                             }
                             IpcEventMpv::Set((name, value)) => video.set_mpv_property(name, value),
@@ -520,6 +602,8 @@ impl ApplicationImpl for Application {
 
         let enhanced_ref = enhanced.clone();
         let server_ref = self.server.borrow().clone();
+        let thumbnail_tx_ref = thumbnail_tx.clone();
+        let active_stream_url_ref = active_stream_url.clone();
         let dev_mode_flag = dev_mode;
         webview.connect_enhanced_ipc(clone!(
             #[weak]
@@ -529,7 +613,16 @@ impl ApplicationImpl for Application {
             move |_webview: WebView, message: &str| {
                 match serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
                     Ok(action) => {
-                        handle_enhanced_action(&window, &webview, &enhanced_ref, &server_ref, dev_mode_flag, action);
+                        handle_enhanced_action(
+                            &window,
+                            &webview,
+                            &enhanced_ref,
+                            &server_ref,
+                            &thumbnail_tx_ref,
+                            &active_stream_url_ref,
+                            dev_mode_flag,
+                            action,
+                        );
                     }
                     Err(e) => {
                         error!("Failed to parse enhanced IPC message '{message}': {e}");
@@ -617,6 +710,7 @@ impl ApplicationImpl for Application {
         *self.window.borrow_mut() = Some(window);
         *self.webview.borrow_mut() = Some(webview);
         *self.enhanced.borrow_mut() = Some(enhanced.clone());
+        *self.thumbnail_tx.borrow_mut() = Some(thumbnail_tx);
     }
 
     fn open(&self, files: &[gtk::gio::File], hint: &str) {
@@ -639,6 +733,10 @@ impl ApplicationImpl for Application {
     }
 
     fn shutdown(&self) {
+        if let Some(tx) = self.thumbnail_tx.borrow_mut().take() {
+            let _ = tx.send(ThumbnailCmd::SetEnabled(false));
+        }
+
         if let Some(ref server_rc) = *self.server.borrow() {
             let _ = server_rc.borrow_mut().stop();
         }

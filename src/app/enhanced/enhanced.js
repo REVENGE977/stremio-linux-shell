@@ -843,10 +843,10 @@ This will permanently remove the theme file from your themes folder.`,
   }
 
   // src/components/marketplace-item/marketplace-item.html
-  var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; box-sizing: border-box; margin: 0 0 1rem 0; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-logo-box" style="width: 4.5rem; height: 4.5rem; flex-shrink: 0; margin-right: 1.25rem; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n        {{ logoBlock }}\n    </div>\n\n    <div class="marketplace-info-container" style="flex: 1; min-width: 0; padding-right: 1.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n            <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n            <span style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;">v{{ version }}</span>\n            <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n        </div>\n        <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n            <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n            <div><b>Author:</b> {{ author }}</div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: auto; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; margin-left: 1rem;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
+  var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; box-sizing: border-box; margin: 0 0 1rem 0; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-logo-box" style="width: 4.5rem; height: 4.5rem; flex-shrink: 0; margin-right: 1.25rem; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n        {{ logoBlock }}\n    </div>\n\n    <div class="marketplace-info-container" style="flex: 1; min-width: 0; padding-right: 1.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n            <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n            <span class="marketplace-version" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;{{ versionStyle }}">{{ versionLabel }}</span>\n            <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n        </div>\n        <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n            <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n            <div><b>Author:</b> {{ author }}</div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: auto; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; margin-left: 1rem;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
 
   // src/components/marketplace-item/marketplaceItem.ts
-  function createMarketplaceCard(mod, type, isInstalled, onAction) {
+  function createMarketplaceCard(mod, type, isInstalled, onAction, resolvedVersion) {
     let logoBlock = "";
     if (mod.preview) {
       logoBlock = `
@@ -876,9 +876,23 @@ This will permanently remove the theme file from your themes folder.`,
     }
     const actionbtnTitle = isInstalled ? "Uninstall" : "Install";
     const actionbtnClass = isInstalled ? "uninstall-button-container-oV4Yo" : "install-button-container-yfcq5";
+    let versionLabel = "";
+    let versionStyle = "";
+    if (type === "Theme") {
+      const cleanThemeVersion = resolvedVersion ? resolvedVersion.trim().replace(/^v/i, "") : "";
+      if (cleanThemeVersion) {
+        versionLabel = `v${escapeHtml(cleanThemeVersion)}`;
+      } else {
+        versionStyle = " display: none;";
+      }
+    } else {
+      const cleanPluginVersion = (mod.version || "1.0.0").trim().replace(/^v/i, "") || "1.0.0";
+      versionLabel = `v${escapeHtml(cleanPluginVersion)}`;
+    }
     const html = TemplateCache.render(marketplace_item_default, {
       name: escapeHtml(mod.name),
-      version: escapeHtml(mod.version || "1.0.0"),
+      versionLabel,
+      versionStyle,
       type,
       description: escapeHtml(mod.description),
       author: escapeHtml(mod.author),
@@ -910,6 +924,53 @@ This will permanently remove the theme file from your themes folder.`,
     activeTheme: null
   };
   var cachedRegistry = null;
+  var themeVersionCache = /* @__PURE__ */ new Map();
+  var themeVersionInFlight = /* @__PURE__ */ new Map();
+  function extractVersionFromThemeMetadata(content) {
+    if (!content) return null;
+    const cleanedContent = content.replace(/^\uFEFF/, "");
+    const blocks = [];
+    const jsdocMatch = cleanedContent.match(/\/\*\*([\s\S]*?)\*\//);
+    if (jsdocMatch) blocks.push(jsdocMatch[1]);
+    const leadingMatch = cleanedContent.trimStart().match(/^\/\*([\s\S]*?)\*\//);
+    if (leadingMatch && leadingMatch[1] !== jsdocMatch?.[1]) {
+      blocks.push(leadingMatch[1]);
+    }
+    for (const block of blocks) {
+      const versionMatch = block.match(/@version\s+([^\n\r*]+)/i);
+      if (versionMatch && versionMatch[1]) {
+        const version = versionMatch[1].trim().replace(/^v/i, "");
+        if (version) return version;
+      }
+    }
+    return null;
+  }
+  async function fetchThemeVersionFromDownload(downloadUrl, forceRefresh = false) {
+    if (!downloadUrl) return null;
+    if (!forceRefresh && themeVersionCache.has(downloadUrl)) {
+      return themeVersionCache.get(downloadUrl) ?? null;
+    }
+    if (!forceRefresh && themeVersionInFlight.has(downloadUrl)) {
+      return themeVersionInFlight.get(downloadUrl);
+    }
+    const promise = (async () => {
+      try {
+        const res = await fetch(downloadUrl, { cache: "no-store" });
+        if (!res.ok) return null;
+        const text = await res.text();
+        const version = extractVersionFromThemeMetadata(text);
+        themeVersionCache.set(downloadUrl, version);
+        return version;
+      } catch (err) {
+        console.warn(`[Enhanced Marketplace] Failed to fetch theme metadata from ${downloadUrl}:`, err);
+        return null;
+      } finally {
+        themeVersionInFlight.delete(downloadUrl);
+      }
+    })();
+    themeVersionInFlight.set(downloadUrl, promise);
+    return promise;
+  }
   function updateMarketplaceData(data) {
     currentEnhancedData = data;
     syncMarketplaceInstalledState();
@@ -994,6 +1055,9 @@ This will permanently remove the theme file from your themes folder.`,
       return;
     }
     if (container.getAttribute("data-loading") === "true") return;
+    if (forceReload) {
+      themeVersionCache.clear();
+    }
     container.setAttribute("data-loading", "true");
     container.removeAttribute("data-loaded");
     container.innerHTML = getMarketplaceTabHtml();
@@ -1074,8 +1138,20 @@ This will permanently remove the theme file from your themes folder.`,
       for (const theme of registry.themes) {
         const fileName = getFileNameFromUrl(theme.download);
         const installed = isThemeInstalled(fileName);
-        const card = createMarketplaceCard(theme, "Theme", installed, handleAction);
+        const hasCachedVersion = themeVersionCache.has(theme.download);
+        const cachedVersion = hasCachedVersion ? themeVersionCache.get(theme.download) ?? null : null;
+        const card = createMarketplaceCard(theme, "Theme", installed, handleAction, cachedVersion);
         modsList.appendChild(card);
+        if (!hasCachedVersion && theme.download) {
+          fetchThemeVersionFromDownload(theme.download).then((version) => {
+            if (!version || !document.body.contains(card)) return;
+            const versionEl = card.querySelector(".marketplace-version");
+            if (versionEl) {
+              versionEl.textContent = `v${version}`;
+              versionEl.style.display = "";
+            }
+          });
+        }
       }
       container.setAttribute("data-loaded", "true");
     } catch (err) {
@@ -1216,8 +1292,17 @@ This will permanently remove the theme file from your themes folder.`,
         const dl = (m.download || "").toLowerCase();
         return dl.endsWith(fnLower) || dl.includes(`/${baseName}.`);
       });
-      if (found && found.version && found.download) {
-        return { version: found.version, download: found.download };
+      if (found && found.download) {
+        if (type === "theme") {
+          const themeVersion = await fetchThemeVersionFromDownload(found.download);
+          if (themeVersion) {
+            return { version: themeVersion, download: found.download };
+          }
+          return null;
+        }
+        if (found.version) {
+          return { version: found.version, download: found.download };
+        }
       }
     } catch (err) {
       console.warn("[Enhanced Update] Failed to check registry version:", err);
@@ -3501,6 +3586,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
 #enhanced[data-show="themes"] > .enhanced-category:not([data-category="themes"]),
 #enhanced[data-show="plugins"] > .enhanced-category:not([data-category="plugins"]),
 #enhanced[data-show="marketplace"] > .enhanced-category:not([data-category="marketplace"]),
+#enhanced[data-show="player"] > .enhanced-category:not([data-category="player"]),
 #enhanced[data-show="server"] > .enhanced-category:not([data-category="server"]),
 #enhanced[data-show="updates"] > .enhanced-category:not([data-category="updates"]) { display: none; }
 
@@ -3567,6 +3653,353 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   var UPDATE_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
     <path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12zM12.5 8v4.25l3.5 2.08-.72 1.21L11 13V8h1.5z"></path>
 </svg>`;
+  var PLAYER_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
+    <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>
+</svg>`;
+
+  // src/player/thumbnailPreview.ts
+  var MAX_JS_CACHE_ENTRIES = 150;
+  var REQUEST_THROTTLE_MS = 80;
+  var NORMAL_PREVIEW_WIDTH = 240;
+  var PIP_PREVIEW_WIDTH = 160;
+  var previewEnabled = true;
+  var initialized = false;
+  var currentStreamKey = "";
+  var thumbCache = /* @__PURE__ */ new Map();
+  var previewEl = null;
+  var frameWrapEl = null;
+  var imgEl = null;
+  var timeEl = null;
+  var isVisible = false;
+  var draggingSlider = null;
+  var lastHoveredTime = -1;
+  var lastPreviewWidth = NORMAL_PREVIEW_WIDTH;
+  var lastRequestSentAt = 0;
+  var trailingTimer = null;
+  var pendingTrailingRequest = null;
+  var lastDisplayFrameSize = null;
+  function isThumbnailPreviewEnabled() {
+    return previewEnabled;
+  }
+  function updateThumbnailPreviewData(data) {
+    if (typeof data.thumbnailPreview === "boolean") {
+      previewEnabled = data.thumbnailPreview;
+      if (!previewEnabled) {
+        hidePreview();
+        thumbCache.clear();
+      }
+      syncThumbnailPreviewToggle();
+    }
+  }
+  function syncThumbnailPreviewToggle() {
+    const toggle = document.getElementById("thumbnailpreviewToggle");
+    if (!toggle) return;
+    toggle.classList.toggle("checked", previewEnabled);
+    toggle.setAttribute("aria-checked", previewEnabled ? "true" : "false");
+  }
+  function getDurationSeconds() {
+    const coreDur = Number(PermanentCore.getState?.("player")?.duration || 0) / 1e3;
+    if (Number.isFinite(coreDur) && coreDur > 0) return coreDur;
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    const bridgeDur = Number(bridge?.duration || 0);
+    return Number.isFinite(bridgeDur) && bridgeDur > 0 ? bridgeDur : 0;
+  }
+  function getCurrentStreamKey() {
+    const state = PermanentCore.getState?.("player");
+    const coreUrl = state?.selected?.stream?.url;
+    if (coreUrl) return String(coreUrl);
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    return bridge?.getAttribute("src") || "";
+  }
+  function ensureStreamCacheScope() {
+    const key = getCurrentStreamKey();
+    if (key && key !== currentStreamKey) {
+      currentStreamKey = key;
+      thumbCache.clear();
+      lastDisplayFrameSize = null;
+      if (imgEl) {
+        imgEl.removeAttribute("src");
+        imgEl.style.opacity = "0";
+      }
+    }
+    return currentStreamKey;
+  }
+  function quantizeTime(timeSec, duration) {
+    const step = duration > 0 && duration <= 120 ? 0.5 : 1;
+    return Math.round(timeSec / step) * step;
+  }
+  function makeCacheKey(streamKey, qTime, maxWidth) {
+    return `${streamKey}|${qTime.toFixed(1)}|${maxWidth}`;
+  }
+  function formatTimestamp(seconds) {
+    const total = Math.max(0, Math.floor(seconds));
+    const hrs = Math.floor(total / 3600);
+    const mins = Math.floor(total % 3600 / 60);
+    const secs = total % 60;
+    const pad = (n) => n < 10 ? `0${n}` : `${n}`;
+    if (hrs > 0) {
+      return `${hrs}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${mins}:${pad(secs)}`;
+  }
+  function ensurePreviewElement() {
+    if (!previewEl) {
+      previewEl = document.createElement("div");
+      previewEl.id = "stremio-enhanced-thumb-preview";
+      Object.assign(previewEl.style, {
+        position: "fixed",
+        left: "0px",
+        bottom: "0px",
+        display: "none",
+        flexDirection: "column",
+        alignItems: "center",
+        pointerEvents: "none",
+        zIndex: "2147483000",
+        backgroundColor: "rgba(12, 11, 17, 0.94)",
+        border: "1px solid rgba(255, 255, 255, 0.16)",
+        borderRadius: "10px",
+        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.65)",
+        overflow: "hidden",
+        backdropFilter: "blur(10px)",
+        userSelect: "none"
+      });
+      frameWrapEl = document.createElement("div");
+      Object.assign(frameWrapEl.style, {
+        width: `${NORMAL_PREVIEW_WIDTH}px`,
+        height: `${Math.round(NORMAL_PREVIEW_WIDTH * 9 / 16)}px`,
+        backgroundColor: "#09090d",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        position: "relative"
+      });
+      imgEl = document.createElement("img");
+      imgEl.alt = "Thumbnail preview";
+      Object.assign(imgEl.style, {
+        display: "block",
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        opacity: "0",
+        transition: "opacity 0.1s ease"
+      });
+      timeEl = document.createElement("div");
+      Object.assign(timeEl.style, {
+        width: "100%",
+        textAlign: "center",
+        padding: "5px 8px",
+        fontSize: "0.85rem",
+        fontWeight: "600",
+        fontVariantNumeric: "tabular-nums",
+        color: "rgba(255, 255, 255, 0.95)",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+        boxSizing: "border-box",
+        lineHeight: "1.2"
+      });
+      timeEl.textContent = "0:00";
+      frameWrapEl.appendChild(imgEl);
+      previewEl.appendChild(frameWrapEl);
+      previewEl.appendChild(timeEl);
+    }
+    const playerContainer = document.querySelector('[class*="player-container"]');
+    const targetParent = playerContainer || document.body;
+    if (targetParent && previewEl.parentElement !== targetParent) {
+      targetParent.appendChild(previewEl);
+    }
+  }
+  function applyThumbToDom(thumb) {
+    if (!imgEl || !frameWrapEl) return;
+    lastDisplayFrameSize = { width: thumb.width, height: thumb.height };
+    frameWrapEl.style.width = `${thumb.width}px`;
+    frameWrapEl.style.height = `${thumb.height}px`;
+    if (imgEl.src !== thumb.dataUrl) {
+      imgEl.src = thumb.dataUrl;
+    }
+    imgEl.style.opacity = "1";
+  }
+  function hidePreview() {
+    isVisible = false;
+    lastHoveredTime = -1;
+    pendingTrailingRequest = null;
+    if (trailingTimer) {
+      clearTimeout(trailingTimer);
+      trailingTimer = null;
+    }
+    if (previewEl) {
+      previewEl.style.display = "none";
+    }
+  }
+  function dispatchThumbnailRequest(time, maxWidth) {
+    const now = Date.now();
+    const elapsed = now - lastRequestSentAt;
+    if (elapsed >= REQUEST_THROTTLE_MS) {
+      lastRequestSentAt = now;
+      pendingTrailingRequest = null;
+      if (trailingTimer) {
+        clearTimeout(trailingTimer);
+        trailingTimer = null;
+      }
+      postEnhancedMessage("requestThumbnail", { time, maxWidth });
+      return;
+    }
+    pendingTrailingRequest = { time, maxWidth };
+    if (!trailingTimer) {
+      trailingTimer = setTimeout(() => {
+        trailingTimer = null;
+        if (!isVisible || !previewEnabled || !pendingTrailingRequest) return;
+        const req = pendingTrailingRequest;
+        pendingTrailingRequest = null;
+        lastRequestSentAt = Date.now();
+        postEnhancedMessage("requestThumbnail", { time: req.time, maxWidth: req.maxWidth });
+      }, REQUEST_THROTTLE_MS - elapsed);
+    }
+  }
+  function findSeekSlider(target) {
+    if (!(target instanceof Element)) return null;
+    return target.closest('[class*="seek-bar-container-"] [class*="slider-container-"]');
+  }
+  function isLiveSeekBar(slider) {
+    if (slider.classList.contains("disabled")) return true;
+    const seekContainer = slider.closest('[class*="seek-bar-container-"]');
+    if (!seekContainer) return true;
+    return seekContainer.querySelector('[class*="live-badge-layer-"]') !== null;
+  }
+  function updatePreviewAtPointer(slider, clientX) {
+    if (!previewEnabled || isLiveSeekBar(slider)) {
+      hidePreview();
+      return;
+    }
+    const duration = getDurationSeconds();
+    if (!Number.isFinite(duration) || duration <= 0) {
+      hidePreview();
+      return;
+    }
+    const rect = slider.getBoundingClientRect();
+    if (rect.width <= 0) {
+      hidePreview();
+      return;
+    }
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const targetTime = ratio * duration;
+    const isPip = document.documentElement.classList.contains("stremio-pip-mode");
+    const previewW = isPip ? PIP_PREVIEW_WIDTH : NORMAL_PREVIEW_WIDTH;
+    lastPreviewWidth = previewW;
+    lastHoveredTime = targetTime;
+    ensurePreviewElement();
+    if (!previewEl || !frameWrapEl || !imgEl || !timeEl) return;
+    const streamKey = ensureStreamCacheScope();
+    const qTime = quantizeTime(targetTime, duration);
+    const cacheKey = makeCacheKey(streamKey, qTime, previewW);
+    const cached = thumbCache.get(cacheKey);
+    if (cached) {
+      applyThumbToDom(cached);
+    } else {
+      const defaultH = lastDisplayFrameSize ? Math.round(previewW * lastDisplayFrameSize.height / lastDisplayFrameSize.width) : Math.round(previewW * 9 / 16);
+      frameWrapEl.style.width = `${previewW}px`;
+      frameWrapEl.style.height = `${defaultH}px`;
+      if (!imgEl.getAttribute("src")) {
+        imgEl.style.opacity = "0";
+      }
+      dispatchThumbnailRequest(targetTime, previewW);
+    }
+    timeEl.textContent = formatTimestamp(targetTime);
+    const cardWidth = Number.parseFloat(frameWrapEl.style.width) || previewW;
+    const clampedLeft = Math.min(
+      window.innerWidth - cardWidth - 12,
+      Math.max(12, clientX - cardWidth / 2)
+    );
+    const bottomOffset = Math.max(12, window.innerHeight - rect.top + 14);
+    previewEl.style.left = `${Math.round(clampedLeft)}px`;
+    previewEl.style.bottom = `${Math.round(bottomOffset)}px`;
+    previewEl.style.display = "flex";
+    isVisible = true;
+  }
+  function setupThumbnailPreview() {
+    if (initialized) return;
+    initialized = true;
+    window.__receiveThumbnailPreview = function(payload) {
+      if (!payload || !payload.dataUrl || !Number.isFinite(payload.time)) return;
+      const duration = getDurationSeconds();
+      const streamKey = ensureStreamCacheScope();
+      const widthKey = payload.width || lastPreviewWidth || NORMAL_PREVIEW_WIDTH;
+      const qTime = quantizeTime(payload.time, duration);
+      const cacheKey = makeCacheKey(streamKey, qTime, widthKey);
+      if (thumbCache.size >= MAX_JS_CACHE_ENTRIES && !thumbCache.has(cacheKey)) {
+        const oldest = thumbCache.keys().next().value;
+        if (oldest !== void 0) thumbCache.delete(oldest);
+      }
+      const entry = {
+        dataUrl: payload.dataUrl,
+        width: payload.width || NORMAL_PREVIEW_WIDTH,
+        height: payload.height || Math.round(NORMAL_PREVIEW_WIDTH * 9 / 16)
+      };
+      thumbCache.set(cacheKey, entry);
+      if (isVisible && previewEnabled && lastHoveredTime >= 0) {
+        const delta = Math.abs(payload.time - lastHoveredTime);
+        const maxTolerance = Math.max(2.5, duration * 0.015);
+        if (delta <= maxTolerance || !imgEl?.getAttribute("src")) {
+          applyThumbToDom(entry);
+        }
+      }
+    };
+    document.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      const slider = findSeekSlider(e.target);
+      if (slider) {
+        draggingSlider = slider;
+        updatePreviewAtPointer(slider, e.clientX);
+      }
+    }, true);
+    document.addEventListener("pointermove", (e) => {
+      if (!previewEnabled) {
+        if (isVisible) hidePreview();
+        return;
+      }
+      if (draggingSlider) {
+        if (!document.body.contains(draggingSlider)) {
+          draggingSlider = null;
+          hidePreview();
+          return;
+        }
+        updatePreviewAtPointer(draggingSlider, e.clientX);
+        return;
+      }
+      const slider = findSeekSlider(e.target);
+      if (slider) {
+        updatePreviewAtPointer(slider, e.clientX);
+      } else if (isVisible) {
+        hidePreview();
+      }
+    }, true);
+    window.addEventListener("pointerup", (e) => {
+      if (!draggingSlider) return;
+      const hovered = findSeekSlider(e.target);
+      draggingSlider = null;
+      if (!hovered) {
+        hidePreview();
+      }
+    }, true);
+    document.addEventListener("mouseleave", () => {
+      if (!draggingSlider && isVisible) {
+        hidePreview();
+      }
+    });
+    window.addEventListener("blur", () => {
+      draggingSlider = null;
+      hidePreview();
+    });
+    const onRouteChange = () => {
+      const inPlayer = window.location.hash.startsWith("#/player") || document.querySelector('[class*="player-container"]') !== null;
+      if (!inPlayer) {
+        draggingSlider = null;
+        hidePreview();
+      }
+    };
+    window.addEventListener("hashchange", onRouteChange);
+    window.addEventListener("popstate", onRouteChange);
+  }
 
   // src/components/settings/settingsInjector.ts
   var SELECTORS = {
@@ -3680,6 +4113,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         { id: "themes", label: "Themes", icon: THEME_ICON },
         { id: "plugins", label: "Plugins", icon: PLUGIN_ICON },
         { id: "marketplace", label: "Marketplace", icon: MARKETPLACE_ICON },
+        { id: "player", label: "Player", icon: PLAYER_ICON },
         { id: "server", label: "Streaming Server", icon: SERVER_ICON },
         { id: "updates", label: "Client Updates", icon: UPDATE_ICON }
       ];
@@ -3759,6 +4193,50 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       marketplaceContent.id = "enhanced-marketplace-content";
       marketplaceCategory.appendChild(marketplaceContent);
       page.appendChild(marketplaceCategory);
+      const playerCategory = createCategory("enhanced-player-category", "player", "Player", sampleGroup);
+      const thumbOption = document.createElement("div");
+      thumbOption.className = "enhanced-option";
+      const thumbHeading = document.createElement("div");
+      thumbHeading.className = "enhanced-option-heading";
+      const thumbLabel = document.createElement("div");
+      thumbLabel.className = "enhanced-option-label";
+      thumbLabel.textContent = "Thumbnail Preview (ThumbFast)";
+      const thumbDesc = document.createElement("div");
+      thumbDesc.style.cssText = "font-size: 0.85rem; color: rgba(255, 255, 255, 0.55); margin-top: 0.25rem;";
+      thumbDesc.textContent = "Show frame preview thumbnails when hovering or scrubbing the seek bar.";
+      thumbHeading.appendChild(thumbLabel);
+      thumbHeading.appendChild(thumbDesc);
+      const thumbContent = document.createElement("div");
+      thumbContent.className = "enhanced-option-content";
+      const thumbToggle = document.createElement("div");
+      thumbToggle.id = "thumbnailpreviewToggle";
+      thumbToggle.setAttribute("tabindex", "0");
+      thumbToggle.setAttribute("role", "switch");
+      thumbToggle.setAttribute("title", "Thumbnail Preview (ThumbFast)");
+      thumbToggle.className = `toggle-container-lZfHP button-container-zVLH6${isThumbnailPreviewEnabled() ? " checked" : ""}`;
+      thumbToggle.setAttribute("aria-checked", isThumbnailPreviewEnabled() ? "true" : "false");
+      thumbToggle.style.cssText = "outline: none; cursor: pointer;";
+      const thumbKnob = document.createElement("div");
+      thumbKnob.className = "toggle-toOWM";
+      thumbToggle.appendChild(thumbKnob);
+      const onToggleThumbPreview = () => {
+        const next = !isThumbnailPreviewEnabled();
+        thumbToggle.classList.toggle("checked", next);
+        thumbToggle.setAttribute("aria-checked", next ? "true" : "false");
+        postEnhancedMessage("setThumbnailPreview", { enabled: next });
+      };
+      thumbToggle.addEventListener("click", onToggleThumbPreview);
+      thumbToggle.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggleThumbPreview();
+        }
+      });
+      thumbContent.appendChild(thumbToggle);
+      thumbOption.appendChild(thumbHeading);
+      thumbOption.appendChild(thumbContent);
+      playerCategory.appendChild(thumbOption);
+      page.appendChild(playerCategory);
       const serverCategory = createCategory("enhanced-server-category", "server", "Streaming Server", sampleGroup);
       const openServerBtn = createOptionButton("openserverfolderBtn", "Open Server Folder");
       openServerBtn.setAttribute("title", "Open Streaming Server Folder");
@@ -3848,6 +4326,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       renderPluginsList((fileName, enabled) => {
         window.StremioEnhancedAPI.togglePlugin(fileName, enabled);
       });
+      syncThumbnailPreviewToggle();
       updateRoute();
     }).catch((err) => {
       console.warn("[Enhanced] Waiting for settings page:", err);
@@ -3888,6 +4367,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     setupMediaCapabilitiesBridge();
     setupTransparencyBridge();
     setupVideoBridge();
+    setupThumbnailPreview();
     injectFallbackStyles();
     let currentData = {
       plugins: [],
@@ -3901,6 +4381,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       updatePluginManagerData(data);
       updateMarketplaceData(data);
       updateUpdateManagerData(data);
+      updateThumbnailPreviewData(data);
       if (data.serverStatus) {
         updateServerManagerData(data.serverStatus);
       }
