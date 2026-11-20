@@ -218,7 +218,9 @@ if [[ ! -x "$APPIMAGETOOL" ]]; then
 fi
 
 # Allow downloaded AppImage tools to run inside Docker/CI containers without FUSE
+# and prevent host AppImageLauncher (binfmt_misc) from intercepting them.
 export APPIMAGE_EXTRACT_AND_RUN=1
+export APPIMAGELAUNCHER_DISABLE=1
 
 # Step 1: Build the Rust binary
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
