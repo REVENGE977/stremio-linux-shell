@@ -59,3 +59,8 @@ flatpak install -y \
 flatpak install ./flatpak/io.github.revenge977.StremioLinuxShellEnhanced.Devel.flatpak
 flatpak run io.github.revenge977.StremioLinuxShellEnhanced.Devel
 ```
+
+#### Appimage
+```bash
+./appimage/build.sh
+```
