@@ -119,6 +119,20 @@ impl Video {
             "vo" => {
                 // vo is handled by GTK GLArea mpv render context and cannot be changed at runtime
             }
+            "hwdec" => {
+                if let Some(value) = value.as_str() {
+                    // Stremio Web requests "auto-copy", which forces GPU->RAM->GPU copy-back
+                    // (e.g. vaapi-copy) and bottlenecks 4K 10-bit streams on integrated GPUs.
+                    // Use "auto-safe" to prefer zero-copy EGL dmabuf interop first while still
+                    // falling back automatically if zero-copy isn't supported.
+                    let hwdec = if value == "auto-copy" {
+                        "auto-safe"
+                    } else {
+                        value
+                    };
+                    widget.set_property("hwdec", hwdec);
+                }
+            }
             name if FLOAT_PROPERTIES.contains(&name) => {
                 if let Some(value) = value.as_f64() {
                     widget.set_property(name, value);

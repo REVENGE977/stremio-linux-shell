@@ -1,0 +1,74 @@
+name: Build AppImage
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional existing GitHub Release tag to attach the AppImage to (leave empty for artifact only)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    name: AppImage (x86_64, Ubuntu 24.04 / glibc 2.39)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GH_PAT }}
+          submodules: recursive
+
+      - name: Install build and runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            curl \
+            file \
+            gettext \
+            git \
+            libssl-dev \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libwebkitgtk-6.0-dev \
+            libmpv-dev \
+            libepoxy-dev \
+            libglib2.0-dev-bin \
+            glib-networking \
+            dconf-gsettings-backend \
+            librsvg2-common \
+            hicolor-icon-theme \
+            desktop-file-utils \
+            nodejs \
+            npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build AppImage
+        run: |
+          chmod +x ./appimage/build.sh
+          ./appimage/build.sh
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stremio-enhanced-shell-appimage-x86_64
+          path: ./appimage/*.AppImage
+          if-no-files-found: error
+
+      - name: Upload AppImage to GitHub Release
+        if: github.event_name == 'release' || inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
+          files: ./appimage/*.AppImage
