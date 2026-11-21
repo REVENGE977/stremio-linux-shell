@@ -35,6 +35,15 @@
                                 <signal name="notify::active" handler="on_kde_theme_changed" swapped="true"/>
                             </object>
                         </child>
+
+                        <child>
+                            <object class="AdwSwitchRow" id="system_theme">
+                                <property name="title" translatable="yes">System theme</property>
+                                <property name="subtitle" translatable="yes">Use the system GTK theme for window decorations instead of the built-in theme</property>
+
+                                <signal name="notify::active" handler="on_system_theme_changed" swapped="true"/>
+                            </object>
+                        </child>
                     </object>
                 </child>
 

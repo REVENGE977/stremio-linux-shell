@@ -45,6 +45,8 @@ pub struct Application {
     enhanced: RefCell<Option<Rc<RefCell<EnhancedManager>>>>,
     server: RefCell<Option<Rc<RefCell<crate::server::Server>>>>,
     thumbnail_tx: RefCell<Option<flume::Sender<ThumbnailCmd>>>,
+    pub system_theme_provider: RefCell<Option<gtk::CssProvider>>,
+    pub app_settings: RefCell<Option<gtk::gio::Settings>>,
 }
 
 fn is_server_running(server: &Option<Rc<RefCell<crate::server::Server>>>) -> bool {

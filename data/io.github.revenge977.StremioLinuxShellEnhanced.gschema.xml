@@ -29,6 +29,10 @@
             <default>true</default>
             <summary>KDE Theme</summary>
         </key>
+        <key name="system-theme" type="b">
+            <default>true</default>
+            <summary>Use system theme for window decorations</summary>
+        </key>
         <key name="mpv-config-location" type="s">
             <default>"~/.config/mpv/mpv.conf"</default>
             <summary>Location of the MPV configuration file</summary>
