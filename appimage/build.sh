@@ -491,6 +491,68 @@ log "Running linuxdeploy..."
     --icon-file "$ICON_SOURCE" \
     ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}
 
+# Step 6b: Relocate hardcoded WebKitGTK helper/bundle paths inside libwebkitgtk-6.0.so*
+# Release builds of WebKitGTK ignore WEBKIT_EXEC_PATH and hardcode the build distro's path
+# (e.g. /usr/lib/x86_64-linux-gnu/webkitgtk-6.0 on Ubuntu), which crashes on other distros
+# like Fedora/Arch. Rewrite the leading "/usr/" (5 bytes) to "usr//" (5 bytes) for the
+# WebKit path prefix and create matching relative symlinks inside $APPDIR.
+if [[ -d "$APPDIR/usr/lib/webkitgtk-6.0/injected-bundle" && ! -e "$APPDIR/usr/libexec/webkitgtk-6.0/injected-bundle" ]]; then
+    ln -sfn "../../lib/webkitgtk-6.0/injected-bundle" "$APPDIR/usr/libexec/webkitgtk-6.0/injected-bundle"
+fi
+
+if [[ "$WEBKIT_EXEC_DIR" == /usr/* ]]; then
+    REL_WEBKIT_EXEC_DIR="${WEBKIT_EXEC_DIR#/}"
+    if [[ "$REL_WEBKIT_EXEC_DIR" != "usr/libexec/webkitgtk-6.0" ]]; then
+        mkdir -p "$APPDIR/$(dirname "$REL_WEBKIT_EXEC_DIR")"
+        rm -rf "$APPDIR/$REL_WEBKIT_EXEC_DIR"
+        REL_TARGET="$(realpath --relative-to="$APPDIR/$(dirname "$REL_WEBKIT_EXEC_DIR")" "$APPDIR/usr/libexec/webkitgtk-6.0")"
+        ln -sfn "$REL_TARGET" "$APPDIR/$REL_WEBKIT_EXEC_DIR"
+    fi
+fi
+
+if [[ -n "$WEBKIT_BUNDLE_DIR" && "$WEBKIT_BUNDLE_DIR" == /usr/* && "$WEBKIT_BUNDLE_DIR" != "$WEBKIT_EXEC_DIR"* ]]; then
+    REL_WEBKIT_BUNDLE_DIR="${WEBKIT_BUNDLE_DIR#/}"
+    if [[ "$REL_WEBKIT_BUNDLE_DIR" != "usr/lib/webkitgtk-6.0/injected-bundle" ]]; then
+        mkdir -p "$APPDIR/$(dirname "$REL_WEBKIT_BUNDLE_DIR")"
+        rm -rf "$APPDIR/$REL_WEBKIT_BUNDLE_DIR"
+        REL_BUNDLE_TARGET="$(realpath --relative-to="$APPDIR/$(dirname "$REL_WEBKIT_BUNDLE_DIR")" "$APPDIR/usr/lib/webkitgtk-6.0/injected-bundle")"
+        ln -sfn "$REL_BUNDLE_TARGET" "$APPDIR/$REL_WEBKIT_BUNDLE_DIR"
+    fi
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+    PATCH_PREFIXES=("$WEBKIT_EXEC_DIR")
+    if [[ -n "$WEBKIT_BUNDLE_DIR" && "$WEBKIT_BUNDLE_DIR" != "$WEBKIT_EXEC_DIR"* ]]; then
+        PATCH_PREFIXES+=("$WEBKIT_BUNDLE_DIR")
+    fi
+    for prefix in "${PATCH_PREFIXES[@]}"; do
+        [[ "$prefix" == /usr/* ]] || continue
+        old_str="$prefix"
+        new_str="usr//${prefix#/usr/}"
+        python3 - "$old_str" "$new_str" "$APPDIR/usr/lib" <<'PY'
+import glob, os, sys
+
+old_b = sys.argv[1].encode("utf-8")
+new_b = sys.argv[2].encode("utf-8")
+assert len(old_b) == len(new_b), f"Length mismatch: {len(old_b)} vs {len(new_b)}"
+lib_dir = sys.argv[3]
+
+for path in glob.glob(os.path.join(lib_dir, "libwebkitgtk-6.0.so*")):
+    if os.path.islink(path) or not os.path.isfile(path):
+        continue
+    with open(path, "rb") as f:
+        data = f.read()
+    count = data.count(old_b)
+    if count > 0:
+        with open(path, "wb") as f:
+            f.write(data.replace(old_b, new_b))
+        print(f"[appimage] Patched {count} occurrence(s) of {old_b.decode()} -> {new_b.decode()} in {os.path.basename(path)}")
+PY
+    done
+else
+    warn "python3 not found; skipping libwebkitgtk-6.0 hardcoded path relocation"
+fi
+
 # Step 7: Optionally bundle official Node.js binary as stremio-runtime for the streaming server
 if [[ "$BUNDLE_NODE" -eq 1 ]]; then
     NODE_TARBALL="node-${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz"
@@ -575,6 +637,8 @@ if [ -z "${GSK_RENDERER:-}" ] && [ -e /dev/nvidia0 ]; then
     export GSK_RENDERER=opengl
 fi
 
+# Run from $APPDIR so relocated relative WebKitGTK paths (usr//...) resolve inside the AppImage
+cd "$APPDIR"
 exec "$APPDIR/usr/bin/stremio" "$@"
 EOF
 chmod 755 "$APPDIR/AppRun"
