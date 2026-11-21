@@ -2,7 +2,10 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::{prelude::*, subclass::prelude::*};
-use gtk::glib::{self, Properties, clone};
+use gtk::{
+    gio::prelude::SettingsExt,
+    glib::{self, Properties, clone},
+};
 use tracing::{error, info, warn};
 
 use crate::{
@@ -324,6 +327,74 @@ fn handle_enhanced_action(
                 );
                 webview.evaluate_javascript(&script);
             }
+        }
+        crate::app::enhanced::EnhancedAction::SetShellPreference { key, value } => {
+            let settings = gtk::gio::Settings::new(crate::app::config::APP_ID);
+            match key.as_str() {
+                "rememberWindowState" => {
+                    if let Some(v) = value.as_bool() {
+                        settings.set_boolean("remember-window-state", v).ok();
+                    }
+                }
+                "noWindowDecorations" => {
+                    if let Some(v) = value.as_bool() {
+                        settings.set_boolean("no-window-decorations", v).ok();
+                    }
+                }
+                "nativeTitlebar" => {
+                    if let Some(v) = value.as_bool() {
+                        settings.set_boolean("native-titlebar", v).ok();
+                    }
+                }
+                "systemTheme" => {
+                    if let Some(v) = value.as_bool() {
+                        settings.set_boolean("system-theme", v).ok();
+                    }
+                }
+                "kdeTheme" => {
+                    if let Some(v) = value.as_bool() {
+                        settings.set_boolean("kde-theme", v).ok();
+                    }
+                }
+                "mpvConfigLocation" => {
+                    if let Some(v) = value.as_str() {
+                        settings.set_string("mpv-config-location", v).ok();
+                    }
+                }
+                other => {
+                    warn!("Unknown shell preference key: {other}");
+                }
+            }
+            let running = is_server_running(server);
+            let data = enhanced.borrow().ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::BrowseMpvConfigFile => {
+            let choose_file = window.choose_mpv_config_file();
+            let webview = webview.clone();
+            let enhanced = enhanced.clone();
+            let server = server.clone();
+            spawn_local!(async move {
+                if let Some(path) = choose_file.await {
+                    let value = path.to_string_lossy().to_string();
+                    let settings = gtk::gio::Settings::new(crate::app::config::APP_ID);
+                    settings.set_string("mpv-config-location", &value).ok();
+
+                    let running = is_server_running(&server);
+                    let data = enhanced.borrow().ui_data(running);
+                    if let Ok(json) = serde_json::to_string(&data) {
+                        let script = format!(
+                            "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                        );
+                        webview.evaluate_javascript(&script);
+                    }
+                }
+            });
         }
     }
 }

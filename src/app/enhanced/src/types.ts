@@ -38,6 +38,16 @@ export interface ServerStatusUiData {
     skippedVersion: string | null;
 }
 
+export interface ShellPreferencesUiData {
+    rememberWindowState: boolean;
+    noWindowDecorations: boolean;
+    nativeTitlebar: boolean;
+    systemTheme: boolean;
+    kdeTheme: boolean;
+    isDesktopKde: boolean;
+    mpvConfigLocation: string;
+}
+
 export interface EnhancedData {
     plugins: PluginUiData[];
     themes: ThemeUiData[];
@@ -46,6 +56,7 @@ export interface EnhancedData {
     clientVersion?: string;
     skippedClientVersion?: string | null;
     thumbnailPreview?: boolean;
+    shellPreferences?: ShellPreferencesUiData;
 }
 
 export interface SettingSchemaItem {

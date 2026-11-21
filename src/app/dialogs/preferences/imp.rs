@@ -18,6 +18,8 @@ pub struct PreferencesDialog {
     #[template_child]
     remember_window_state: TemplateChild<adw::SwitchRow>,
     #[template_child]
+    native_titlebar: TemplateChild<adw::SwitchRow>,
+    #[template_child]
     kde_theme: TemplateChild<adw::SwitchRow>,
     #[template_child]
     system_theme: TemplateChild<adw::SwitchRow>,
@@ -34,6 +36,14 @@ impl PreferencesDialog {
         let settings = Settings::new(APP_ID);
         let active = self.remember_window_state.is_active();
         settings.set_boolean("remember-window-state", active).ok();
+    }
+
+    #[template_callback]
+    fn on_native_titlebar_changed(&self) {
+        let settings = Settings::new(APP_ID);
+        settings
+            .set_boolean("native-titlebar", self.native_titlebar.is_active())
+            .ok();
     }
 
     #[template_callback]
@@ -125,6 +135,9 @@ impl ObjectImpl for PreferencesDialog {
 
         let remember_window_state = settings.boolean("remember-window-state");
         self.remember_window_state.set_active(remember_window_state);
+
+        let native_titlebar = settings.boolean("native-titlebar");
+        self.native_titlebar.set_active(native_titlebar);
 
         let no_window_decorations = settings.boolean("no-window-decorations");
         self.no_window_decorations.set_active(no_window_decorations);

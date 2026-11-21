@@ -10,7 +10,7 @@ import { updateThemeManagerData, applyThemeUI, ensureActiveTheme, renderThemesLi
 import { updatePluginManagerData, loadEnabledPlugins, renderPluginsList } from './plugins/pluginManager';
 import { updateMarketplaceData } from './marketplace/marketplaceManager';
 import { updateUpdateManagerData, checkForAllUpdates, checkClientUpdate } from './updates/updateManager';
-import { checkSettings } from './components/settings/settingsInjector';
+import { checkSettings, updateShellPreferencesData } from './components/settings/settingsInjector';
 import { setupServerManager, updateServerManagerData, checkServerJsUpdateAndSetup } from './server/serverManager';
 import { setupThumbnailPreview, updateThumbnailPreviewData } from './player/thumbnailPreview';
 import { EnhancedData } from './types';
@@ -51,6 +51,7 @@ import { EnhancedData } from './types';
         updateMarketplaceData(data);
         updateUpdateManagerData(data);
         updateThumbnailPreviewData(data);
+        updateShellPreferencesData(data);
         if (data.serverStatus) {
             updateServerManagerData(data.serverStatus);
         }

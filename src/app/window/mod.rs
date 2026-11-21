@@ -1,6 +1,8 @@
 mod imp;
 
-use adw::subclass::prelude::*;
+use std::path::PathBuf;
+
+use ashpd::desktop::file_chooser::FileFilter;
 use gtk::{
     Widget, gio,
     glib::{
@@ -11,13 +13,14 @@ use gtk::{
         DisplayExt, GtkWindowExt, MonitorExt, NativeExt, SeatExt, SurfaceExt, ToplevelExt,
         WidgetExt,
     },
+    subclass::prelude::*,
 };
 
-use crate::app::Application;
+use crate::app::{Application, ext::ASHPDExt};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
-    @extends gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow, gtk::Widget,
+    @extends gtk::Window, gtk::ApplicationWindow, gtk::Widget,
     @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::ShortcutManager, gtk::Native, gtk::Root;
 }
 
@@ -62,6 +65,9 @@ impl Window {
             imp.pip_mode.set(false);
             self.remove_css_class("pip-mode");
             self.set_size_request(400, 406);
+            if imp.native_titlebar.get() && imp.decorations.get() {
+                self.set_decorated(true);
+            }
             imp.show_header(!self.is_fullscreen());
 
             let (w, h) = imp.saved_size.get();
@@ -98,6 +104,9 @@ impl Window {
 
             imp.pip_mode.set(true);
             self.add_css_class("pip-mode");
+            if imp.native_titlebar.get() && imp.decorations.get() {
+                self.set_decorated(false);
+            }
             imp.show_header(false);
             self.set_size_request(280, 158);
             self.set_default_size(pip_w - 1, pip_h - 1);
@@ -201,6 +210,13 @@ impl Window {
 
     pub fn open_file(&self, file_path: String) {
         self.imp().open_file(file_path);
+    }
+
+    pub fn choose_mpv_config_file(&self) -> impl Future<Output = Option<PathBuf>> + 'static {
+        let filter = FileFilter::new("MPV Config")
+            .mimetype("text/plain")
+            .glob("*.conf");
+        self.imp().choose_file(filter)
     }
 }
 

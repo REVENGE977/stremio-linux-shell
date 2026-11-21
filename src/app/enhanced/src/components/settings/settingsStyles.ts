@@ -18,7 +18,18 @@ export const SETTINGS_STYLES = `
 #enhanced[data-show="marketplace"] > .enhanced-category:not([data-category="marketplace"]),
 #enhanced[data-show="player"] > .enhanced-category:not([data-category="player"]),
 #enhanced[data-show="server"] > .enhanced-category:not([data-category="server"]),
+#enhanced[data-show="preferences"] > .enhanced-category:not([data-category="preferences"]),
 #enhanced[data-show="updates"] > .enhanced-category:not([data-category="updates"]) { display: none; }
+
+.enhanced-subsection-title {
+    color: var(--foreground-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 1.25rem 0 0.6rem 0.2rem;
+}
+.enhanced-subsection-title:first-of-type { margin-top: 0.25rem; }
 
 .enhanced-option {
     display: flex;
@@ -29,13 +40,44 @@ export const SETTINGS_STYLES = `
     margin-bottom: 0.75rem;
     border-radius: var(--border-radius, 0.75rem);
     background: var(--surface-background-color, var(--overlay-color, rgba(255, 255, 255, 0.05)));
+    transition: opacity 0.2s;
 }
+.enhanced-option.enhanced-option-muted { opacity: 0.55; }
 .enhanced-option-heading { flex: 1; min-width: 0; }
 .enhanced-option-label {
     color: var(--foreground-color-primary, var(--primary-foreground-color, rgba(255, 255, 255, 0.9)));
     font-size: 1rem;
 }
+.enhanced-option-description {
+    font-size: 0.85rem;
+    color: var(--foreground-color-secondary, rgba(255, 255, 255, 0.55));
+    margin-top: 0.25rem;
+    line-height: 1.4;
+}
 .enhanced-option-content { flex: none; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.enhanced-option-input-group {
+    flex: 0 1 24rem;
+    min-width: 14rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.enhanced-text-input {
+    flex: 1;
+    min-width: 0;
+    height: 2.4rem;
+    padding: 0 0.85rem;
+    border-radius: 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--foreground-color-primary, var(--primary-foreground-color, #fff));
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+}
+.enhanced-text-input:focus {
+    border-color: var(--accent-color, var(--primary-accent-color, #7b5bf5));
+}
 
 .enhanced-option-content .button,
 .enhanced-button {

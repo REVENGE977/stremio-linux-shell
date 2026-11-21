@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use gtk::glib;
+use gtk::{
+    gio::{Settings as GioSettings, SettingsSchemaSource, prelude::SettingsExt},
+    glib,
+};
 use serde::Deserialize;
 use tracing::{error, info, warn};
 
@@ -167,6 +170,58 @@ pub enum EnhancedAction {
     SetThumbnailPreview {
         enabled: bool,
     },
+    SetShellPreference {
+        key: String,
+        value: serde_json::Value,
+    },
+    BrowseMpvConfigFile,
+}
+
+/// Shell/GTK window and MPV preferences exposed to the Stremio Enhanced settings UI.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellPreferencesUiData {
+    pub remember_window_state: bool,
+    pub no_window_decorations: bool,
+    pub native_titlebar: bool,
+    pub system_theme: bool,
+    pub kde_theme: bool,
+    pub is_desktop_kde: bool,
+    pub mpv_config_location: String,
+}
+
+impl Default for ShellPreferencesUiData {
+    fn default() -> Self {
+        Self {
+            remember_window_state: true,
+            no_window_decorations: false,
+            native_titlebar: false,
+            system_theme: true,
+            kde_theme: true,
+            is_desktop_kde: *crate::utils::IS_DESKTOP_KDE,
+            mpv_config_location: "~/.config/mpv/mpv.conf".to_string(),
+        }
+    }
+}
+
+pub fn read_shell_preferences() -> ShellPreferencesUiData {
+    let has_schema = SettingsSchemaSource::default()
+        .and_then(|src| src.lookup(crate::app::config::APP_ID, true))
+        .is_some();
+    if !has_schema {
+        return ShellPreferencesUiData::default();
+    }
+
+    let settings = GioSettings::new(crate::app::config::APP_ID);
+    ShellPreferencesUiData {
+        remember_window_state: settings.boolean("remember-window-state"),
+        no_window_decorations: settings.boolean("no-window-decorations"),
+        native_titlebar: settings.boolean("native-titlebar"),
+        system_theme: settings.boolean("system-theme"),
+        kde_theme: settings.boolean("kde-theme"),
+        is_desktop_kde: *crate::utils::IS_DESKTOP_KDE,
+        mpv_config_location: settings.string("mpv-config-location").to_string(),
+    }
 }
 
 /// Serialized plugin information for the web UI.
@@ -208,6 +263,7 @@ pub struct EnhancedUiData {
     pub client_version: String,
     pub skipped_client_version: Option<String>,
     pub thumbnail_preview: bool,
+    pub shell_preferences: ShellPreferencesUiData,
 }
 
 /// The main manager that handles loading plugins/themes and tracking settings.
@@ -479,6 +535,7 @@ impl EnhancedManager {
             client_version: env!("CARGO_PKG_VERSION").to_string(),
             skipped_client_version,
             thumbnail_preview: self.settings.thumbnail_preview,
+            shell_preferences: read_shell_preferences(),
         }
     }
 
@@ -797,6 +854,20 @@ mod tests {
             }
             _ => panic!("Wrong action"),
         }
+
+        let set_pref = r#"{"action":"setShellPreference","key":"nativeTitlebar","value":true}"#;
+        let action: EnhancedAction = serde_json::from_str(set_pref).unwrap();
+        match action {
+            EnhancedAction::SetShellPreference { key, value } => {
+                assert_eq!(key, "nativeTitlebar");
+                assert_eq!(value, serde_json::Value::Bool(true));
+            }
+            _ => panic!("Wrong action"),
+        }
+
+        let browse_mpv = r#"{"action":"browseMpvConfigFile"}"#;
+        let action: EnhancedAction = serde_json::from_str(browse_mpv).unwrap();
+        assert!(matches!(action, EnhancedAction::BrowseMpvConfigFile));
     }
 
     #[test]

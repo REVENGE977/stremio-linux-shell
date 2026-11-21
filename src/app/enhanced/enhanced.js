@@ -3588,7 +3588,18 @@ Please place server.js in the folder or start Stremio Service. Would you like to
 #enhanced[data-show="marketplace"] > .enhanced-category:not([data-category="marketplace"]),
 #enhanced[data-show="player"] > .enhanced-category:not([data-category="player"]),
 #enhanced[data-show="server"] > .enhanced-category:not([data-category="server"]),
+#enhanced[data-show="preferences"] > .enhanced-category:not([data-category="preferences"]),
 #enhanced[data-show="updates"] > .enhanced-category:not([data-category="updates"]) { display: none; }
+
+.enhanced-subsection-title {
+    color: var(--foreground-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 1.25rem 0 0.6rem 0.2rem;
+}
+.enhanced-subsection-title:first-of-type { margin-top: 0.25rem; }
 
 .enhanced-option {
     display: flex;
@@ -3599,13 +3610,44 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     margin-bottom: 0.75rem;
     border-radius: var(--border-radius, 0.75rem);
     background: var(--surface-background-color, var(--overlay-color, rgba(255, 255, 255, 0.05)));
+    transition: opacity 0.2s;
 }
+.enhanced-option.enhanced-option-muted { opacity: 0.55; }
 .enhanced-option-heading { flex: 1; min-width: 0; }
 .enhanced-option-label {
     color: var(--foreground-color-primary, var(--primary-foreground-color, rgba(255, 255, 255, 0.9)));
     font-size: 1rem;
 }
+.enhanced-option-description {
+    font-size: 0.85rem;
+    color: var(--foreground-color-secondary, rgba(255, 255, 255, 0.55));
+    margin-top: 0.25rem;
+    line-height: 1.4;
+}
 .enhanced-option-content { flex: none; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.enhanced-option-input-group {
+    flex: 0 1 24rem;
+    min-width: 14rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.enhanced-text-input {
+    flex: 1;
+    min-width: 0;
+    height: 2.4rem;
+    padding: 0 0.85rem;
+    border-radius: 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--foreground-color-primary, var(--primary-foreground-color, #fff));
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+}
+.enhanced-text-input:focus {
+    border-color: var(--accent-color, var(--primary-accent-color, #7b5bf5));
+}
 
 .enhanced-option-content .button,
 .enhanced-button {
@@ -3655,6 +3697,9 @@ Please place server.js in the folder or start Stremio Service. Would you like to
 </svg>`;
   var PLAYER_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
     <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>
+</svg>`;
+  var PREFERENCES_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
+    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"></path>
 </svg>`;
 
   // src/player/thumbnailPreview.ts
@@ -4013,6 +4058,58 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   };
   var ENHANCED_ROUTE = "#/settings/enhanced";
   var DEFAULT_SELECTED_CLASS = "selected-S7SeK";
+  var currentShellPreferences = {
+    rememberWindowState: true,
+    noWindowDecorations: false,
+    nativeTitlebar: false,
+    systemTheme: true,
+    kdeTheme: true,
+    isDesktopKde: false,
+    mpvConfigLocation: "~/.config/mpv/mpv.conf"
+  };
+  function updateShellPreferencesData(data) {
+    if (data.shellPreferences) {
+      currentShellPreferences = { ...currentShellPreferences, ...data.shellPreferences };
+      syncShellPreferencesUI();
+    }
+  }
+  function syncShellPreferencesUI() {
+    const boolKeys = [
+      "rememberWindowState",
+      "nativeTitlebar",
+      "systemTheme",
+      "kdeTheme",
+      "noWindowDecorations"
+    ];
+    for (const key of boolKeys) {
+      const toggle = document.getElementById(`pref-${key}-toggle`);
+      if (toggle) {
+        const active = Boolean(currentShellPreferences[key]);
+        toggle.classList.toggle("checked", active);
+        toggle.setAttribute("aria-checked", active ? "true" : "false");
+      }
+    }
+    const kdeRow = document.getElementById("pref-kdeTheme-row");
+    if (kdeRow) {
+      kdeRow.style.display = currentShellPreferences.isDesktopKde ? "" : "none";
+    }
+    const csdInactive = currentShellPreferences.nativeTitlebar || currentShellPreferences.noWindowDecorations;
+    const sysThemeRow = document.getElementById("pref-systemTheme-row");
+    if (sysThemeRow) {
+      sysThemeRow.classList.toggle("enhanced-option-muted", csdInactive);
+    }
+    if (kdeRow) {
+      kdeRow.classList.toggle("enhanced-option-muted", csdInactive);
+    }
+    const nativeRow = document.getElementById("pref-nativeTitlebar-row");
+    if (nativeRow) {
+      nativeRow.classList.toggle("enhanced-option-muted", currentShellPreferences.noWindowDecorations);
+    }
+    const mpvInput = document.getElementById("pref-mpvConfigLocation-input");
+    if (mpvInput && document.activeElement !== mpvInput) {
+      mpvInput.value = currentShellPreferences.mpvConfigLocation || "";
+    }
+  }
   var classOf = (el) => el?.getAttribute("class") ?? "";
   function selectedClass() {
     for (const item of Array.from(document.querySelectorAll(`${SELECTORS.NAV_MENU} a`))) {
@@ -4115,6 +4212,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         { id: "marketplace", label: "Marketplace", icon: MARKETPLACE_ICON },
         { id: "player", label: "Player", icon: PLAYER_ICON },
         { id: "server", label: "Streaming Server", icon: SERVER_ICON },
+        { id: "preferences", label: "Preferences", icon: PREFERENCES_ICON },
         { id: "updates", label: "Client Updates", icon: UPDATE_ICON }
       ];
       for (const item of items) {
@@ -4280,6 +4378,145 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       serverCategory.appendChild(createOptionRow([openServerBtn, checkServerUpdatesBtn]));
       serverCategory.appendChild(serverStatusInfo);
       page.appendChild(serverCategory);
+      const preferencesCategory = createCategory("enhanced-preferences-category", "preferences", "Preferences", sampleGroup);
+      const createSubsectionTitle = (title) => {
+        const sub = document.createElement("div");
+        sub.className = "enhanced-subsection-title";
+        sub.textContent = title;
+        return sub;
+      };
+      const createShellToggleOption = (key, title, description, requiresRestart) => {
+        const option = document.createElement("div");
+        option.id = `pref-${key}-row`;
+        option.className = "enhanced-option";
+        const optHeading = document.createElement("div");
+        optHeading.className = "enhanced-option-heading";
+        const optLabel = document.createElement("div");
+        optLabel.className = "enhanced-option-label";
+        optLabel.textContent = title;
+        const optDesc = document.createElement("div");
+        optDesc.className = "enhanced-option-description";
+        optDesc.textContent = description;
+        optHeading.appendChild(optLabel);
+        optHeading.appendChild(optDesc);
+        const optContent = document.createElement("div");
+        optContent.className = "enhanced-option-content";
+        const toggle = document.createElement("div");
+        toggle.id = `pref-${key}-toggle`;
+        toggle.setAttribute("tabindex", "0");
+        toggle.setAttribute("role", "switch");
+        toggle.setAttribute("title", title);
+        const initialActive = Boolean(currentShellPreferences[key]);
+        toggle.className = `toggle-container-lZfHP button-container-zVLH6${initialActive ? " checked" : ""}`;
+        toggle.setAttribute("aria-checked", initialActive ? "true" : "false");
+        toggle.style.cssText = "outline: none; cursor: pointer;";
+        const knob = document.createElement("div");
+        knob.className = "toggle-toOWM";
+        toggle.appendChild(knob);
+        const onToggle = () => {
+          const next = !Boolean(currentShellPreferences[key]);
+          currentShellPreferences[key] = next;
+          syncShellPreferencesUI();
+          postEnhancedMessage("setShellPreference", { key, value: next });
+          if (requiresRestart) {
+            modalManager.showToast(
+              `pref-restart-${key}`,
+              "Restart Required",
+              "Restart Stremio Enhanced Shell for this change to take effect.",
+              "info"
+            );
+          }
+        };
+        toggle.addEventListener("click", onToggle);
+        toggle.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        });
+        optContent.appendChild(toggle);
+        option.appendChild(optHeading);
+        option.appendChild(optContent);
+        return option;
+      };
+      preferencesCategory.appendChild(createSubsectionTitle("Interface"));
+      preferencesCategory.appendChild(createShellToggleOption(
+        "rememberWindowState",
+        "Remember window state",
+        "Save and restore window dimensions, maximized and fullscreen state.",
+        false
+      ));
+      preferencesCategory.appendChild(createShellToggleOption(
+        "nativeTitlebar",
+        "Native window titlebar (Server-Side / OS frame)",
+        "Disable the built-in titlebar (CSD) and let your OS window manager draw a native titlebar (SSD). Best supported on X11; Wayland compositors may still fall back to CSD. Requires restarting the application.",
+        true
+      ));
+      preferencesCategory.appendChild(createShellToggleOption(
+        "systemTheme",
+        "System theme (Client-Side / GTK4 titlebar)",
+        "Apply your system GTK4 theme colors and controls to the built-in client-side titlebar (CSD) instead of Libadwaita. Only applies when Native window titlebar is off.",
+        false
+      ));
+      preferencesCategory.appendChild(createShellToggleOption(
+        "kdeTheme",
+        "KDE theme (Compact Client-Side titlebar)",
+        "Use a slimmer titlebar layout tailored for KDE Plasma when using the built-in titlebar. Requires restarting the application.",
+        true
+      ));
+      preferencesCategory.appendChild(createShellToggleOption(
+        "noWindowDecorations",
+        "Remove window decorations",
+        "Removes the titlebar, rounded corners, and drop shadow completely. Requires restarting the application.",
+        true
+      ));
+      preferencesCategory.appendChild(createSubsectionTitle("MPV"));
+      const mpvOption = document.createElement("div");
+      mpvOption.id = "pref-mpvConfigLocation-row";
+      mpvOption.className = "enhanced-option";
+      const mpvHeading = document.createElement("div");
+      mpvHeading.className = "enhanced-option-heading";
+      const mpvLabel = document.createElement("div");
+      mpvLabel.className = "enhanced-option-label";
+      mpvLabel.textContent = "Configuration file location";
+      const mpvDesc = document.createElement("div");
+      mpvDesc.className = "enhanced-option-description";
+      mpvDesc.textContent = "Path to custom mpv.conf file (takes effect after restarting the application).";
+      mpvHeading.appendChild(mpvLabel);
+      mpvHeading.appendChild(mpvDesc);
+      const mpvInputGroup = document.createElement("div");
+      mpvInputGroup.className = "enhanced-option-input-group";
+      const mpvInput = document.createElement("input");
+      mpvInput.id = "pref-mpvConfigLocation-input";
+      mpvInput.type = "text";
+      mpvInput.className = "enhanced-text-input";
+      mpvInput.placeholder = "~/.config/mpv/mpv.conf";
+      mpvInput.spellcheck = false;
+      mpvInput.autocomplete = "off";
+      mpvInput.value = currentShellPreferences.mpvConfigLocation || "";
+      const commitMpvPath = () => {
+        const value = mpvInput.value;
+        currentShellPreferences.mpvConfigLocation = value;
+        postEnhancedMessage("setShellPreference", { key: "mpvConfigLocation", value });
+      };
+      mpvInput.addEventListener("change", commitMpvPath);
+      mpvInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitMpvPath();
+          mpvInput.blur();
+        }
+      });
+      const mpvBrowseBtn = createOptionButton("pref-mpvConfigLocation-browse", "Browse");
+      mpvBrowseBtn.onclick = () => {
+        postEnhancedMessage("browseMpvConfigFile");
+      };
+      mpvInputGroup.appendChild(mpvInput);
+      mpvInputGroup.appendChild(mpvBrowseBtn);
+      mpvOption.appendChild(mpvHeading);
+      mpvOption.appendChild(mpvInputGroup);
+      preferencesCategory.appendChild(mpvOption);
+      page.appendChild(preferencesCategory);
       const updatesCategory = createCategory("enhanced-updates-category", "updates", "Client Updates", sampleGroup);
       const checkClientUpdatesBtn = createOptionButton("checkclientupdatesBtn", "Check for Client Updates");
       const openClientReleasesBtn = createOptionButton("openclientreleasesBtn", "View Releases");
@@ -4327,6 +4564,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         window.StremioEnhancedAPI.togglePlugin(fileName, enabled);
       });
       syncThumbnailPreviewToggle();
+      syncShellPreferencesUI();
       updateRoute();
     }).catch((err) => {
       console.warn("[Enhanced] Waiting for settings page:", err);
@@ -4382,6 +4620,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       updateMarketplaceData(data);
       updateUpdateManagerData(data);
       updateThumbnailPreviewData(data);
+      updateShellPreferencesData(data);
       if (data.serverStatus) {
         updateServerManagerData(data.serverStatus);
       }

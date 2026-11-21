@@ -19,17 +19,26 @@
                         </child>
 
                         <child>
-                            <object class="AdwSwitchRow" id="no_window_decorations">
-                                <property name="title" translatable="yes">Remove window decorations</property>
-                                <property name="subtitle" translatable="yes">Removes title bar, rounded corners and drop shadow</property>
+                            <object class="AdwSwitchRow" id="native_titlebar">
+                                <property name="title" translatable="yes">Native window titlebar (Server-Side / OS frame)</property>
+                                <property name="subtitle" translatable="yes">Disable the built-in titlebar (CSD) and let the OS window manager draw a native titlebar (SSD). Best supported on X11. Requires restarting the application</property>
 
-                                <signal name="notify::active" handler="on_no_window_decorations_changed" swapped="true"/>
+                                <signal name="notify::active" handler="on_native_titlebar_changed" swapped="true"/>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="AdwSwitchRow" id="system_theme">
+                                <property name="title" translatable="yes">System theme (Client-Side / GTK4 titlebar)</property>
+                                <property name="subtitle" translatable="yes">Apply the system GTK4 theme to the built-in client-side titlebar (CSD) instead of Libadwaita</property>
+
+                                <signal name="notify::active" handler="on_system_theme_changed" swapped="true"/>
                             </object>
                         </child>
 
                         <child>
                             <object class="AdwSwitchRow" id="kde_theme">
-                                <property name="title" translatable="yes">KDE Theme</property>
+                                <property name="title" translatable="yes">KDE theme (Compact Client-Side titlebar)</property>
                                 <property name="subtitle" translatable="yes">Requires restarting the application for changes to take effect</property>
 
                                 <signal name="notify::active" handler="on_kde_theme_changed" swapped="true"/>
@@ -37,11 +46,11 @@
                         </child>
 
                         <child>
-                            <object class="AdwSwitchRow" id="system_theme">
-                                <property name="title" translatable="yes">System theme</property>
-                                <property name="subtitle" translatable="yes">Use the system GTK theme for window decorations instead of the built-in theme</property>
+                            <object class="AdwSwitchRow" id="no_window_decorations">
+                                <property name="title" translatable="yes">Remove window decorations</property>
+                                <property name="subtitle" translatable="yes">Removes title bar, rounded corners and drop shadow</property>
 
-                                <signal name="notify::active" handler="on_system_theme_changed" swapped="true"/>
+                                <signal name="notify::active" handler="on_no_window_decorations_changed" swapped="true"/>
                             </object>
                         </child>
                     </object>

@@ -1,7 +1,10 @@
-use std::{cell::Cell, fs::File, os::fd::AsFd, sync::Arc};
+use std::{
+    cell::{Cell, RefCell},
+    fs::File,
+    os::fd::AsFd,
+    sync::Arc,
+};
 
-use adw::prelude::*;
-use adw::subclass::prelude::*;
 use ashpd::{
     Uri,
     desktop::{
@@ -13,15 +16,19 @@ use ashpd::{
     enumflags2::BitFlags,
 };
 use gtk::{
-    gio::Settings,
+    gio::{Settings, prelude::SettingsExt},
     glib::{self, subclass::InitializingObject},
-    prelude::WidgetExt,
+    prelude::*,
+    subclass::prelude::*,
 };
 use tokio::sync::Mutex;
 use tracing::error;
 
 use crate::{
-    app::{config::APP_ID, ext::ASHPDExt},
+    app::{
+        config::{APP_ID, APP_NAME},
+        ext::ASHPDExt,
+    },
     spawn_local,
     utils::IS_DESKTOP_KDE,
 };
@@ -31,12 +38,12 @@ use crate::{
 #[template(file = "window.ui")]
 pub struct Window {
     #[property(get, set)]
-    decorations: Cell<bool>,
+    pub decorations: Cell<bool>,
+    pub native_titlebar: Cell<bool>,
     pub pip_mode: Cell<bool>,
     pub was_maximized: Cell<bool>,
     pub saved_size: Cell<(i32, i32)>,
-    #[template_child]
-    header: TemplateChild<adw::HeaderBar>,
+    header: RefCell<Option<adw::HeaderBar>>,
     #[template_child]
     pub overlay: TemplateChild<gtk::Overlay>,
     pub inhibit_request: Arc<Mutex<Option<Request<()>>>>,
@@ -150,8 +157,9 @@ impl Window {
     }
 
     pub fn show_header(&self, state: bool) {
-        self.header
-            .set_visible(self.decorations.get() && state && !self.pip_mode.get());
+        if let Some(ref header) = *self.header.borrow() {
+            header.set_visible(self.decorations.get() && state && !self.pip_mode.get());
+        }
     }
 }
 
@@ -159,7 +167,7 @@ impl Window {
 impl ObjectSubclass for Window {
     const NAME: &'static str = "Window";
     type Type = super::Window;
-    type ParentType = adw::ApplicationWindow;
+    type ParentType = gtk::ApplicationWindow;
 
     fn class_init(klass: &mut Self::Class) {
         klass.bind_template();
@@ -175,13 +183,7 @@ impl ObjectImpl for Window {
     fn constructed(&self) {
         self.parent_constructed();
 
-        let settings = Settings::new(APP_ID);
-
-        let kde_theme_enabled = settings.boolean("kde-theme");
-
-        if *IS_DESKTOP_KDE && kde_theme_enabled {
-            self.header.add_css_class("kde");
-        }
+        self.obj().set_title(Some(APP_NAME));
 
         if cfg!(debug_assertions) {
             self.obj().add_css_class("devel");
@@ -195,8 +197,6 @@ impl ObjectImpl for Window {
 
 impl WidgetImpl for Window {
     fn realize(&self) {
-        self.parent_realize();
-
         let widget = self.obj();
         let settings = Settings::new(APP_ID);
 
@@ -205,10 +205,31 @@ impl WidgetImpl for Window {
             self.decorations.set(false);
         }
 
+        let native_titlebar = settings.boolean("native-titlebar");
+        self.native_titlebar.set(native_titlebar);
+
+        // Configure titlebar / CSD vs SSD before parent_realize() creates the surface.
         if !self.decorations.get() {
-            self.show_header(false);
-            widget.remove_css_class("csd");
+            widget.set_titlebar(None::<&gtk::Widget>);
             widget.set_decorated(false);
+        } else if native_titlebar {
+            widget.set_titlebar(None::<&gtk::Widget>);
+            widget.set_decorated(true);
+        } else {
+            let header = adw::HeaderBar::new();
+            header.add_css_class("flat");
+            if *IS_DESKTOP_KDE && settings.boolean("kde-theme") {
+                header.add_css_class("kde");
+            }
+            widget.set_titlebar(Some(&header));
+            widget.set_decorated(true);
+            *self.header.borrow_mut() = Some(header);
+        }
+
+        self.parent_realize();
+
+        if !self.decorations.get() {
+            widget.remove_css_class("csd");
         }
 
         let remember_window_state = settings.boolean("remember-window-state");
@@ -281,4 +302,3 @@ impl WindowImpl for Window {
 }
 
 impl ApplicationWindowImpl for Window {}
-impl AdwApplicationWindowImpl for Window {}

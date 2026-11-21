@@ -1,10 +1,12 @@
 import { SETTINGS_STYLES, SETTINGS_STYLE_ID } from './settingsStyles';
 import { escapeHtml, waitForElement, postEnhancedMessage } from '../../utils/dom';
-import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON, UPDATE_ICON, PLAYER_ICON } from '../../utils/icons';
+import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON, UPDATE_ICON, PLAYER_ICON, PREFERENCES_ICON } from '../../utils/icons';
 import { renderThemesList } from '../../themes/themeManager';
 import { renderPluginsList, toggleAllPlugins } from '../../plugins/pluginManager';
 import { renderMarketplaceInline } from '../../marketplace/marketplaceManager';
 import { isThumbnailPreviewEnabled, syncThumbnailPreviewToggle } from '../../player/thumbnailPreview';
+import { modalManager } from '../modals/modalManager';
+import { EnhancedData, ShellPreferencesUiData } from '../../types';
 import {
     openStreamingServerFolder,
     checkServerJsUpdateAndSetup,
@@ -36,6 +38,71 @@ const SELECTORS = {
 
 const ENHANCED_ROUTE = '#/settings/enhanced';
 const DEFAULT_SELECTED_CLASS = 'selected-S7SeK';
+
+let currentShellPreferences: ShellPreferencesUiData = {
+    rememberWindowState: true,
+    noWindowDecorations: false,
+    nativeTitlebar: false,
+    systemTheme: true,
+    kdeTheme: true,
+    isDesktopKde: false,
+    mpvConfigLocation: '~/.config/mpv/mpv.conf',
+};
+
+type BooleanShellPreferenceKey =
+    | 'rememberWindowState'
+    | 'noWindowDecorations'
+    | 'nativeTitlebar'
+    | 'systemTheme'
+    | 'kdeTheme';
+
+export function updateShellPreferencesData(data: EnhancedData): void {
+    if (data.shellPreferences) {
+        currentShellPreferences = { ...currentShellPreferences, ...data.shellPreferences };
+        syncShellPreferencesUI();
+    }
+}
+
+export function syncShellPreferencesUI(): void {
+    const boolKeys: BooleanShellPreferenceKey[] = [
+        'rememberWindowState',
+        'nativeTitlebar',
+        'systemTheme',
+        'kdeTheme',
+        'noWindowDecorations',
+    ];
+    for (const key of boolKeys) {
+        const toggle = document.getElementById(`pref-${key}-toggle`);
+        if (toggle) {
+            const active = Boolean(currentShellPreferences[key]);
+            toggle.classList.toggle('checked', active);
+            toggle.setAttribute('aria-checked', active ? 'true' : 'false');
+        }
+    }
+
+    const kdeRow = document.getElementById('pref-kdeTheme-row');
+    if (kdeRow) {
+        kdeRow.style.display = currentShellPreferences.isDesktopKde ? '' : 'none';
+    }
+
+    const csdInactive = currentShellPreferences.nativeTitlebar || currentShellPreferences.noWindowDecorations;
+    const sysThemeRow = document.getElementById('pref-systemTheme-row');
+    if (sysThemeRow) {
+        sysThemeRow.classList.toggle('enhanced-option-muted', csdInactive);
+    }
+    if (kdeRow) {
+        kdeRow.classList.toggle('enhanced-option-muted', csdInactive);
+    }
+    const nativeRow = document.getElementById('pref-nativeTitlebar-row');
+    if (nativeRow) {
+        nativeRow.classList.toggle('enhanced-option-muted', currentShellPreferences.noWindowDecorations);
+    }
+
+    const mpvInput = document.getElementById('pref-mpvConfigLocation-input') as HTMLInputElement | null;
+    if (mpvInput && document.activeElement !== mpvInput) {
+        mpvInput.value = currentShellPreferences.mpvConfigLocation || '';
+    }
+}
 
 interface NavItem {
     id: string;
@@ -173,6 +240,7 @@ function buildNavGroup(): Promise<void> {
                 { id: 'marketplace', label: 'Marketplace', icon: MARKETPLACE_ICON },
                 { id: 'player', label: 'Player', icon: PLAYER_ICON },
                 { id: 'server', label: 'Streaming Server', icon: SERVER_ICON },
+                { id: 'preferences', label: 'Preferences', icon: PREFERENCES_ICON },
                 { id: 'updates', label: 'Client Updates', icon: UPDATE_ICON },
             ];
 
@@ -380,6 +448,168 @@ function buildSettingsPage(): Promise<void> {
             serverCategory.appendChild(serverStatusInfo);
             page.appendChild(serverCategory);
 
+            // Preferences Category (Shell Interface & MPV settings)
+            const preferencesCategory = createCategory('enhanced-preferences-category', 'preferences', 'Preferences', sampleGroup);
+
+            const createSubsectionTitle = (title: string): HTMLElement => {
+                const sub = document.createElement('div');
+                sub.className = 'enhanced-subsection-title';
+                sub.textContent = title;
+                return sub;
+            };
+
+            const createShellToggleOption = (
+                key: BooleanShellPreferenceKey,
+                title: string,
+                description: string,
+                requiresRestart: boolean
+            ): HTMLElement => {
+                const option = document.createElement('div');
+                option.id = `pref-${key}-row`;
+                option.className = 'enhanced-option';
+
+                const optHeading = document.createElement('div');
+                optHeading.className = 'enhanced-option-heading';
+                const optLabel = document.createElement('div');
+                optLabel.className = 'enhanced-option-label';
+                optLabel.textContent = title;
+                const optDesc = document.createElement('div');
+                optDesc.className = 'enhanced-option-description';
+                optDesc.textContent = description;
+                optHeading.appendChild(optLabel);
+                optHeading.appendChild(optDesc);
+
+                const optContent = document.createElement('div');
+                optContent.className = 'enhanced-option-content';
+
+                const toggle = document.createElement('div');
+                toggle.id = `pref-${key}-toggle`;
+                toggle.setAttribute('tabindex', '0');
+                toggle.setAttribute('role', 'switch');
+                toggle.setAttribute('title', title);
+                const initialActive = Boolean(currentShellPreferences[key]);
+                toggle.className = `toggle-container-lZfHP button-container-zVLH6${initialActive ? ' checked' : ''}`;
+                toggle.setAttribute('aria-checked', initialActive ? 'true' : 'false');
+                toggle.style.cssText = 'outline: none; cursor: pointer;';
+
+                const knob = document.createElement('div');
+                knob.className = 'toggle-toOWM';
+                toggle.appendChild(knob);
+
+                const onToggle = () => {
+                    const next = !Boolean(currentShellPreferences[key]);
+                    currentShellPreferences[key] = next;
+                    syncShellPreferencesUI();
+                    postEnhancedMessage('setShellPreference', { key, value: next });
+                    if (requiresRestart) {
+                        modalManager.showToast(
+                            `pref-restart-${key}`,
+                            'Restart Required',
+                            'Restart Stremio Enhanced Shell for this change to take effect.',
+                            'info'
+                        );
+                    }
+                };
+                toggle.addEventListener('click', onToggle);
+                toggle.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onToggle();
+                    }
+                });
+
+                optContent.appendChild(toggle);
+                option.appendChild(optHeading);
+                option.appendChild(optContent);
+                return option;
+            };
+
+            preferencesCategory.appendChild(createSubsectionTitle('Interface'));
+            preferencesCategory.appendChild(createShellToggleOption(
+                'rememberWindowState',
+                'Remember window state',
+                'Save and restore window dimensions, maximized and fullscreen state.',
+                false
+            ));
+            preferencesCategory.appendChild(createShellToggleOption(
+                'nativeTitlebar',
+                'Native window titlebar (Server-Side / OS frame)',
+                'Disable the built-in titlebar (CSD) and let your OS window manager draw a native titlebar (SSD). Best supported on X11; Wayland compositors may still fall back to CSD. Requires restarting the application.',
+                true
+            ));
+            preferencesCategory.appendChild(createShellToggleOption(
+                'systemTheme',
+                'System theme (Client-Side / GTK4 titlebar)',
+                'Apply your system GTK4 theme colors and controls to the built-in client-side titlebar (CSD) instead of Libadwaita. Only applies when Native window titlebar is off.',
+                false
+            ));
+            preferencesCategory.appendChild(createShellToggleOption(
+                'kdeTheme',
+                'KDE theme (Compact Client-Side titlebar)',
+                'Use a slimmer titlebar layout tailored for KDE Plasma when using the built-in titlebar. Requires restarting the application.',
+                true
+            ));
+            preferencesCategory.appendChild(createShellToggleOption(
+                'noWindowDecorations',
+                'Remove window decorations',
+                'Removes the titlebar, rounded corners, and drop shadow completely. Requires restarting the application.',
+                true
+            ));
+
+            preferencesCategory.appendChild(createSubsectionTitle('MPV'));
+            const mpvOption = document.createElement('div');
+            mpvOption.id = 'pref-mpvConfigLocation-row';
+            mpvOption.className = 'enhanced-option';
+
+            const mpvHeading = document.createElement('div');
+            mpvHeading.className = 'enhanced-option-heading';
+            const mpvLabel = document.createElement('div');
+            mpvLabel.className = 'enhanced-option-label';
+            mpvLabel.textContent = 'Configuration file location';
+            const mpvDesc = document.createElement('div');
+            mpvDesc.className = 'enhanced-option-description';
+            mpvDesc.textContent = 'Path to custom mpv.conf file (takes effect after restarting the application).';
+            mpvHeading.appendChild(mpvLabel);
+            mpvHeading.appendChild(mpvDesc);
+
+            const mpvInputGroup = document.createElement('div');
+            mpvInputGroup.className = 'enhanced-option-input-group';
+
+            const mpvInput = document.createElement('input');
+            mpvInput.id = 'pref-mpvConfigLocation-input';
+            mpvInput.type = 'text';
+            mpvInput.className = 'enhanced-text-input';
+            mpvInput.placeholder = '~/.config/mpv/mpv.conf';
+            mpvInput.spellcheck = false;
+            mpvInput.autocomplete = 'off';
+            mpvInput.value = currentShellPreferences.mpvConfigLocation || '';
+
+            const commitMpvPath = () => {
+                const value = mpvInput.value;
+                currentShellPreferences.mpvConfigLocation = value;
+                postEnhancedMessage('setShellPreference', { key: 'mpvConfigLocation', value });
+            };
+            mpvInput.addEventListener('change', commitMpvPath);
+            mpvInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitMpvPath();
+                    mpvInput.blur();
+                }
+            });
+
+            const mpvBrowseBtn = createOptionButton('pref-mpvConfigLocation-browse', 'Browse');
+            mpvBrowseBtn.onclick = () => {
+                postEnhancedMessage('browseMpvConfigFile');
+            };
+
+            mpvInputGroup.appendChild(mpvInput);
+            mpvInputGroup.appendChild(mpvBrowseBtn);
+            mpvOption.appendChild(mpvHeading);
+            mpvOption.appendChild(mpvInputGroup);
+            preferencesCategory.appendChild(mpvOption);
+            page.appendChild(preferencesCategory);
+
             // Client Updates Category
             const updatesCategory = createCategory('enhanced-updates-category', 'updates', 'Client Updates', sampleGroup);
             const checkClientUpdatesBtn = createOptionButton('checkclientupdatesBtn', 'Check for Client Updates');
@@ -438,6 +668,7 @@ function buildSettingsPage(): Promise<void> {
                 (window as any).StremioEnhancedAPI.togglePlugin(fileName, enabled);
             });
             syncThumbnailPreviewToggle();
+            syncShellPreferencesUI();
 
             updateRoute();
         })

@@ -31,7 +31,11 @@
         </key>
         <key name="system-theme" type="b">
             <default>true</default>
-            <summary>Use system theme for window decorations</summary>
+            <summary>Use system GTK4 theme for the built-in client-side titlebar (CSD)</summary>
+        </key>
+        <key name="native-titlebar" type="b">
+            <default>false</default>
+            <summary>Use native OS window titlebar (server-side decorations)</summary>
         </key>
         <key name="mpv-config-location" type="s">
             <default>"~/.config/mpv/mpv.conf"</default>
