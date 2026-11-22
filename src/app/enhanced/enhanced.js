@@ -1,5 +1,5 @@
 (() => {
-  // src/core/permanentCore.ts
+  // src/app/enhanced/src/core/permanentCore.ts
   var PermanentCore = {
     getState: null,
     dispatch: null
@@ -168,7 +168,7 @@
     }
   }
 
-  // src/utils/dom.ts
+  // src/app/enhanced/src/utils/dom.ts
   function escapeHtml(str) {
     if (!str) return "";
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -329,7 +329,7 @@
     }
   }
 
-  // src/utils/logger.ts
+  // src/app/enhanced/src/utils/logger.ts
   function setupLogger() {
     const origLog = console.log.bind(console);
     const origWarn = console.warn.bind(console);
@@ -379,7 +379,7 @@
     });
   }
 
-  // src/network/fetchInterceptor.ts
+  // src/app/enhanced/src/network/fetchInterceptor.ts
   var pendingHttpRequests = /* @__PURE__ */ new Map();
   function setupFetchInterceptor() {
     window.__receiveHttpResponse = function(id, status, bodyText) {
@@ -468,10 +468,10 @@
     };
   }
 
-  // src/components/theme-item/theme-item.html
+  // src/app/enhanced/src/components/theme-item/theme-item.html
   var theme_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 theme-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete theme" class="button-container-zVLH6 theme-delete-btn" style="display: {{ deleteDisplay }}; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="{{ buttonClass }} button-container-zVLH6 theme-apply-btn" data-theme="{{ fileName }}" id="theme-btn-{{ fileName }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.5rem 1.25rem; border-radius: 0.35rem; font-weight: 700;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ label }}</div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/utils/templateCache.ts
+  // src/app/enhanced/src/utils/templateCache.ts
   var TemplateCache = class {
     /**
      * Replaces placeholders formatted as {{ key }} with values from the data map.
@@ -486,19 +486,19 @@
     }
   };
 
-  // src/components/modals/plugin-settings-modal.html
+  // src/app/enhanced/src/components/modals/plugin-settings-modal.html
   var plugin_settings_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 800px; height: auto; max-height: 85vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); position: relative; box-sizing: border-box;">\n        <div class="modal-dialog-background-vZpB_"></div>\n        \n        <div tabindex="0" title="Close" class="close-button-container-cmxAp button-container-zVLH6" id="{{ modalId }}-close-x" style="position: absolute; top: 15px; right: 15px; cursor: pointer; z-index: 10; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">\n            <svg class="icon-OYzlV" style="width: 18px; height: 18px; fill: currentcolor;" viewBox="0 0 512 512"><path d="M289.9 256l95-95c4.5-4.5 7-10.6 7.1-17 0-6.4-2.5-12.5-7-17s-10.6-7.1-17-7.1c-3.2 0-6.3.6-9.2 1.8s-5.6 3-7.8 5.2l-95 95-95-95c-3.4-3.3-7.6-5.6-12.3-6.5-4.6-.9-9.4-.4-13.8 1.4-4.4 1.8-8.1 4.9-10.8 8.8-2.6 3.9-4 8.6-4 13.3-.1 3.2.5 6.3 1.7 9.2 1.2 2.9 3 5.6 5.2 7.8l95 95-95 95c-2.8 2.8-4.8 6.2-6 10-1.1 3.8-1.3 7.8-.5 11.6.8 3.9 2.5 7.5 5 10.5 2.5 3.1 5.8 5.4 9.4 6.9 4.4 1.8 9.2 2.3 13.8 1.4 4.7-.9 8.9-3.2 12.3-6.5l95-95 95 95c3.4 3.3 7.6 5.6 12.3 6.5 4.6.9 9.4.4 13.8-1.4 4.4-1.8 8.1-4.9 10.8-8.8 2.6-3.9 4-8.6 4-13.3.1-3.2-.5-6.3-1.7-9.2-1.2-2.9-3-5.6-5.2-7.8z"></path></svg>\n        </div>\n        \n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; max-height: 85vh; padding: 25px 25px 20px 25px; box-sizing: border-box; min-height: 0; flex: 1 1 auto; overflow: hidden;">\n            <div class="title-container-v2mmF" title="{{ pluginName }} Settings" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; color: white; flex-shrink: 0;">{{ pluginName }} Settings</div>\n            \n            <div class="body-container-H80dD" style="flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 12px; box-sizing: border-box;">\n                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">\n                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.5; padding-bottom: 35px; box-sizing: border-box;">\n                        {{ settingsHtml }}\n                    </div>\n                </div>\n            </div>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 15px; display: flex; justify-content: flex-end; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; box-sizing: border-box;">\n                <div tabindex="0" title="Close & Save" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-close-btn" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; font-weight: bold; background-color: var(--accent-color, var(--primary-accent-color, #735bf2));">\n                    <div class="label-wbfsE" style="color: white;">Close</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/components/modals/prompt-modal.html
+  // src/app/enhanced/src/components/modals/prompt-modal.html
   var prompt_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75);">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 600px; height: auto; max-height: 80vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; padding: 25px;">\n            <div class="title-container-v2mmF" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; color: white;">{{ title }}</div>\n            <div style="font-size: 0.95rem; color: #a0a0a0; margin-bottom: 20px; line-height: 1.4;">{{ message }}</div>\n            \n            <label class="search-bar-k7MXd search-bar-container-p4tSt" style="width: 100%; padding: 0; margin: 0; display: block;">\n                <input id="{{ modalId }}-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh text-input-hnLiz" type="text" value="{{ defaultValue }}" style="width: 100%; box-sizing: border-box; height: 42px; padding: 0 15px; background-color: rgba(255, 255, 255, 0.08); color: white; border: 1px solid transparent; border-radius: 0.35rem; outline: none;">\n            </label>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 15px;">\n                <div tabindex="0" title="Cancel" class="cancel-button-zuUX6 action-button-eprQG button-container-zVLH6" id="{{ modalId }}-cancel" style="cursor: pointer; padding: 10px 20px; border-radius: 4px; background-color: rgba(255,255,255,0.1);">\n                    <div class="label-wbfsE" style="color: #ccc;">Cancel</div>\n                </div>\n                <div tabindex="0" title="Submit" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-save" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; background-color: var(--accent-color, var(--primary-accent-color, #735bf2));">\n                    <div class="label-wbfsE" style="color: white; font-weight: bold;">Submit</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/components/modals/alert-modal.html
+  // src/app/enhanced/src/components/modals/alert-modal.html
   var alert_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">\n    <div class="modal-dialog-container-DZMKq" style="width: 90%; max-width: 660px; height: auto; max-height: 85vh; display: flex !important; flex-direction: column !important; background: #16152b; border-radius: 0.75rem; overflow: hidden !important; box-shadow: 0 10px 40px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box !important;">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex !important; flex-direction: column !important; max-height: 85vh !important; box-sizing: border-box !important; min-height: 0 !important; flex: 1 1 auto !important; overflow: hidden !important;">\n            <div class="title-container-v2mmF" style="padding: 20px 24px 14px 24px; font-size: 1.25rem; font-weight: bold; color: white; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0 !important; box-sizing: border-box !important;">{{ title }}</div>\n            \n            <div class="body-container-H80dD modal-dialog-message-scroll" tabindex="0" style="padding: 18px 24px; overflow-y: auto !important; overflow-x: hidden !important; flex: 1 1 auto !important; min-height: 0 !important; max-height: 52vh !important; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.35) rgba(0,0,0,0.2); box-sizing: border-box !important; overscroll-behavior: contain; outline: none;">\n                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">\n                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.6; font-size: 0.95rem; color: #ddd; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text;">{{ message }}</div>\n                </div>\n            </div>\n            \n            <div class="buttons-container-e_JoR" style="padding: 14px 24px 18px 24px; display: flex !important; justify-content: flex-end !important; align-items: center !important; gap: 10px !important; flex-wrap: wrap !important; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); flex-shrink: 0 !important; box-sizing: border-box !important;">\n                {{ buttonsHtml }}\n            </div>\n        </div>\n    </div>\n    <style>\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar {\n            width: 8px !important;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-track {\n            background: rgba(0, 0, 0, 0.25) !important;\n            border-radius: 4px;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb {\n            background: rgba(255, 255, 255, 0.35) !important;\n            border-radius: 4px;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb:hover {\n            background: rgba(255, 255, 255, 0.6) !important;\n        }\n    </style>\n</div>\n';
 
-  // src/components/modals/toast.html
+  // src/app/enhanced/src/components/modals/toast.html
   var toast_default = '<div tabindex="-1" class="toast-item-container-nG0uk button-container-zVLH6 {{ status }}" id="{{ id }}" style="margin-bottom: 10px; display: flex; align-items: center; padding: 12px 18px; border-radius: 6px; background-color: #1f1d36; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 4px solid var(--accent-color, var(--primary-accent-color, #735bf2)); transition: all 0.3s ease;">\n    <div class="icon-container-rjAiH" style="margin-right: 12px; display: flex; align-items: center;">\n        <svg class="icon-Y4I_O" style="width: 20px; height: 20px; fill: none; stroke: currentcolor; stroke-width: 50;" viewBox="0 0 512 512">\n            <path d="M421 128 197 384l-96-96" style="stroke-linecap: round; stroke-linejoin: round;"></path>\n        </svg>\n    </div>\n    <div class="info-container-xD9V6">\n        <div class="title-container-VFReJ" style="font-weight: bold; font-size: 0.95rem;">{{ title }}</div>\n        <div class="message-container-znkCj" style="font-size: 0.85rem; color: #bbb; margin-top: 2px;">{{ message }}</div>\n    </div>\n</div>\n';
 
-  // src/components/modals/modalManager.ts
+  // src/app/enhanced/src/components/modals/modalManager.ts
   var modalManager = {
     openPluginSettingsModal: (pluginFileName, displayNameOrSchema, schemaOrCurrentValues, currentValuesOrOnSave, onSaveCallback) => {
       let displayName;
@@ -770,7 +770,7 @@
     }
   };
 
-  // src/components/theme-item/themeItem.ts
+  // src/app/enhanced/src/components/theme-item/themeItem.ts
   function createThemeCard(fileName, meta, isApplied, onApply) {
     const buttonClass = isApplied ? "uninstall-button-container-oV4Yo disabled" : "install-button-container-yfcq5";
     const label = isApplied ? "Applied" : "Apply";
@@ -837,18 +837,18 @@ This will permanently remove the theme file from your themes folder.`,
     return card;
   }
 
-  // src/components/marketplace-tab/marketplace-tab.html
+  // src/app/enhanced/src/components/marketplace-tab/marketplace-tab.html
   var marketplace_tab_default = '<div class="marketplace-inline-view" style="width: 100%; box-sizing: border-box;">\n    <div style="margin-bottom: 1rem;">\n        <label title="Search themes/plugins" style="display: flex; align-items: center; background: var(--surface-background-color, rgba(255, 255, 255, 0.06)); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--border-radius, 0.75rem); padding: 0.65rem 1rem; width: 100%; box-sizing: border-box;">\n            <input id="marketplace-search-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh" type="text" placeholder="Search themes and plugins..." value="" style="flex: 1; background: transparent; border: none; outline: none; color: var(--foreground-color-primary, #fff); font-size: 1rem;">\n            <svg viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem; fill: rgba(255, 255, 255, 0.6); margin-left: 0.5rem; flex-shrink: 0;">\n                <path d="M456.882 415.7999999999997l-93.791-89.45c22.605-28.67 34.784-63.57 34.686-99.44 0-91.54-78.142-166.07-174.125-166.07s-174.125 74.53-174.125 166.17c0 91.54 78.142 166.07 174.125 166.07 37.586 0 74.161-11.61 104.256-33.08l93.79 89.45c3.535 3.04 7.91 5.05 12.604 5.79 4.696 0.74 9.515 0.18 13.887-1.61 4.374-1.79 8.117-4.74 10.788-8.49 2.671-3.76 4.157-8.17 4.284-12.7 0.108-6.11-2.165-12.04-6.379-16.64m-357.62-188.79c-0.01-29.43 11.453-57.8 32.162-79.61 20.709-21.82 49.183-35.49 79.884-38.39 30.7-2.9 61.433 5.2 86.221 22.72 24.787 17.52 41.858 43.2 47.891 72.05 6.034 28.86 0.598 58.83-15.249 84.07s-40.972 43.96-70.489 52.53c-29.518 8.55-61.317 6.33-89.213-6.24s-49.895-34.57-61.718-61.75c-6.258-14.38-9.483-29.81-9.488-45.38" style="fill: currentcolor;"></path>\n            </svg>\n        </label>\n    </div>\n\n    <div tabindex="0" title="Submit your themes and plugins here" style="margin-bottom: 1.25rem; text-align: center;">\n        <a href="https://github.com/REVENGE977/stremio-enhanced-registry" target="_blank" rel="noreferrer" class="enhanced-link" style="display: block; text-decoration: none;">\n            <span class="enhanced-link-label">Submit your themes and plugins here</span>\n        </a>\n    </div>\n\n    <div id="mods-list" style="display: flex; flex-direction: column; gap: 1rem; width: 100%; box-sizing: border-box;">\n        <div id="marketplace-loading" style="padding: 2.5rem; text-align: center; color: rgba(255, 255, 255, 0.7); font-size: 1.05rem;">\n            Loading community plugins &amp; themes...\n        </div>\n    </div>\n</div>\n';
 
-  // src/components/marketplace-tab/marketplaceTab.ts
+  // src/app/enhanced/src/components/marketplace-tab/marketplaceTab.ts
   function getMarketplaceTabHtml() {
     return TemplateCache.render(marketplace_tab_default, {});
   }
 
-  // src/components/marketplace-item/marketplace-item.html
+  // src/app/enhanced/src/components/marketplace-item/marketplace-item.html
   var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; box-sizing: border-box; margin: 0 0 1rem 0; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-logo-box" style="width: 4.5rem; height: 4.5rem; flex-shrink: 0; margin-right: 1.25rem; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n        {{ logoBlock }}\n    </div>\n\n    <div class="marketplace-info-container" style="flex: 1; min-width: 0; padding-right: 1.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n            <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n            <span class="marketplace-version" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;{{ versionStyle }}">{{ versionLabel }}</span>\n            <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n        </div>\n        <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n            <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n            <div><b>Author:</b> {{ author }}</div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: auto; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; margin-left: 1rem;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
 
-  // src/components/marketplace-item/marketplaceItem.ts
+  // src/app/enhanced/src/components/marketplace-item/marketplaceItem.ts
   function createMarketplaceCard(mod, type, isInstalled, onAction, resolvedVersion) {
     let logoBlock = "";
     if (mod.preview) {
@@ -919,7 +919,7 @@ This will permanently remove the theme file from your themes folder.`,
     return card;
   }
 
-  // src/marketplace/marketplaceManager.ts
+  // src/app/enhanced/src/marketplace/marketplaceManager.ts
   var REGISTRY_URL = "https://raw.githubusercontent.com/REVENGE977/stremio-enhanced-registry/refs/heads/main/registry.json";
   var currentEnhancedData = {
     plugins: [],
@@ -1177,7 +1177,7 @@ This will permanently remove the theme file from your themes folder.`,
     }
   }
 
-  // src/updates/updateManager.ts
+  // src/app/enhanced/src/updates/updateManager.ts
   var currentEnhancedData2 = { plugins: [], themes: [], activeTheme: null };
   var DEFAULT_CLIENT_VERSION = "1.2.2-enhanced.3";
   var CLIENT_RELEASES_URL = "https://github.com/REVENGE977/stremio-linux-shell/releases/latest";
@@ -1671,8 +1671,8 @@ Are you sure you want to update? It's recommended to read the source code of the
       const remParsed = parseClientVersion(remote.version);
       const curBaseStr = curParsed.base.join(".");
       const remBaseStr = remParsed.base.join(".");
-      const curEnhNum = curParsed.enhanced[0] ?? 0;
-      const remEnhNum = remParsed.enhanced[0] ?? 0;
+      const curEnhNum = curParsed.enhanced.length > 0 ? curParsed.enhanced.join(".") : "0";
+      const remEnhNum = remParsed.enhanced.length > 0 ? remParsed.enhanced.join(".") : "0";
       const details = `A new version of Stremio Linux Shell Enhanced is available!
 
 Installed Version: v${currentVersion} (Base ${curBaseStr}, Enhanced build #${curEnhNum})
@@ -1721,7 +1721,7 @@ Would you like to open the GitHub Releases page to download the update?`;
     }
   }
 
-  // src/themes/themeManager.ts
+  // src/app/enhanced/src/themes/themeManager.ts
   var headMutationObserver = null;
   var currentEnhancedData3 = { plugins: [], themes: [], activeTheme: null };
   function updateThemeManagerData(data) {
@@ -1876,10 +1876,10 @@ Would you like to open the GitHub Releases page to download the update?`;
     }
   }
 
-  // src/components/plugin-item/plugin-item.html
+  // src/app/enhanced/src/components/plugin-item/plugin-item.html
   var plugin_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 plugin-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1.2rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="-1" id="{{ fileName }}-settings" title="Plugin settings" class="nav-tab-button-tW6qT nav-tab-button-container-dYhs0 button-container-zVLH6 plugin-settings-btn" style="display: {{ settingsDisplay }}; cursor: pointer; margin-right: 0.75rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); transition: background-color 0.2s;">\n                <svg class="icon-TzPrK" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;" viewBox="0 0 512 512">\n                    <path d="M464 250c0-2.7-1-5-3-7l-6-3-26-4-3-2-2-3-1-9v-4l2-2 23-13 5-5v-8l-4-11c-.7-2-2.3-3.7-5-5-2-1.3-4.3-1.7-7-.7l-25 5-4-1-2-2-5-8c-.6-1.1-.8-2.4-.6-3.7.2-1.3.7-2.4 1.6-3.3l17-19 2-7c.7-2.7 0-5-2-7l-7-9c-1.6-2.1-4-3.5-6.6-3.9-2.6-.4-5.3.3-7.4 1.9l-22 13c-.9.9-2.2 1.4-3.5 1.4s-2.6-.5-3.5-1.4l-7-7-2-2v-4l9-24c1.1-2.3 1.3-4.9.6-7.3-.8-2.4-2.4-4.4-4.6-5.7l-10-6c-2-2-4.3-2.3-7-1-2.7.7-5 2-7 4l-16 20-2 2h-4l-9-4-3-2-1-3v-26c.7-2.7 0-5-2-7-1.3-2.7-3.3-4-6-4l-12-2c-2-.7-4.3-.4-7 1l-4 6-9 25-2 3h-13c-1.3.7-2.3.4-3-1l-2-2-9-25c0-2-1.3-4-4-6l-7-1-12 2c-2.7 0-4.7 1.3-6 4-2 2-2.7 4.3-2 7v26l-1 3-3 2-9 4c-2.7.7-4.7 0-6-2l-17-20c-.7-2-2.7-3.3-6-4-2-.7-4.3-.3-7 1l-10 6-5 5v8l10 24v3c0 2-.7 3-2 3l-7 6c-.4.5-.9 1-1.5 1.3-.6.3-1.2.6-1.8.7-.7.1-1.3.1-2-.1-.6-.2-1.2-.5-1.7-.8l-22-14-7-1-7 3-7 9c-1.8 1.9-2.9 4.4-2.9 7s1 5.1 2.9 7l18 20 1 3-1 3-5 9-2 2h-4l-25-4c-2.4-.7-4.9-.4-7.2.7s-3.9 3.1-4.8 5.3l-4 11v7c1.3 3.3 3 5.3 5 6l23 13 2 2v5l-2 8-1 3-3 2-26 4c-2.5.2-4.8 1.4-6.4 3.3-1.7 1.8-2.6 4.3-2.6 6.7v12c0 2.5.9 4.9 2.6 6.7s3.9 3.1 6.4 3.3l26 4 3 2 1 3 2 9v4l-2 2-23 13-5 5v8l4 11c.7 2 2.3 3.7 5 5 2 1.3 4.3 1.7 7 .7l25-5 4 1 2 2 5 8c.7 1.1 1.1 2.3 1.1 3.6 0 1.3-.4 2.5-1.1 3.5l-17 20c-1.7 1.7-2.7 3.9-2.9 6.3-.2 2.4.5 4.8 1.9 6.7l7 9c1.6 2.1 4 3.5 6.6 3.9 2.6.4 5.3-.4 7.4-2l22-13c1.1-.8 2.4-1.1 3.7-.9 1.3.2 2.5.9 3.3 1.9l7 6 2 3v3l-9 24c-1.1 2.3-1.3 4.9-.5 7.3.7 2.4 2.4 4.4 4.5 5.7l10 6c1.1.7 2.4 1.2 3.7 1.5 1.3.2 2.7.2 4-.1 1.3-.3 2.6-.8 3.6-1.6 1.1-.8 2-1.7 2.7-2.8l16-20 5-2 10 4 3 2 1 3v26c-.7 2.7 0 5 2 7 1.3 2.7 3.3 4 6 4l12 2c2.3.2 4.7-.4 6.6-1.7 2-1.3 3.5-3.1 4.4-5.3l9-25 2-2c1.3-1.3 2.3-1.7 3-1.3h10l3 1 2 2 9 25c.7 2 2 3.7 4 5 1.9 1.3 4.3 1.9 6.7 1.7l12-2c2.7-.7 4.7-2 6-4.7.7-2.7.7-5.3.7-7.3v-26l1-3 3-2 9-3c3.3-.7 5.3-.3 6 1.3l17 20c1.4 2 3.5 3.4 5.9 4 2.4.6 4.9.2 7.1-1l10-6 5-5v-8l-10-24v-3l2-3 7-6 4-2 3 1 22 13c2.7 1.3 5 1 7-1l7-9c1-1.3 1.7-2.7 2-4.3.3-1.6.2-3.3-.4-4.8l-17-20-2-3 1-4 5-9 3-2 3-1 25 5c1.2.5 2.6.7 3.9.7 1.3 0 2.6-.4 3.8-1 1.2-.6 2.3-1.4 3.2-2.3.9-1 1.6-2.1 2.1-3.4l3-11v-8l-5-5-23-13-3-2v-5l2-8 1-3 3-2 26-4c2.5-.2 4.8-1.4 6.5-3.3 1.6-1.8 2.5-4.3 2.5-6.7v-12zm-282 94c-1.3 2-3.3 3.7-6 5-2 1.4-4.3 2.3-6.8 2.6-2.4.3-4.9 0-7.2-.8l-6-4c-22.7-24.9-35.3-57.3-35.3-91s12.6-66.1 35.3-91l7-4 7-1c2.5.3 4.9 1.2 7 2.6 2.1 1.4 3.8 3.3 4.9 5.4l46 80c1.4 2.4 2.1 5.2 2.1 8s-.7 5.6-2.1 8l-46 80zm74 47c-10 0-19.3-1-28-3-3.7-.7-7-2.7-9.4-5.6-2.4-2.9-3.7-6.6-3.6-10.3l2-7 46-80 6-6 8-2h92c2.5-.1 5 .4 7.2 1.5s4.2 2.6 5.8 4.6l3 7 1 7c-17 55-68 94-128 94zm7-164l-45-80-2-7c-1.1-3.6 0-7.2 2.2-10.1 2.2-2.9 5.3-5 8.8-5.9 32.7-6.8 66.7-1.2 95.5 15.6 28.8 16.8 50.4 43.7 60.5 75.5l1 7c-.7 3.7-2.7 7-5.6 9.4-2.9 2.4-6.6 3.7-10.4 3.7h-92c-2.7.7-5.3 0-8-2l-6-6.2z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete plugin" class="button-container-zVLH6 plugin-delete-btn" style="display: flex; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="toggle-container-lZfHP button-container-zVLH6 plugin-toggle {{ checkedClass }}" data-plugin="{{ fileName }}" style="outline: none; cursor: pointer;">\n                <div class="toggle-toOWM"></div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/components/plugin-item/pluginItem.ts
+  // src/app/enhanced/src/components/plugin-item/pluginItem.ts
   function createPluginCard(fileName, meta, isEnabled, onToggle) {
     const checkedClass = isEnabled ? "checked" : "";
     const pluginBaseName = fileName.replace(/\.plugin\.js$/, "").replace(/\.js$/, "");
@@ -1991,7 +1991,7 @@ This will permanently remove the plugin file from your plugins folder.`,
     return card;
   }
 
-  // src/plugins/pluginManager.ts
+  // src/app/enhanced/src/plugins/pluginManager.ts
   var currentEnhancedData4 = { plugins: [], themes: [], activeTheme: null };
   function updatePluginManagerData(data) {
     currentEnhancedData4 = data;
@@ -2135,7 +2135,7 @@ This will permanently remove the plugin file from your plugins folder.`,
     }
   }
 
-  // src/server/serverManager.ts
+  // src/app/enhanced/src/server/serverManager.ts
   var DEFAULT_SERVER_JS_URL = "https://dl.strem.io/server/v4.21.1/desktop/server.js";
   var CARGO_TOML_URL = "https://raw.githubusercontent.com/Stremio/stremio-service/refs/heads/master/Cargo.toml";
   var currentServerStatus = {
@@ -2494,7 +2494,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     }
   }
 
-  // src/api/stremioEnhancedApi.ts
+  // src/app/enhanced/src/api/stremioEnhancedApi.ts
   var currentEnhancedData5 = { plugins: [], themes: [], activeTheme: null };
   function updateApiData(data) {
     currentEnhancedData5 = data;
@@ -2816,7 +2816,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     };
   }
 
-  // src/bridge/transparencyBridge.ts
+  // src/app/enhanced/src/bridge/transparencyBridge.ts
   var isTransparent = false;
   var isEnforcing = false;
   var modifiedElements = /* @__PURE__ */ new Set();
@@ -2912,7 +2912,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     }
   }
 
-  // src/bridge/videoBridge.ts
+  // src/app/enhanced/src/bridge/videoBridge.ts
   var bridgeHost = null;
   var bridgeVideo = null;
   var pipActive = false;
@@ -3573,7 +3573,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     return bridgeVideo;
   }
 
-  // src/bridge/mediaCapabilitiesBridge.ts
+  // src/app/enhanced/src/bridge/mediaCapabilitiesBridge.ts
   function setupMediaCapabilitiesBridge() {
     const isAdvancedCodec = (codecStr) => {
       if (!codecStr) return false;
@@ -3610,7 +3610,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     }
   }
 
-  // src/components/settings/settingsStyles.ts
+  // src/app/enhanced/src/components/settings/settingsStyles.ts
   var SETTINGS_STYLE_ID = "enhanced-settings-style";
   var SETTINGS_STYLES = `
 .enhanced-page-container { display: none; }
@@ -3713,7 +3713,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
 .enhanced-link:hover { background: var(--accent-color, var(--primary-accent-color, #7b5bf5)); }
 `;
 
-  // src/utils/icons.ts
+  // src/app/enhanced/src/utils/icons.ts
   var THEME_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 512 512">
     <path d="M204.3 5C104.9 24.4 24.4 104.9 5 204.3c-26.1 133.4 75.3 247.9 203 247.9 24.3 0 44-19.7 44-44 0-11.4-4.3-21.8-11.4-29.6-7-7.8-11.6-18.1-11.6-29.4 0-24.3 19.7-44 44-44h52.8c97 0 175.2-78.2 175.2-175.2C501 77.2 360.5-25.3 204.3 5zM112 256c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64-96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm128 0c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64 96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32z"></path>
 </svg>`;
@@ -3736,7 +3736,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"></path>
 </svg>`;
 
-  // src/player/thumbnailPreview.ts
+  // src/app/enhanced/src/player/thumbnailPreview.ts
   var MAX_JS_CACHE_ENTRIES = 150;
   var REQUEST_THROTTLE_MS = 80;
   var NORMAL_PREVIEW_WIDTH = 240;
@@ -4080,7 +4080,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     window.addEventListener("popstate", onRouteChange);
   }
 
-  // src/components/settings/settingsInjector.ts
+  // src/app/enhanced/src/components/settings/settingsInjector.ts
   var SELECTORS = {
     SETTINGS_CONTENT: '[class*="settings-content-"]',
     NAV_MENU: '[class*="settings-content-"] > nav',
@@ -4624,7 +4624,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     });
   }
 
-  // src/index.ts
+  // src/app/enhanced/src/index.ts
   (function() {
     "use strict";
     if (window.__STREMIO_ENHANCED_INITIALIZED__) return;

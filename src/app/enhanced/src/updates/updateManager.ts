@@ -663,8 +663,8 @@ export async function checkClientUpdate(isManual = false): Promise<boolean> {
         const remParsed = parseClientVersion(remote.version);
         const curBaseStr = curParsed.base.join('.');
         const remBaseStr = remParsed.base.join('.');
-        const curEnhNum = curParsed.enhanced[0] ?? 0;
-        const remEnhNum = remParsed.enhanced[0] ?? 0;
+        const curEnhNum = curParsed.enhanced.length > 0 ? curParsed.enhanced.join('.') : '0';
+        const remEnhNum = remParsed.enhanced.length > 0 ? remParsed.enhanced.join('.') : '0';
 
         const details =
             `A new version of Stremio Linux Shell Enhanced is available!\n\n` +
