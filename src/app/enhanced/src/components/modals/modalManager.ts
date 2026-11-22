@@ -71,7 +71,18 @@ export const modalManager = {
             });
         });
 
+        let isClosed = false;
+        const keyHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                handleCloseAndSave();
+            }
+        };
+
         const handleCloseAndSave = () => {
+            if (isClosed) return;
+            isClosed = true;
+            window.removeEventListener('keydown', keyHandler);
+
             const newValues: Record<string, any> = {};
             schema.forEach(setting => {
                 const element = modalElement.querySelector(`[data-key="${setting.key}"]`);
@@ -99,12 +110,6 @@ export const modalManager = {
         });
 
         // Escape key to close
-        const keyHandler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                window.removeEventListener('keydown', keyHandler);
-                handleCloseAndSave();
-            }
-        };
         window.addEventListener('keydown', keyHandler);
     },
 

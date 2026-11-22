@@ -45,8 +45,7 @@ export function createPluginCard(
         };
     }
 
-    const settingsBtn = card.querySelector<HTMLElement>(`#${fileName}-settings`) ||
-                        card.querySelector<HTMLElement>('.plugin-settings-btn');
+    const settingsBtn = card.querySelector<HTMLElement>('.plugin-settings-btn');
     if (settingsBtn) {
         settingsBtn.onclick = async function (e) {
             e.stopPropagation();

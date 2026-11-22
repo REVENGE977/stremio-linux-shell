@@ -550,7 +550,16 @@
           toggle.classList.toggle("checked");
         });
       });
+      let isClosed = false;
+      const keyHandler = (e) => {
+        if (e.key === "Escape") {
+          handleCloseAndSave();
+        }
+      };
       const handleCloseAndSave = () => {
+        if (isClosed) return;
+        isClosed = true;
+        window.removeEventListener("keydown", keyHandler);
         const newValues = {};
         schema.forEach((setting) => {
           const element = modalElement.querySelector(`[data-key="${setting.key}"]`);
@@ -571,12 +580,6 @@
           handleCloseAndSave();
         }
       });
-      const keyHandler = (e) => {
-        if (e.key === "Escape") {
-          window.removeEventListener("keydown", keyHandler);
-          handleCloseAndSave();
-        }
-      };
       window.addEventListener("keydown", keyHandler);
     },
     _buildToggle: (setting, currentValue) => {
@@ -1906,7 +1909,7 @@ Would you like to open the GitHub Releases page to download the update?`;
         onToggle(fileName, newEnabled);
       };
     }
-    const settingsBtn = card.querySelector(`#${fileName}-settings`) || card.querySelector(".plugin-settings-btn");
+    const settingsBtn = card.querySelector(".plugin-settings-btn");
     if (settingsBtn) {
       settingsBtn.onclick = async function(e) {
         e.stopPropagation();
@@ -2525,7 +2528,34 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     function getPluginBaseName(name) {
       return name ? name.replace(/\.plugin\.js$/, "").replace(/\.js$/, "") : "global";
     }
-    async function internalGetSetting(pluginName, key) {
+    let pendingMacrotaskCallbacks = [];
+    let macrotaskScheduled = false;
+    let lastMacrotaskFlushAt = 0;
+    let consecutiveMacrotaskTicks = 0;
+    function yieldToMacrotask(value) {
+      return new Promise((resolve) => {
+        pendingMacrotaskCallbacks.push(() => resolve(value));
+        if (macrotaskScheduled) return;
+        macrotaskScheduled = true;
+        const now = Date.now();
+        if (now - lastMacrotaskFlushAt < 25) {
+          consecutiveMacrotaskTicks++;
+        } else {
+          consecutiveMacrotaskTicks = 0;
+        }
+        const delayMs = consecutiveMacrotaskTicks >= 20 ? 16 : consecutiveMacrotaskTicks >= 5 ? 4 : 0;
+        setTimeout(() => {
+          const callbacks = pendingMacrotaskCallbacks;
+          pendingMacrotaskCallbacks = [];
+          macrotaskScheduled = false;
+          lastMacrotaskFlushAt = Date.now();
+          for (const cb of callbacks) {
+            cb();
+          }
+        }, delayMs);
+      });
+    }
+    function readSettingSync(pluginName, key) {
       const baseName = getPluginBaseName(pluginName);
       const storageKey = `plugin_setting:${baseName}:${key}`;
       const val = localStorage.getItem(storageKey);
@@ -2543,14 +2573,17 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         return val;
       }
     }
-    async function internalGetSettings(pluginName) {
+    function internalGetSetting(pluginName, key) {
+      return yieldToMacrotask(readSettingSync(pluginName, key));
+    }
+    function internalGetSettings(pluginName) {
       const baseName = getPluginBaseName(pluginName);
       const schema = window.__pluginSchemas[baseName] || window.__pluginSchemas[pluginName] || [];
       const result = {};
       for (const item of schema) {
-        result[item.key] = await internalGetSetting(baseName, item.key);
+        result[item.key] = readSettingSync(baseName, item.key);
       }
-      return result;
+      return yieldToMacrotask(result);
     }
     async function internalSaveSetting(pluginName, key, value) {
       const baseName = getPluginBaseName(pluginName);
@@ -2560,6 +2593,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       } catch (e) {
         localStorage.setItem(storageKey, String(value));
       }
+      await yieldToMacrotask(void 0);
       const notifyPayload = { [key]: value };
       const listeners = window.__pluginSettingListeners[baseName] || window.__pluginSettingListeners[pluginName] || [];
       listeners.forEach((cb) => {
@@ -2582,7 +2616,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       console.log(`[Enhanced] Registered settings schema for ${baseName}:`, schema);
       const optBtn = document.getElementById(`${baseName}.plugin.js-settings`) || document.getElementById(`${baseName}-settings`) || document.getElementById(`${pluginName}-settings`);
       if (optBtn) optBtn.style.display = "flex";
-      return Promise.resolve(true);
+      return yieldToMacrotask(true);
     }
     window.__createScopedPluginAPI = function(pluginBaseName) {
       return {

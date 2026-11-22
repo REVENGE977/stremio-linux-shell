@@ -46,7 +46,40 @@ export function setupEnhancedApi(): void {
         return name ? name.replace(/\.plugin\.js$/, '').replace(/\.js$/, '') : 'global';
     }
 
-    async function internalGetSetting(pluginName: string, key: string): Promise<any> {
+    let pendingMacrotaskCallbacks: Array<() => void> = [];
+    let macrotaskScheduled = false;
+    let lastMacrotaskFlushAt = 0;
+    let consecutiveMacrotaskTicks = 0;
+
+    // Yield async settings promises to a batched macrotask so plugins calling them inside
+    // MutationObserver loops cannot starve browser painting and input handling via microtasks.
+    function yieldToMacrotask<T>(value: T): Promise<T> {
+        return new Promise((resolve) => {
+            pendingMacrotaskCallbacks.push(() => resolve(value));
+            if (macrotaskScheduled) return;
+
+            macrotaskScheduled = true;
+            const now = Date.now();
+            if (now - lastMacrotaskFlushAt < 25) {
+                consecutiveMacrotaskTicks++;
+            } else {
+                consecutiveMacrotaskTicks = 0;
+            }
+            const delayMs = consecutiveMacrotaskTicks >= 20 ? 16 : consecutiveMacrotaskTicks >= 5 ? 4 : 0;
+
+            setTimeout(() => {
+                const callbacks = pendingMacrotaskCallbacks;
+                pendingMacrotaskCallbacks = [];
+                macrotaskScheduled = false;
+                lastMacrotaskFlushAt = Date.now();
+                for (const cb of callbacks) {
+                    cb();
+                }
+            }, delayMs);
+        });
+    }
+
+    function readSettingSync(pluginName: string, key: string): any {
         const baseName = getPluginBaseName(pluginName);
         const storageKey = `plugin_setting:${baseName}:${key}`;
         const val = localStorage.getItem(storageKey);
@@ -66,15 +99,19 @@ export function setupEnhancedApi(): void {
         }
     }
 
-    async function internalGetSettings(pluginName: string): Promise<Record<string, any>> {
+    function internalGetSetting(pluginName: string, key: string): Promise<any> {
+        return yieldToMacrotask(readSettingSync(pluginName, key));
+    }
+
+    function internalGetSettings(pluginName: string): Promise<Record<string, any>> {
         const baseName = getPluginBaseName(pluginName);
         const schema = (window as any).__pluginSchemas[baseName] ||
                        (window as any).__pluginSchemas[pluginName] || [];
         const result: Record<string, any> = {};
         for (const item of schema) {
-            result[item.key] = await internalGetSetting(baseName, item.key);
+            result[item.key] = readSettingSync(baseName, item.key);
         }
-        return result;
+        return yieldToMacrotask(result);
     }
 
     async function internalSaveSetting(pluginName: string, key: string, value: any): Promise<boolean> {
@@ -85,6 +122,8 @@ export function setupEnhancedApi(): void {
         } catch (e) {
             localStorage.setItem(storageKey, String(value));
         }
+
+        await yieldToMacrotask(undefined);
 
         const notifyPayload = { [key]: value };
         const listeners = (window as any).__pluginSettingListeners[baseName] ||
@@ -110,7 +149,7 @@ export function setupEnhancedApi(): void {
                        document.getElementById(`${baseName}-settings`) ||
                        document.getElementById(`${pluginName}-settings`);
         if (optBtn) optBtn.style.display = 'flex';
-        return Promise.resolve(true);
+        return yieldToMacrotask(true);
     }
 
     // Scoped API provided to each plugin
