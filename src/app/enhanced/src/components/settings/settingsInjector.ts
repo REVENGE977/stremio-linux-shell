@@ -5,6 +5,8 @@ import { renderThemesList } from '../../themes/themeManager';
 import { renderPluginsList, toggleAllPlugins } from '../../plugins/pluginManager';
 import { renderMarketplaceInline } from '../../marketplace/marketplaceManager';
 import { isThumbnailPreviewEnabled, syncThumbnailPreviewToggle } from '../../player/thumbnailPreview';
+import { isChapterMarkersEnabled, syncChapterMarkersToggle } from '../../player/chapterMarkers';
+import { syncShaderSettingsUI } from '../../player/shaderControls';
 import { modalManager } from '../modals/modalManager';
 import { EnhancedData, ShellPreferencesUiData } from '../../types';
 import {
@@ -16,11 +18,16 @@ import {
     reloadToLocalStreamingServer
 } from '../../server/serverManager';
 import {
+    canSelfUpdateAppImage,
     checkClientUpdate,
     fetchLatestClientVersion,
     getCurrentClientVersion,
+    getInstallInfo,
     getLatestClientVersion,
     isNewerVersion,
+    renderPatchNotesMarkdown,
+    showPatchNotesModal,
+    startAppImageSelfUpdate,
     CLIENT_RELEASES_URL
 } from '../../updates/updateManager';
 
@@ -340,8 +347,18 @@ function buildSettingsPage(): Promise<void> {
             marketplaceCategory.appendChild(marketplaceContent);
             page.appendChild(marketplaceCategory);
 
-            // Player Category (ThumbFast Thumbnail Preview)
+            // Player Category (ThumbFast, Chapter Markers, Stats HUD, GLSL Shaders)
             const playerCategory = createCategory('enhanced-player-category', 'player', 'Player', sampleGroup);
+
+            const createPlayerSubsection = (title: string): HTMLElement => {
+                const sub = document.createElement('div');
+                sub.className = 'enhanced-subsection-title';
+                sub.textContent = title;
+                return sub;
+            };
+
+            playerCategory.appendChild(createPlayerSubsection('Playback & Overlay'));
+
             const thumbOption = document.createElement('div');
             thumbOption.className = 'enhanced-option';
 
@@ -351,7 +368,7 @@ function buildSettingsPage(): Promise<void> {
             thumbLabel.className = 'enhanced-option-label';
             thumbLabel.textContent = 'Thumbnail Preview (ThumbFast)';
             const thumbDesc = document.createElement('div');
-            thumbDesc.style.cssText = 'font-size: 0.85rem; color: rgba(255, 255, 255, 0.55); margin-top: 0.25rem;';
+            thumbDesc.className = 'enhanced-option-description';
             thumbDesc.textContent = 'Show frame preview thumbnails when hovering or scrubbing the seek bar.';
             thumbHeading.appendChild(thumbLabel);
             thumbHeading.appendChild(thumbDesc);
@@ -390,6 +407,85 @@ function buildSettingsPage(): Promise<void> {
             thumbOption.appendChild(thumbHeading);
             thumbOption.appendChild(thumbContent);
             playerCategory.appendChild(thumbOption);
+
+            // Chapter Markers toggle
+            const chapterOption = document.createElement('div');
+            chapterOption.className = 'enhanced-option';
+
+            const chapterHeading = document.createElement('div');
+            chapterHeading.className = 'enhanced-option-heading';
+            const chapterLabel = document.createElement('div');
+            chapterLabel.className = 'enhanced-option-label';
+            chapterLabel.textContent = 'Chapter Markers on Seek Bar';
+            const chapterDesc = document.createElement('div');
+            chapterDesc.className = 'enhanced-option-description';
+            chapterDesc.textContent = 'Show chapter ticks on the seek bar, chapter titles in tooltips, and skip chapters with Alt+Left / Alt+Right.';
+            chapterHeading.appendChild(chapterLabel);
+            chapterHeading.appendChild(chapterDesc);
+
+            const chapterContent = document.createElement('div');
+            chapterContent.className = 'enhanced-option-content';
+
+            const chapterToggle = document.createElement('div');
+            chapterToggle.id = 'chaptermarkersToggle';
+            chapterToggle.setAttribute('tabindex', '0');
+            chapterToggle.setAttribute('role', 'switch');
+            chapterToggle.setAttribute('title', 'Chapter Markers on Seek Bar');
+            chapterToggle.className = `toggle-container-lZfHP button-container-zVLH6${isChapterMarkersEnabled() ? ' checked' : ''}`;
+            chapterToggle.setAttribute('aria-checked', isChapterMarkersEnabled() ? 'true' : 'false');
+            chapterToggle.style.cssText = 'outline: none; cursor: pointer;';
+
+            const chapterKnob = document.createElement('div');
+            chapterKnob.className = 'toggle-toOWM';
+            chapterToggle.appendChild(chapterKnob);
+
+            const onToggleChapterMarkers = () => {
+                const next = !isChapterMarkersEnabled();
+                chapterToggle.classList.toggle('checked', next);
+                chapterToggle.setAttribute('aria-checked', next ? 'true' : 'false');
+                postEnhancedMessage('setChapterMarkers', { enabled: next });
+            };
+            chapterToggle.addEventListener('click', onToggleChapterMarkers);
+            chapterToggle.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onToggleChapterMarkers();
+                }
+            });
+
+            chapterContent.appendChild(chapterToggle);
+            chapterOption.appendChild(chapterHeading);
+            chapterOption.appendChild(chapterContent);
+            playerCategory.appendChild(chapterOption);
+
+            // Stats for Nerds shortcut reference
+            const statsOption = document.createElement('div');
+            statsOption.className = 'enhanced-option';
+            const statsHeading = document.createElement('div');
+            statsHeading.className = 'enhanced-option-heading';
+            const statsLabel = document.createElement('div');
+            statsLabel.className = 'enhanced-option-label';
+            statsLabel.textContent = 'Stats for Nerds & Quick Shader Menu';
+            const statsDesc = document.createElement('div');
+            statsDesc.className = 'enhanced-option-description';
+            statsDesc.textContent = 'During playback, press I to toggle live codec/HDR/hwdec/cache telemetry, or press Ctrl+Shift+U to switch GLSL shaders live.';
+            statsHeading.appendChild(statsLabel);
+            statsHeading.appendChild(statsDesc);
+            statsOption.appendChild(statsHeading);
+            playerCategory.appendChild(statsOption);
+
+            // Upscaling & GLSL Shaders subsection
+            playerCategory.appendChild(createPlayerSubsection('Upscaling & GLSL Shaders'));
+            const openShadersBtn = createOptionButton('openshadersfolderBtn', 'Open Shaders Folder');
+            openShadersBtn.onclick = () => {
+                postEnhancedMessage('openShadersFolder');
+            };
+            playerCategory.appendChild(createOptionRow([openShadersBtn]));
+
+            const shadersGrid = document.createElement('div');
+            shadersGrid.id = 'enhanced-shaders-grid';
+            playerCategory.appendChild(shadersGrid);
+
             page.appendChild(playerCategory);
 
             // Streaming Server Category
@@ -613,6 +709,10 @@ function buildSettingsPage(): Promise<void> {
             // Client Updates Category
             const updatesCategory = createCategory('enhanced-updates-category', 'updates', 'Client Updates', sampleGroup);
             const checkClientUpdatesBtn = createOptionButton('checkclientupdatesBtn', 'Check for Client Updates');
+            const installClientUpdateBtn = createOptionButton('installclientupdateBtn', 'Download & Install Update');
+            installClientUpdateBtn.style.display = 'none';
+            installClientUpdateBtn.style.backgroundColor = 'var(--accent-color, var(--primary-accent-color, #7b5bf5))';
+            const viewPatchNotesBtn = createOptionButton('viewpatchnotesBtn', 'View Patch Notes');
             const openClientReleasesBtn = createOptionButton('openclientreleasesBtn', 'View Releases');
             openClientReleasesBtn.setAttribute('title', 'View Releases on GitHub');
 
@@ -620,23 +720,63 @@ function buildSettingsPage(): Promise<void> {
             clientVersionInfo.id = 'enhanced-client-version-info';
             clientVersionInfo.style.cssText = 'font-size: 0.9rem; color: #a0a0a0; margin-top: 0.5rem; margin-left: 0.2rem;';
 
+            const patchNotesContainer = document.createElement('div');
+            patchNotesContainer.id = 'enhanced-client-patch-notes';
+            patchNotesContainer.className = 'enhanced-patch-notes';
+            patchNotesContainer.style.display = 'none';
+
             const renderClientVersionInfo = () => {
                 const currentVer = getCurrentClientVersion();
                 const latest = getLatestClientVersion();
+                const info = getInstallInfo();
+                const installLabel =
+                    info.installType === 'appimage'
+                        ? (info.canSelfUpdate ? 'AppImage (Auto-Update Ready)' : 'AppImage (Read-Only)')
+                        : info.installType === 'flatpak'
+                            ? 'Flatpak'
+                            : 'Native';
+                const installPill = `<span style="margin-left:0.5rem;padding:0.12rem 0.55rem;border-radius:999px;font-size:0.78rem;background:rgba(255,255,255,0.09);color:#d4d4d8;">${escapeHtml(installLabel)}</span>`;
+
                 if (!latest) {
-                    clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}`;
+                    clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}${installPill}`;
+                    installClientUpdateBtn.style.display = 'none';
+                    patchNotesContainer.style.display = 'none';
                     return;
                 }
                 const hasUpdate = isNewerVersion(latest.version, currentVer);
                 const badge = hasUpdate
                     ? `<span style="color: #fcc419; font-weight: 600;">● Update available: v${escapeHtml(latest.version)}</span>`
                     : `<span style="color: #51cf66;">● Up to date (v${escapeHtml(latest.version)})</span>`;
-                clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}`;
+                clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}${installPill}`;
+
+                installClientUpdateBtn.style.display = hasUpdate && canSelfUpdateAppImage(latest) ? 'inline-flex' : 'none';
+
+                if (latest.body && latest.body.trim()) {
+                    const releaseTitle = latest.releaseName || `Release v${latest.version}`;
+                    patchNotesContainer.innerHTML = `
+                        <div style="font-weight:700;font-size:0.94rem;color:#fff;margin-bottom:8px;">Latest Release Notes — ${escapeHtml(releaseTitle)}</div>
+                        ${renderPatchNotesMarkdown(latest.body)}
+                    `;
+                    patchNotesContainer.style.display = 'block';
+                } else {
+                    patchNotesContainer.style.display = 'none';
+                }
             };
 
             checkClientUpdatesBtn.onclick = async () => {
                 await checkClientUpdate(true);
                 renderClientVersionInfo();
+            };
+
+            installClientUpdateBtn.onclick = async () => {
+                const latest = getLatestClientVersion() || (await fetchLatestClientVersion());
+                if (latest && canSelfUpdateAppImage(latest)) {
+                    await startAppImageSelfUpdate(latest);
+                }
+            };
+
+            viewPatchNotesBtn.onclick = async () => {
+                await showPatchNotesModal(getLatestClientVersion());
             };
 
             openClientReleasesBtn.onclick = () => {
@@ -646,8 +786,11 @@ function buildSettingsPage(): Promise<void> {
                 } catch (_) {}
             };
 
-            updatesCategory.appendChild(createOptionRow([checkClientUpdatesBtn, openClientReleasesBtn]));
+            updatesCategory.appendChild(
+                createOptionRow([checkClientUpdatesBtn, installClientUpdateBtn, viewPatchNotesBtn, openClientReleasesBtn])
+            );
             updatesCategory.appendChild(clientVersionInfo);
+            updatesCategory.appendChild(patchNotesContainer);
             page.appendChild(updatesCategory);
 
             container.appendChild(page);
@@ -668,6 +811,8 @@ function buildSettingsPage(): Promise<void> {
                 (window as any).StremioEnhancedAPI.togglePlugin(fileName, enabled);
             });
             syncThumbnailPreviewToggle();
+            syncChapterMarkersToggle();
+            syncShaderSettingsUI();
             syncShellPreferencesUI();
 
             updateRoute();

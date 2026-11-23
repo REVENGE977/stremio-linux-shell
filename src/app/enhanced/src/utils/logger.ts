@@ -24,20 +24,37 @@ export function setupLogger(): void {
         }).join(' ');
     }
 
+    const WATCHED_LOG_TAGS = ['[TheIntroDB]', '[Enhanced]', '[Plugin]', 'Episode ID:', '[Aptabase]'];
+
+    function hasWatchedTag(args: any[]): boolean {
+        for (let i = 0; i < args.length; i++) {
+            const arg = args[i];
+            if (typeof arg === 'string') {
+                for (let j = 0; j < WATCHED_LOG_TAGS.length; j++) {
+                    if (arg.includes(WATCHED_LOG_TAGS[j])) return true;
+                }
+            } else if (arg instanceof Error) {
+                const text = `${arg.name || ''} ${arg.message || ''}`;
+                for (let j = 0; j < WATCHED_LOG_TAGS.length; j++) {
+                    if (text.includes(WATCHED_LOG_TAGS[j])) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     console.log = function (...args: any[]) {
         origLog(...args);
+        if (!hasWatchedTag(args)) return;
         const msg = formatConsoleArgs(args);
-        if (msg.includes('[TheIntroDB]') || msg.includes('[Enhanced]') || msg.includes('[Plugin]') || msg.includes('Episode ID:') || msg.includes('[Aptabase]')) {
-            postEnhancedMessage('log', { level: 'info', message: msg });
-        }
+        postEnhancedMessage('log', { level: 'info', message: msg });
     };
 
     console.warn = function (...args: any[]) {
         origWarn(...args);
+        if (!hasWatchedTag(args)) return;
         const msg = formatConsoleArgs(args);
-        if (msg.includes('[TheIntroDB]') || msg.includes('[Enhanced]') || msg.includes('[Plugin]') || msg.includes('[Aptabase]')) {
-            postEnhancedMessage('log', { level: 'warn', message: msg });
-        }
+        postEnhancedMessage('log', { level: 'warn', message: msg });
     };
 
     console.error = function (...args: any[]) {

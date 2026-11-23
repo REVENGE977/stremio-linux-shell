@@ -318,18 +318,18 @@ fn read_video_dimensions(mpv: &Mpv) -> (Option<f64>, Option<f64>) {
     if let (Ok(dw), Ok(dh)) = (
         mpv.get_property::<f64>("dwidth"),
         mpv.get_property::<f64>("dheight"),
-    ) {
-        if dw > 0.0 && dh > 0.0 {
-            return (Some(dw), Some(dh));
-        }
+    ) && dw > 0.0
+        && dh > 0.0
+    {
+        return (Some(dw), Some(dh));
     }
-    if let Ok(params_str) = mpv.get_property::<String>("video-params") {
-        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&params_str) {
-            let w = val.get("w").and_then(|v| v.as_f64());
-            let h = val.get("h").and_then(|v| v.as_f64());
-            if w.is_some_and(|v| v > 0.0) && h.is_some_and(|v| v > 0.0) {
-                return (w, h);
-            }
+    if let Ok(params_str) = mpv.get_property::<String>("video-params")
+        && let Ok(val) = serde_json::from_str::<serde_json::Value>(&params_str)
+    {
+        let w = val.get("w").and_then(|v| v.as_f64());
+        let h = val.get("h").and_then(|v| v.as_f64());
+        if w.is_some_and(|v| v > 0.0) && h.is_some_and(|v| v > 0.0) {
+            return (w, h);
         }
     }
     (None, None)
@@ -535,10 +535,11 @@ fn run_thumbnail_loop(
                         file_ready = true;
                         load_failed = false;
                         load_started_at = None;
-                        if let Ok(d) = eng.mpv.get_property::<f64>("duration") {
-                            if d.is_finite() && d > 0.0 {
-                                duration = Some(d);
-                            }
+                        if let Ok(d) = eng.mpv.get_property::<f64>("duration")
+                            && d.is_finite()
+                            && d > 0.0
+                        {
+                            duration = Some(d);
                         }
                     }
                     libmpv2_sys::mpv_event_id_MPV_EVENT_PLAYBACK_RESTART => {
@@ -562,10 +563,9 @@ fn run_thumbnail_loop(
             let update_flags = eng.render.update_flags();
             if (update_flags & (libmpv2_sys::mpv_render_update_flag_MPV_RENDER_UPDATE_FRAME as u64))
                 != 0
+                && let Some(ref mut seek) = in_flight
             {
-                if let Some(ref mut seek) = in_flight {
-                    seek.render_ready = true;
-                }
+                seek.render_ready = true;
             }
 
             if !file_ready
@@ -586,16 +586,14 @@ fn run_thumbnail_loop(
                     match eng.render.render_bgr0(tw, th) {
                         Ok((bgr0, stride)) => {
                             let bmp = encode_bgr0_to_bmp(&bgr0, stride, tw as usize, th as usize);
-                            let data_url = format!(
-                                "data:image/bmp;base64,{}",
-                                BASE64_STANDARD.encode(&bmp)
-                            );
+                            let data_url =
+                                format!("data:image/bmp;base64,{}", BASE64_STANDARD.encode(&bmp));
                             let cache_key = (seek.quantized_key, seek.max_width);
                             if !cache.contains_key(&cache_key) {
-                                if cache_order.len() >= MAX_CACHE_ENTRIES {
-                                    if let Some(old_key) = cache_order.pop_front() {
-                                        cache.remove(&old_key);
-                                    }
+                                if cache_order.len() >= MAX_CACHE_ENTRIES
+                                    && let Some(old_key) = cache_order.pop_front()
+                                {
+                                    cache.remove(&old_key);
                                 }
                                 cache_order.push_back(cache_key);
                             }
@@ -626,20 +624,22 @@ fn run_thumbnail_loop(
             }
 
             // 4. Start next pending request if idle.
-            if enabled && file_ready && !load_failed && in_flight.is_none() {
-                while let Some((req_time, req_width)) = pending_request.take() {
-                    let qkey = quantize_time(req_time, duration);
-                    if let Some(hit) = cache.get(&(qkey, req_width)) {
-                        send_thumbnail_to_webview(
-                            &script_tx,
-                            req_time,
-                            &hit.data_url,
-                            hit.width,
-                            hit.height,
-                        );
-                        break;
-                    }
-
+            if enabled
+                && file_ready
+                && !load_failed
+                && in_flight.is_none()
+                && let Some((req_time, req_width)) = pending_request.take()
+            {
+                let qkey = quantize_time(req_time, duration);
+                if let Some(hit) = cache.get(&(qkey, req_width)) {
+                    send_thumbnail_to_webview(
+                        &script_tx,
+                        req_time,
+                        &hit.data_url,
+                        hit.width,
+                        hit.height,
+                    );
+                } else {
                     let clamped_time = match duration {
                         Some(d) if d > 0.5 => req_time.clamp(0.0, d - 0.25),
                         _ => req_time.max(0.0),
@@ -660,7 +660,6 @@ fn run_thumbnail_loop(
                             render_ready: false,
                         });
                     }
-                    break;
                 }
             }
         }
@@ -750,10 +749,8 @@ mod tests {
             return;
         }
 
-        let temp_mp4 = std::env::temp_dir().join(format!(
-            "stremio_thumbfast_test_{}.mp4",
-            std::process::id()
-        ));
+        let temp_mp4 =
+            std::env::temp_dir().join(format!("stremio_thumbfast_test_{}.mp4", std::process::id()));
         let status = std::process::Command::new("ffmpeg")
             .args([
                 "-y",

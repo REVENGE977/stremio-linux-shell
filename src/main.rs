@@ -41,12 +41,17 @@ fn main() -> ExitCode {
 
     fs::create_dir_all(&data_dir).expect("Failed to create data directory");
 
-    let gettext_dir = match env::var("FLATPAK_ID") {
-        Ok(_) => GETTEXT_DIR_FLATPAK,
-        Err(_) => env!("GETTEXT_DIR"),
+    let gettext_dir = if env::var("FLATPAK_ID").is_ok() {
+        GETTEXT_DIR_FLATPAK.to_string()
+    } else if let Ok(appdir) = env::var("APPDIR") {
+        format!("{appdir}/usr/share/locale")
+    } else if std::path::Path::new(env!("GETTEXT_DIR")).exists() {
+        env!("GETTEXT_DIR").to_string()
+    } else {
+        "/usr/share/locale".to_string()
     };
 
-    gettextrs::bindtextdomain(GETTEXT_DOMAIN, gettext_dir).expect("Failed to bind text domain");
+    gettextrs::bindtextdomain(GETTEXT_DOMAIN, &gettext_dir).expect("Failed to bind text domain");
     gettextrs::bind_textdomain_codeset(GETTEXT_DOMAIN, "UTF-8")
         .expect("Failed to set the text domain encoding");
     gettextrs::textdomain(GETTEXT_DOMAIN).expect("Failed to switch text domain");
@@ -71,8 +76,7 @@ fn main() -> ExitCode {
             tracing::warn!("Failed to start streaming server: {e}");
         } else {
             for _ in 0..50 {
-                if crate::server::is_streaming_server_online()
-                    || !server.borrow_mut().is_running()
+                if crate::server::is_streaming_server_online() || !server.borrow_mut().is_running()
                 {
                     break;
                 }

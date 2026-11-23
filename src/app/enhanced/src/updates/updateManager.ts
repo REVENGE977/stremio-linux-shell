@@ -1,7 +1,7 @@
-import { EnhancedData, MetaData, PluginUiData, ThemeUiData } from '../types';
+import { AppImageUpdateProgress, EnhancedData, InstallInfo, MetaData, PluginUiData, ThemeUiData } from '../types';
 import { fetchRegistry, fetchThemeVersionFromDownload } from '../marketplace/marketplaceManager';
 import { modalManager } from '../components/modals/modalManager';
-import { postEnhancedMessage } from '../utils/dom';
+import { escapeHtml, postEnhancedMessage } from '../utils/dom';
 
 let currentEnhancedData: EnhancedData = { plugins: [], themes: [], activeTheme: null };
 
@@ -38,11 +38,36 @@ const CLIENT_RELEASE_SOURCES: { apiUrl: string; releaseUrl: string }[] = [
     }
 ];
 
-let latestClientVersionCache: { version: string; releaseUrl: string } | null = null;
+export interface LatestClientRelease {
+    version: string;
+    releaseUrl: string;
+    tagName?: string;
+    releaseName?: string;
+    publishedAt?: string;
+    body?: string;
+    appimageDownloadUrl?: string;
+    appimageAssetName?: string;
+    appimageSize?: number;
+}
+
+let latestClientVersionCache: LatestClientRelease | null = null;
 let clientUpdateCheckInProgress = false;
+let selfUpdateInProgress = false;
 
 export function updateUpdateManagerData(data: EnhancedData): void {
     currentEnhancedData = data;
+}
+
+export function getInstallInfo(): InstallInfo {
+    return (
+        currentEnhancedData.installInfo ||
+        (window as any).__INITIAL_ENHANCED_DATA__?.installInfo || {
+            installType: 'native',
+            canSelfUpdate: false,
+            appimagePath: null,
+            arch: 'x86_64'
+        }
+    );
 }
 
 export function getCurrentClientVersion(): string {
@@ -53,8 +78,13 @@ export function getCurrentClientVersion(): string {
     );
 }
 
-export function getLatestClientVersion(): { version: string; releaseUrl: string } | null {
+export function getLatestClientVersion(): LatestClientRelease | null {
     return latestClientVersionCache;
+}
+
+export function canSelfUpdateAppImage(release?: LatestClientRelease | null): boolean {
+    const info = getInstallInfo();
+    return Boolean(info.installType === 'appimage' && info.canSelfUpdate && release?.appimageDownloadUrl);
 }
 
 /**
@@ -315,56 +345,76 @@ export async function checkUpdateData(
 }
 
 const inFlightChecks = new Set<string>();
+const UPDATE_CHECK_COOLDOWN_MS = 5 * 60 * 1000;
+const itemUpdateCache = new Map<string, { checkedAt: number; result: UpdateCheckResult | null }>();
+let lastAutoUpdateCheckAt = 0;
+let autoUpdateCheckInFlight = false;
+
+function bindItemUpdateButton(
+    updateButton: HTMLElement,
+    itemFile: string,
+    type: 'plugin' | 'theme',
+    updateData: UpdateCheckResult | null
+): boolean {
+    if (!updateData || !updateData.hasUpdate || !updateData.newContent || !updateData.newMetaData) {
+        updateButton.style.display = 'none';
+        return false;
+    }
+
+    updateButton.style.display = 'inline-flex';
+    updateButton.setAttribute('title', `Update available: v${updateData.newMetaData.version}`);
+    const label = updateButton.querySelector('.label-OnWh2') || updateButton;
+    label.textContent = `Update (v${updateData.newMetaData.version})`;
+
+    updateButton.onclick = async (e) => {
+        e.stopPropagation();
+
+        // Warn about non-registry updates for plugins
+        if (type === 'plugin' && updateData.registryVersion !== updateData.newMetaData!.version) {
+            const result = await modalManager.showAlert(
+                'warning',
+                'Confirm Update',
+                `This update for ${updateData.installedMetaData?.name || itemFile} (v${updateData.newMetaData!.version}) isn't submitted to the registry (Community Marketplace) yet, and thus has not been confirmed safe.\n\nAre you sure you want to update? It's recommended to read the source code of the update before updating.`,
+                ['Yes', 'No', 'View Source Code']
+            );
+
+            if (result === 0) {
+                await applyUpdate(type, itemFile, updateData.newContent!, updateData.newMetaData!);
+            } else if (result === 2 && updateData.updateUrl) {
+                try { window.open(updateData.updateUrl, '_blank'); } catch (_) {}
+            }
+        } else {
+            await applyUpdate(type, itemFile, updateData.newContent!, updateData.newMetaData!);
+        }
+    };
+
+    return true;
+}
 
 /**
  * Check updates for a single item and update its UI button if an update is found.
  */
 export async function checkForItemUpdatesUI(
     itemFile: string,
-    type: 'plugin' | 'theme'
+    type: 'plugin' | 'theme',
+    force = false
 ): Promise<boolean> {
     const updateButton = document.getElementById(`${itemFile}-update`);
     if (!updateButton) return false;
+
+    const cacheKey = `${type}:${itemFile}`;
+    const cached = !force ? itemUpdateCache.get(cacheKey) : undefined;
+    if (cached && (Date.now() - cached.checkedAt) < UPDATE_CHECK_COOLDOWN_MS) {
+        return bindItemUpdateButton(updateButton, itemFile, type, cached.result);
+    }
 
     if (inFlightChecks.has(itemFile)) return false;
     inFlightChecks.add(itemFile);
 
     try {
         const updateData = await checkUpdateData(itemFile, type);
-        if (!updateData || !updateData.hasUpdate || !updateData.newContent || !updateData.newMetaData) {
-            updateButton.style.display = 'none';
-            return false;
-        }
-
-        // Show the update button
-        updateButton.style.display = 'inline-flex';
-        updateButton.setAttribute('title', `Update available: v${updateData.newMetaData.version}`);
-        const label = updateButton.querySelector('.label-OnWh2') || updateButton;
-        label.textContent = `Update (v${updateData.newMetaData.version})`;
-
-        updateButton.onclick = async (e) => {
-            e.stopPropagation();
-
-            // Warn about non-registry updates for plugins
-            if (type === 'plugin' && updateData.registryVersion !== updateData.newMetaData!.version) {
-                const result = await modalManager.showAlert(
-                    'warning',
-                    'Confirm Update',
-                    `This update for ${updateData.installedMetaData?.name || itemFile} (v${updateData.newMetaData!.version}) isn't submitted to the registry (Community Marketplace) yet, and thus has not been confirmed safe.\n\nAre you sure you want to update? It's recommended to read the source code of the update before updating.`,
-                    ['Yes', 'No', 'View Source Code']
-                );
-
-                if (result === 0) {
-                    await applyUpdate(type, itemFile, updateData.newContent!, updateData.newMetaData!);
-                } else if (result === 2 && updateData.updateUrl) {
-                    try { window.open(updateData.updateUrl, '_blank'); } catch (_) {}
-                }
-            } else {
-                await applyUpdate(type, itemFile, updateData.newContent!, updateData.newMetaData!);
-            }
-        };
-
-        return true;
+        itemUpdateCache.set(cacheKey, { checkedAt: Date.now(), result: updateData });
+        return bindItemUpdateButton(updateButton, itemFile, type, updateData);
     } catch (err) {
         console.error(`[Enhanced Update] Error updating UI for ${itemFile}:`, err);
         return false;
@@ -388,6 +438,8 @@ export async function applyUpdate(
     if (updateButton) updateButton.style.pointerEvents = 'none';
 
     try {
+        itemUpdateCache.delete(`${type}:${itemFile}`);
+
         postEnhancedMessage('installMod', {
             modType: type,
             fileName: itemFile,
@@ -434,6 +486,15 @@ export async function applyUpdate(
  * Scan all installed plugins and themes for updates.
  */
 export async function checkForAllUpdates(isManual = false): Promise<void> {
+    const now = Date.now();
+    if (!isManual) {
+        if (autoUpdateCheckInFlight || (now - lastAutoUpdateCheckAt) < UPDATE_CHECK_COOLDOWN_MS) {
+            return;
+        }
+        autoUpdateCheckInFlight = true;
+        lastAutoUpdateCheckAt = now;
+    }
+
     if (isManual) {
         modalManager.showToast(
             'check-updates-progress',
@@ -457,7 +518,7 @@ export async function checkForAllUpdates(isManual = false): Promise<void> {
             : (((window as any).__INITIAL_ENHANCED_DATA__?.plugins) || []);
 
         for (const p of plugins) {
-            const hasUp = await checkForItemUpdatesUI(p.fileName, 'plugin');
+            const hasUp = await checkForItemUpdatesUI(p.fileName, 'plugin', isManual);
             if (hasUp) updateCount++;
         }
 
@@ -466,7 +527,7 @@ export async function checkForAllUpdates(isManual = false): Promise<void> {
             : (((window as any).__INITIAL_ENHANCED_DATA__?.themes) || []);
 
         for (const t of themes) {
-            const hasUp = await checkForItemUpdatesUI(t.fileName, 'theme');
+            const hasUp = await checkForItemUpdatesUI(t.fileName, 'theme', isManual);
             if (hasUp) updateCount++;
         }
 
@@ -488,6 +549,9 @@ export async function checkForAllUpdates(isManual = false): Promise<void> {
             }
         }
     } finally {
+        if (!isManual) {
+            autoUpdateCheckInFlight = false;
+        }
         if (checkBtn) {
             checkBtn.style.pointerEvents = '';
             checkBtn.textContent = 'Check for Updates';
@@ -547,35 +611,115 @@ export function extractClientVersionFromRemote(content: string): string | null {
     return null;
 }
 
-/**
- * Fetch the latest client version from the GitHub repository (Cargo.toml / VERSION),
- * falling back to the latest GitHub release name (then tag_name) if no version file
- * exists or if the version file does not report a newer version than currentVersion.
- */
-export async function fetchLatestClientVersion(currentVersion?: string): Promise<{ version: string; releaseUrl: string } | null> {
-    let bestCandidate: { version: string; releaseUrl: string } | null = null;
-    const compareAgainst = currentVersion || getCurrentClientVersion();
+function selectAppImageAsset(assets: any[], arch: string): { url: string; name: string; size?: number } | null {
+    if (!Array.isArray(assets)) return null;
+    const isArm = arch.includes('aarch64') || arch.includes('arm64');
+    const archTokens = isArm ? ['aarch64', 'arm64'] : ['x86_64', 'amd64'];
+    const currentIsDevel = /-devel\b/i.test(getCurrentClientVersion());
 
-    for (const source of CLIENT_VERSION_SOURCES) {
-        try {
-            const res = await fetch(source.url, { cache: 'no-store' });
-            if (!res.ok) continue;
-            const text = await res.text();
-            const version = extractClientVersionFromRemote(text);
-            if (version) {
-                if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
-                    bestCandidate = { version, releaseUrl: source.releaseUrl };
-                }
-                if (isNewerVersion(version, compareAgainst)) {
-                    latestClientVersionCache = bestCandidate;
-                    return latestClientVersionCache;
-                }
-                break;
-            }
-        } catch (err) {
-            console.warn(`[Enhanced Client Update] Failed to fetch ${source.url}:`, err);
-        }
+    const candidates = assets.filter(asset => {
+        const name = String(asset?.name || '');
+        const url = String(asset?.browser_download_url || '');
+        if (!name.toLowerCase().endsWith('.appimage') || !url) return false;
+        if (!currentIsDevel && /-devel-/i.test(name)) return false;
+        return true;
+    });
+
+    const archMatched = candidates.find(asset => {
+        const lower = String(asset.name || '').toLowerCase();
+        return archTokens.some(token => lower.includes(token));
+    });
+
+    const chosen = archMatched || (candidates.length === 1 && !isArm ? candidates[0] : null);
+    if (!chosen) return null;
+
+    return {
+        url: String(chosen.browser_download_url),
+        name: String(chosen.name),
+        size: typeof chosen.size === 'number' ? chosen.size : undefined
+    };
+}
+
+function formatBytes(bytes: number): string {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MiB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KiB`;
+    return `${bytes} B`;
+}
+
+function formatInlineMarkdown(escapedLine: string): string {
+    return escapedLine
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, text, url) => {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${text}</a>`;
+        })
+        .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;font-size:0.86em;">$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+}
+
+export function renderPatchNotesMarkdown(markdown?: string): string {
+    if (!markdown || !markdown.trim()) {
+        return '<div style="color:rgba(255,255,255,0.55);font-style:italic;">No release notes provided for this release.</div>';
     }
+
+    const lines = escapeHtml(markdown).split(/\r?\n/);
+    const out: string[] = [];
+    let inList = false;
+
+    const closeList = () => {
+        if (inList) {
+            out.push('</ul>');
+            inList = false;
+        }
+    };
+
+    for (const raw of lines) {
+        const trimmed = raw.trim();
+        if (!trimmed) {
+            closeList();
+            continue;
+        }
+        if (/^---+$/.test(trimmed)) {
+            closeList();
+            out.push('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.12);margin:10px 0;">');
+            continue;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+        if (headingMatch) {
+            closeList();
+            const level = headingMatch[1].length;
+            const size = level === 1 ? '1.08rem' : level === 2 ? '0.98rem' : '0.9rem';
+            out.push(`<div style="font-weight:700;font-size:${size};color:#fff;margin:10px 0 4px;">${formatInlineMarkdown(headingMatch[2])}</div>`);
+            continue;
+        }
+
+        const bulletMatch = trimmed.match(/^[-*+]\s+(.+)$/);
+        if (bulletMatch) {
+            if (!inList) {
+                out.push('<ul style="margin:4px 0 8px 18px;padding:0;list-style:disc;">');
+                inList = true;
+            }
+            out.push(`<li style="margin:3px 0;color:#e4e4e7;">${formatInlineMarkdown(bulletMatch[1])}</li>`);
+            continue;
+        }
+
+        closeList();
+        out.push(`<p style="margin:4px 0;color:#d4d4d8;">${formatInlineMarkdown(trimmed)}</p>`);
+    }
+
+    closeList();
+    return out.join('');
+}
+
+/**
+ * Fetch the latest client version from GitHub Releases (including patch notes & AppImage assets)
+ * and GitHub Cargo.toml/VERSION sources.
+ */
+export async function fetchLatestClientVersion(currentVersion?: string): Promise<LatestClientRelease | null> {
+    let bestCandidate: LatestClientRelease | null = null;
+    let releaseCandidate: LatestClientRelease | null = null;
+    const compareAgainst = currentVersion || getCurrentClientVersion();
+    const arch = getInstallInfo().arch || 'x86_64';
 
     for (const source of CLIENT_RELEASE_SOURCES) {
         try {
@@ -592,9 +736,19 @@ export async function fetchLatestClientVersion(currentVersion?: string): Promise
                     typeof data.html_url === 'string' && data.html_url.trim()
                         ? data.html_url.trim()
                         : source.releaseUrl;
-                if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
-                    bestCandidate = { version, releaseUrl };
-                }
+                const asset = selectAppImageAsset(data.assets, arch);
+                releaseCandidate = {
+                    version,
+                    releaseUrl,
+                    tagName: typeof data.tag_name === 'string' ? data.tag_name : undefined,
+                    releaseName: typeof data.name === 'string' ? data.name : undefined,
+                    publishedAt: typeof data.published_at === 'string' ? data.published_at : undefined,
+                    body: typeof data.body === 'string' ? data.body : undefined,
+                    appimageDownloadUrl: asset?.url,
+                    appimageAssetName: asset?.name,
+                    appimageSize: asset?.size
+                };
+                bestCandidate = releaseCandidate;
                 break;
             }
         } catch (err) {
@@ -602,10 +756,164 @@ export async function fetchLatestClientVersion(currentVersion?: string): Promise
         }
     }
 
+    for (const source of CLIENT_VERSION_SOURCES) {
+        try {
+            const res = await fetch(source.url, { cache: 'no-store' });
+            if (!res.ok) continue;
+            const text = await res.text();
+            const version = extractClientVersionFromRemote(text);
+            if (version) {
+                if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
+                    bestCandidate = {
+                        version,
+                        releaseUrl: releaseCandidate?.releaseUrl || source.releaseUrl,
+                        tagName: releaseCandidate?.tagName,
+                        releaseName: releaseCandidate?.releaseName,
+                        publishedAt: releaseCandidate?.publishedAt,
+                        body: releaseCandidate?.body
+                    };
+                }
+                if (isNewerVersion(version, compareAgainst)) {
+                    latestClientVersionCache = bestCandidate;
+                    return latestClientVersionCache;
+                }
+                break;
+            }
+        } catch (err) {
+            console.warn(`[Enhanced Client Update] Failed to fetch ${source.url}:`, err);
+        }
+    }
+
     if (bestCandidate) {
         latestClientVersionCache = bestCandidate;
     }
     return bestCandidate;
+}
+
+export async function startAppImageSelfUpdate(release: LatestClientRelease): Promise<void> {
+    if (selfUpdateInProgress) return;
+    if (!release.appimageDownloadUrl) {
+        try { window.open(release.releaseUrl, '_blank'); } catch (_) {}
+        return;
+    }
+
+    selfUpdateInProgress = true;
+    const reqId = 'appupd_' + Math.random().toString(36).substring(2, 9);
+    const modal = modalManager.openProgressModal(
+        reqId,
+        `Updating to v${release.version}`,
+        `Preparing download (${release.appimageAssetName || 'AppImage'})...`
+    );
+
+    const prevHandler = (window as any).__receiveAppImageUpdateProgress;
+    const cleanup = () => {
+        selfUpdateInProgress = false;
+        if (prevHandler) {
+            (window as any).__receiveAppImageUpdateProgress = prevHandler;
+        } else {
+            delete (window as any).__receiveAppImageUpdateProgress;
+        }
+    };
+
+    (window as any).__receiveAppImageUpdateProgress = function (id: string, evt: AppImageUpdateProgress) {
+        if (id !== reqId) {
+            if (typeof prevHandler === 'function') prevHandler(id, evt);
+            return;
+        }
+
+        const total = evt.totalBytes || release.appimageSize || 0;
+        const detail = total > 0
+            ? `${evt.percent}% (${formatBytes(evt.downloadedBytes)} / ${formatBytes(total)})`
+            : evt.downloadedBytes > 0
+                ? `${formatBytes(evt.downloadedBytes)} downloaded`
+                : `${evt.percent}%`;
+
+        modal.update(evt.percent, evt.message, detail);
+
+        if (evt.phase === 'ready') {
+            cleanup();
+            modal.setButtons([
+                {
+                    label: 'Restart Now',
+                    primary: true,
+                    onClick: () => {
+                        modal.close();
+                        postEnhancedMessage('restartApp');
+                    }
+                },
+                {
+                    label: 'Restart Later',
+                    onClick: () => modal.close()
+                }
+            ]);
+        } else if (evt.phase === 'error') {
+            cleanup();
+            modal.update(0, `Update failed: ${evt.error || evt.message}`, 'You can download the update manually from GitHub Releases.');
+            modal.setButtons([
+                {
+                    label: 'Open Release Page',
+                    primary: true,
+                    onClick: () => {
+                        modal.close();
+                        try { window.open(release.releaseUrl, '_blank'); } catch (_) {}
+                    }
+                },
+                {
+                    label: 'Close',
+                    onClick: () => modal.close()
+                }
+            ]);
+        }
+    };
+
+    postEnhancedMessage('selfUpdateAppImage', {
+        id: reqId,
+        downloadUrl: release.appimageDownloadUrl,
+        expectedVersion: release.version
+    });
+}
+
+export async function showPatchNotesModal(release?: LatestClientRelease | null): Promise<void> {
+    const target = release || getLatestClientVersion() || (await fetchLatestClientVersion());
+    if (!target) {
+        modalManager.showToast('patch-notes-err', 'Release Notes Unavailable', 'Could not fetch release notes from GitHub.', 'fail');
+        return;
+    }
+
+    const currentVersion = getCurrentClientVersion();
+    const hasUpdate = isNewerVersion(target.version, currentVersion);
+    const selfUpdateReady = hasUpdate && canSelfUpdateAppImage(target);
+    const dateLine = target.publishedAt
+        ? `Published ${new Date(target.publishedAt).toLocaleDateString()}`
+        : '';
+
+    const html = `
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="padding:3px 9px;border-radius:999px;background:rgba(123,91,245,0.28);color:#dcd4ff;font-weight:700;font-size:0.82rem;">v${escapeHtml(target.version)}</span>
+            ${dateLine ? `<span style="font-size:0.82rem;color:rgba(255,255,255,0.6);">${escapeHtml(dateLine)}</span>` : ''}
+        </div>
+        <div style="padding:12px 14px;border-radius:8px;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.08);">
+            ${renderPatchNotesMarkdown(target.body)}
+        </div>
+    `;
+
+    const buttons = selfUpdateReady
+        ? ['Download & Install Update', 'Open Release Page', 'Close']
+        : ['Open Release Page', 'Close'];
+
+    const choice = await modalManager.showRichAlert(
+        'info',
+        target.releaseName || `Release Notes (v${target.version})`,
+        html,
+        buttons
+    );
+
+    if (selfUpdateReady) {
+        if (choice === 0) await startAppImageSelfUpdate(target);
+        else if (choice === 1) try { window.open(target.releaseUrl, '_blank'); } catch (_) {}
+    } else if (choice === 0) {
+        try { window.open(target.releaseUrl, '_blank'); } catch (_) {}
+    }
 }
 
 /**
@@ -666,32 +974,70 @@ export async function checkClientUpdate(isManual = false): Promise<boolean> {
         const curEnhNum = curParsed.enhanced.length > 0 ? curParsed.enhanced.join('.') : '0';
         const remEnhNum = remParsed.enhanced.length > 0 ? remParsed.enhanced.join('.') : '0';
 
-        const details =
-            `A new version of Stremio Linux Shell Enhanced is available!\n\n` +
-            `Installed Version: v${currentVersion} (Base ${curBaseStr}, Enhanced build #${curEnhNum})\n` +
-            `Latest Version: v${remote.version} (Base ${remBaseStr}, Enhanced build #${remEnhNum})\n\n` +
-            `Would you like to open the GitHub Releases page to download the update?`;
+        const info = getInstallInfo();
+        const selfUpdateReady = canSelfUpdateAppImage(remote);
+        const installHint = selfUpdateReady
+            ? `Running as AppImage (${escapeHtml(remote.appimageAssetName || 'ready')}). One-click update will download and replace the AppImage automatically.`
+            : info.installType === 'flatpak'
+                ? 'Running as Flatpak. Update automatically via GNOME Software / KDE Discover or <code>flatpak update</code>, or grab the release below.'
+                : 'Install or update from the GitHub Releases page (or your distro/AUR package).';
 
-        const choice = await modalManager.showAlert(
+        const detailsHtml = `
+            <div style="margin-bottom:10px;color:#e4e4e7;">A new version of <strong>Stremio Linux Shell Enhanced</strong> is available!</div>
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.88rem;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.05);margin-bottom:12px;">
+                <div style="color:rgba(255,255,255,0.6);">Installed:</div>
+                <div>v${escapeHtml(currentVersion)} (Base ${escapeHtml(curBaseStr)}, Enhanced #${escapeHtml(curEnhNum)})</div>
+                <div style="color:rgba(255,255,255,0.6);">Latest:</div>
+                <div style="color:#a78bfa;font-weight:700;">v${escapeHtml(remote.version)} (Base ${escapeHtml(remBaseStr)}, Enhanced #${escapeHtml(remEnhNum)})</div>
+            </div>
+            <div style="font-size:0.84rem;color:rgba(255,255,255,0.7);margin-bottom:12px;">${installHint}</div>
+            ${remote.body ? `
+                <div style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.58);margin-bottom:6px;">What's New</div>
+                <div style="padding:10px 12px;border-radius:8px;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.08);">
+                    ${renderPatchNotesMarkdown(remote.body)}
+                </div>
+            ` : ''}
+        `;
+
+        const buttons = selfUpdateReady
+            ? ['Download & Install Update', 'Open Release Page', 'Skip This Version', 'Later']
+            : ['Download / Open Release Page', 'Skip This Version', 'Later'];
+
+        const choice = await modalManager.showRichAlert(
             'info',
             'Client Update Available',
-            details,
-            ['Download / Open Release Page', 'Skip This Version', 'Later']
+            detailsHtml,
+            buttons
         );
 
-        if (choice === 0) {
-            try {
-                window.open(remote.releaseUrl, '_blank');
-            } catch (_) {}
-        } else if (choice === 1) {
-            currentEnhancedData.skippedClientVersion = remote.version;
-            postEnhancedMessage('skipClientVersion', { version: remote.version });
-            modalManager.showToast(
-                'client-update-skipped',
-                'Version Skipped',
-                `Skipped client update v${remote.version}.`,
-                'info'
-            );
+        if (selfUpdateReady) {
+            if (choice === 0) {
+                await startAppImageSelfUpdate(remote);
+            } else if (choice === 1) {
+                try { window.open(remote.releaseUrl, '_blank'); } catch (_) {}
+            } else if (choice === 2) {
+                currentEnhancedData.skippedClientVersion = remote.version;
+                postEnhancedMessage('skipClientVersion', { version: remote.version });
+                modalManager.showToast(
+                    'client-update-skipped',
+                    'Version Skipped',
+                    `Skipped client update v${remote.version}.`,
+                    'info'
+                );
+            }
+        } else {
+            if (choice === 0) {
+                try { window.open(remote.releaseUrl, '_blank'); } catch (_) {}
+            } else if (choice === 1) {
+                currentEnhancedData.skippedClientVersion = remote.version;
+                postEnhancedMessage('skipClientVersion', { version: remote.version });
+                modalManager.showToast(
+                    'client-update-skipped',
+                    'Version Skipped',
+                    `Skipped client update v${remote.version}.`,
+                    'info'
+                );
+            }
         }
 
         return true;

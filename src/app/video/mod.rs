@@ -2,14 +2,65 @@ mod config;
 mod imp;
 pub mod thumbnailer;
 
+use std::path::PathBuf;
+
 use adw::subclass::prelude::ObjectSubclassIsExt;
 use gtk::glib::{self, Variant, closure_local, object::ObjectExt};
 use itertools::Itertools;
 use libmpv2::Format;
+use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use tracing::warn;
 
 use crate::app::video::config::{BOOL_PROPERTIES, FLOAT_PROPERTIES, STRING_PROPERTIES};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChapterInfo {
+    pub title: String,
+    pub time: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaybackStats {
+    pub media_title: Option<String>,
+    pub path: Option<String>,
+    pub video_codec: Option<String>,
+    pub video_format: Option<String>,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
+    pub dwidth: Option<i64>,
+    pub dheight: Option<i64>,
+    pub output_width: Option<i64>,
+    pub output_height: Option<i64>,
+    pub container_fps: Option<f64>,
+    pub estimated_vf_fps: Option<f64>,
+    pub display_fps: Option<f64>,
+    pub hwdec_current: Option<String>,
+    pub video_bitrate: Option<f64>,
+    pub color_primaries: Option<String>,
+    pub color_gamma: Option<String>,
+    pub color_matrix: Option<String>,
+    pub sig_peak: Option<f64>,
+    pub pixel_format: Option<String>,
+    pub audio_codec: Option<String>,
+    pub audio_channels: Option<String>,
+    pub audio_sample_rate: Option<i64>,
+    pub audio_bitrate: Option<f64>,
+    pub dropped_frames: Option<i64>,
+    pub decoder_dropped_frames: Option<i64>,
+    pub mistimed_frames: Option<i64>,
+    pub avsync: Option<f64>,
+    pub cache_duration: Option<f64>,
+    pub cache_speed: Option<f64>,
+    pub paused_for_cache: bool,
+    pub speed: Option<f64>,
+    pub volume: Option<f64>,
+    pub time_pos: Option<f64>,
+    pub duration: Option<f64>,
+    pub active_shaders: Vec<String>,
+}
 
 glib::wrapper! {
     pub struct Video(ObjectSubclass<imp::Video>)
@@ -150,5 +201,25 @@ impl Video {
             }
             name => warn!("Failed to set property {name}: Unsupported"),
         };
+    }
+
+    pub fn set_glsl_shaders(&self, paths: &[PathBuf]) {
+        self.imp().set_glsl_shaders(paths);
+    }
+
+    pub fn get_chapters(&self) -> Vec<ChapterInfo> {
+        self.imp().get_chapters()
+    }
+
+    pub fn get_playback_stats(&self) -> PlaybackStats {
+        self.imp().get_playback_stats()
+    }
+
+    pub fn is_playing(&self) -> bool {
+        self.imp().is_playing.get()
+    }
+
+    pub fn set_playing(&self, playing: bool) {
+        self.imp().is_playing.set(playing);
     }
 }

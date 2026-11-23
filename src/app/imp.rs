@@ -60,16 +60,33 @@ fn is_server_running(server: &Option<Rc<RefCell<crate::server::Server>>>) -> boo
         || crate::server::is_streaming_server_online()
 }
 
-fn handle_enhanced_action(
-    window: &Window,
-    webview: &WebView,
-    enhanced: &Rc<RefCell<EnhancedManager>>,
-    server: &Option<Rc<RefCell<crate::server::Server>>>,
-    thumbnail_tx: &flume::Sender<ThumbnailCmd>,
-    active_stream_url: &Rc<RefCell<Option<String>>>,
+struct EnhancedActionContext<'a> {
+    app: &'a super::Application,
+    window: &'a Window,
+    webview: &'a WebView,
+    video: &'a Video,
+    enhanced: &'a Rc<RefCell<EnhancedManager>>,
+    server: &'a Option<Rc<RefCell<crate::server::Server>>>,
+    thumbnail_tx: &'a flume::Sender<ThumbnailCmd>,
+    active_stream_url: &'a Rc<RefCell<Option<String>>>,
     dev_mode: bool,
+}
+
+fn handle_enhanced_action(
+    ctx: EnhancedActionContext<'_>,
     action: crate::app::enhanced::EnhancedAction,
 ) {
+    let EnhancedActionContext {
+        app,
+        window,
+        webview,
+        video,
+        enhanced,
+        server,
+        thumbnail_tx,
+        active_stream_url,
+        dev_mode,
+    } = ctx;
     match action {
         crate::app::enhanced::EnhancedAction::GetData => {
             let mut mgr = enhanced.borrow_mut();
@@ -144,10 +161,7 @@ fn handle_enhanced_action(
                 error!("Failed to skip client version: {e}");
             }
         }
-        crate::app::enhanced::EnhancedAction::TogglePlugin {
-            file_name,
-            enabled,
-        } => {
+        crate::app::enhanced::EnhancedAction::TogglePlugin { file_name, enabled } => {
             info!("Toggling plugin {file_name}: {enabled}");
             enhanced.borrow_mut().toggle_plugin(&file_name, enabled);
             let running = is_server_running(server);
@@ -177,18 +191,26 @@ fn handle_enhanced_action(
                 webview.evaluate_javascript(&script);
             }
         }
-        crate::app::enhanced::EnhancedAction::Log { level, message } => {
-            match level.as_str() {
-                "error" => error!("{message}"),
-                "warn" => warn!("{message}"),
-                _ => info!("{message}"),
-            }
-        }
+        crate::app::enhanced::EnhancedAction::Log { level, message } => match level.as_str() {
+            "error" => error!("{message}"),
+            "warn" => warn!("{message}"),
+            _ => info!("{message}"),
+        },
         crate::app::enhanced::EnhancedAction::HttpGet { id, url } => {
             let webview = webview.clone();
             spawn_local!(async move {
                 let res = tokio::process::Command::new("curl")
-                    .args(["-4", "-sL", "--connect-timeout", "10", "--max-time", "25", "-w", "\n%{http_code}", &url])
+                    .args([
+                        "-4",
+                        "-sL",
+                        "--connect-timeout",
+                        "10",
+                        "--max-time",
+                        "25",
+                        "-w",
+                        "\n%{http_code}",
+                        &url,
+                    ])
                     .output()
                     .await;
 
@@ -196,7 +218,16 @@ fn handle_enhanced_action(
                     Ok(out) if out.status.success() => Ok(out),
                     _ => {
                         tokio::process::Command::new("curl")
-                            .args(["-sL", "--connect-timeout", "10", "--max-time", "25", "-w", "\n%{http_code}", &url])
+                            .args([
+                                "-sL",
+                                "--connect-timeout",
+                                "10",
+                                "--max-time",
+                                "25",
+                                "-w",
+                                "\n%{http_code}",
+                                &url,
+                            ])
                             .output()
                             .await
                     }
@@ -209,24 +240,34 @@ fn handle_enhanced_action(
                             let body = &stdout[..pos];
                             let code_str = stdout[pos + 1..].trim();
                             let status: u16 = code_str.parse().unwrap_or(200);
-                            let body_json = serde_json::to_string(body).unwrap_or_else(|_| "\"\"".to_string());
-                            let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, {status}, {body_json});");
+                            let body_json =
+                                serde_json::to_string(body).unwrap_or_else(|_| "\"\"".to_string());
+                            let script = format!(
+                                "window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, {status}, {body_json});"
+                            );
                             webview.evaluate_javascript(&script);
                         } else {
-                            let body_json = serde_json::to_string(&stdout).unwrap_or_else(|_| "\"\"".to_string());
-                            let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 200, {body_json});");
+                            let body_json = serde_json::to_string(&stdout)
+                                .unwrap_or_else(|_| "\"\"".to_string());
+                            let script = format!(
+                                "window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 200, {body_json});"
+                            );
                             webview.evaluate_javascript(&script);
                         }
                     }
                     Ok(output) => {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         error!("Curl failed for {url}: {stderr}");
-                        let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Curl error\");");
+                        let script = format!(
+                            "window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Curl error\");"
+                        );
                         webview.evaluate_javascript(&script);
                     }
                     Err(e) => {
                         error!("Failed to execute curl for {url}: {e}");
-                        let script = format!("window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Exec error\");");
+                        let script = format!(
+                            "window.__receiveHttpResponse && window.__receiveHttpResponse({id:?}, 500, \"Exec error\");"
+                        );
                         webview.evaluate_javascript(&script);
                     }
                 }
@@ -274,17 +315,18 @@ fn handle_enhanced_action(
         crate::app::enhanced::EnhancedAction::DownloadFfmpeg { id } => {
             let webview = webview.clone();
             spawn_local!(async move {
-                let success = tokio::task::spawn_blocking(|| {
-                    match crate::server::download_and_extract_ffmpeg() {
-                        Ok(()) => true,
-                        Err(e) => {
-                            error!("[FFmpeg] Setup failed: {e}");
-                            false
-                        }
-                    }
-                })
-                .await
-                .unwrap_or(false);
+                let success =
+                    tokio::task::spawn_blocking(
+                        || match crate::server::download_and_extract_ffmpeg() {
+                            Ok(()) => true,
+                            Err(e) => {
+                                error!("[FFmpeg] Setup failed: {e}");
+                                false
+                            }
+                        },
+                    )
+                    .await
+                    .unwrap_or(false);
                 let script = format!(
                     "window.__receiveFfmpegResult && window.__receiveFfmpegResult({id:?}, {success});"
                 );
@@ -293,9 +335,7 @@ fn handle_enhanced_action(
         }
         crate::app::enhanced::EnhancedAction::SetPictureInPicture { enabled } => {
             let pip_active = window.set_pip(enabled);
-            let script = format!(
-                "window.__syncPipState && window.__syncPipState({pip_active});"
-            );
+            let script = format!("window.__syncPipState && window.__syncPipState({pip_active});");
             webview.evaluate_javascript(&script);
         }
         crate::app::enhanced::EnhancedAction::StartPipDrag => {
@@ -314,10 +354,8 @@ fn handle_enhanced_action(
             let mut mgr = enhanced.borrow_mut();
             mgr.set_thumbnail_preview(enabled);
             let _ = thumbnail_tx.send(ThumbnailCmd::SetEnabled(enabled));
-            if enabled {
-                if let Some(url) = active_stream_url.borrow().clone() {
-                    let _ = thumbnail_tx.send(ThumbnailCmd::SetSource(Some(url)));
-                }
+            if enabled && let Some(url) = active_stream_url.borrow().clone() {
+                let _ = thumbnail_tx.send(ThumbnailCmd::SetSource(Some(url)));
             }
             let running = is_server_running(server);
             let data = mgr.ui_data(running);
@@ -396,6 +434,171 @@ fn handle_enhanced_action(
                 }
             });
         }
+        crate::app::enhanced::EnhancedAction::OpenShadersFolder => {
+            enhanced.borrow().open_shaders_folder();
+        }
+        crate::app::enhanced::EnhancedAction::SetShaderPreset { id, preset } => {
+            let shaders_dir = enhanced.borrow().shaders_dir.clone();
+            let preset_def = crate::app::enhanced::shaders::find_preset(&preset);
+            let is_off_or_installed = preset == "off"
+                || preset_def.is_some_and(|def| {
+                    crate::app::enhanced::shaders::is_preset_installed(&shaders_dir, def)
+                });
+
+            if is_off_or_installed {
+                let paths =
+                    crate::app::enhanced::shaders::resolve_preset_paths(&shaders_dir, &preset);
+                video.set_glsl_shaders(&paths);
+                enhanced.borrow_mut().set_shader_preset(&preset);
+
+                let id_json = serde_json::to_string(&id).unwrap_or_else(|_| "\"\"".to_string());
+                let preset_json =
+                    serde_json::to_string(&preset).unwrap_or_else(|_| "\"off\"".to_string());
+                webview.evaluate_javascript(&format!(
+                    "window.__receiveShaderPresetResult && window.__receiveShaderPresetResult({id_json}, true, {preset_json}, null);"
+                ));
+
+                let running = is_server_running(server);
+                let data = enhanced.borrow().ui_data(running);
+                if let Ok(json) = serde_json::to_string(&data) {
+                    webview.evaluate_javascript(&format!(
+                        "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                    ));
+                }
+            } else {
+                let webview = webview.clone();
+                let video = video.clone();
+                let enhanced = enhanced.clone();
+                let server = server.clone();
+                spawn_local!(async move {
+                    let preset_dl = preset.clone();
+                    let shaders_dir_dl = shaders_dir.clone();
+                    let result = tokio::task::spawn_blocking(move || {
+                        crate::app::enhanced::shaders::ensure_preset_downloaded(
+                            &shaders_dir_dl,
+                            &preset_dl,
+                        )
+                    })
+                    .await
+                    .unwrap_or_else(|e| Err(format!("Shader task panicked: {e}")));
+
+                    let id_json = serde_json::to_string(&id).unwrap_or_else(|_| "\"\"".to_string());
+                    let preset_json =
+                        serde_json::to_string(&preset).unwrap_or_else(|_| "\"off\"".to_string());
+
+                    match result {
+                        Ok(paths) => {
+                            video.set_glsl_shaders(&paths);
+                            enhanced.borrow_mut().set_shader_preset(&preset);
+                            webview.evaluate_javascript(&format!(
+                                "window.__receiveShaderPresetResult && window.__receiveShaderPresetResult({id_json}, true, {preset_json}, null);"
+                            ));
+
+                            let running = is_server_running(&server);
+                            let data = enhanced.borrow().ui_data(running);
+                            if let Ok(json) = serde_json::to_string(&data) {
+                                webview.evaluate_javascript(&format!(
+                                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                                ));
+                            }
+                        }
+                        Err(err) => {
+                            error!("[Shaders] Failed to apply preset {preset}: {err}");
+                            let err_json = serde_json::to_string(&err)
+                                .unwrap_or_else(|_| "\"Error\"".to_string());
+                            webview.evaluate_javascript(&format!(
+                                "window.__receiveShaderPresetResult && window.__receiveShaderPresetResult({id_json}, false, {preset_json}, {err_json});"
+                            ));
+                        }
+                    }
+                });
+            }
+        }
+        crate::app::enhanced::EnhancedAction::GetPlaybackStats { id } => {
+            let stats = video.get_playback_stats();
+            if let Ok(json) = serde_json::to_string(&stats) {
+                let script = format!(
+                    "window.__receivePlaybackStats && window.__receivePlaybackStats({id:?}, {json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::GetChapters => {
+            let chapters = video.get_chapters();
+            if let Ok(json) = serde_json::to_string(&chapters) {
+                let script =
+                    format!("window.__receiveChapters && window.__receiveChapters({json});");
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::SetChapterMarkers { enabled } => {
+            let mut mgr = enhanced.borrow_mut();
+            mgr.set_chapter_markers(enabled);
+            let running = is_server_running(server);
+            let data = mgr.ui_data(running);
+            if let Ok(json) = serde_json::to_string(&data) {
+                let script = format!(
+                    "window.__receiveEnhancedData && window.__receiveEnhancedData({json});"
+                );
+                webview.evaluate_javascript(&script);
+            }
+        }
+        crate::app::enhanced::EnhancedAction::SelfUpdateAppImage {
+            id,
+            download_url,
+            expected_version,
+        } => {
+            info!("[SelfUpdate] Starting self-update to v{expected_version}");
+            let (tx, rx) = flume::unbounded::<crate::app::enhanced::updater::UpdateProgressEvent>();
+            let webview_prog = webview.clone();
+            let id_prog = id.clone();
+            spawn_local!(async move {
+                while let Ok(evt) = rx.recv_async().await {
+                    if let Ok(json) = serde_json::to_string(&evt) {
+                        let script = format!(
+                            "window.__receiveAppImageUpdateProgress && window.__receiveAppImageUpdateProgress({id_prog:?}, {json});"
+                        );
+                        webview_prog.evaluate_javascript(&script);
+                    }
+                }
+            });
+
+            let webview_done = webview.clone();
+            let id_done = id.clone();
+            spawn_local!(async move {
+                let tx_dl = tx.clone();
+                if let Err(err) = crate::app::enhanced::updater::download_and_replace_appimage(
+                    download_url,
+                    tx_dl,
+                )
+                .await
+                {
+                    error!("[SelfUpdate] {err}");
+                    let evt = crate::app::enhanced::updater::UpdateProgressEvent {
+                        phase: "error".to_string(),
+                        percent: 0,
+                        downloaded_bytes: 0,
+                        total_bytes: 0,
+                        message: err.clone(),
+                        error: Some(err),
+                    };
+                    if let Ok(json) = serde_json::to_string(&evt) {
+                        let script = format!(
+                            "window.__receiveAppImageUpdateProgress && window.__receiveAppImageUpdateProgress({id_done:?}, {json});"
+                        );
+                        webview_done.evaluate_javascript(&script);
+                    }
+                }
+                drop(tx);
+            });
+        }
+        crate::app::enhanced::EnhancedAction::RestartApp => {
+            if let Err(err) = crate::app::enhanced::updater::relaunch_appimage() {
+                error!("[SelfUpdate] {err}");
+            } else {
+                app.quit();
+            }
+        }
     }
 }
 
@@ -448,6 +651,19 @@ impl ApplicationImpl for Application {
         // Load plugins and themes from ~/.config/stremio-enhanced/
         let enhanced = Rc::new(RefCell::new(EnhancedManager::new()));
 
+        {
+            let mgr = enhanced.borrow();
+            if mgr.settings.shader_preset != "off" {
+                let paths = crate::app::enhanced::shaders::resolve_preset_paths(
+                    &mgr.shaders_dir,
+                    &mgr.settings.shader_preset,
+                );
+                if !paths.is_empty() {
+                    video.set_glsl_shaders(&paths);
+                }
+            }
+        }
+
         let webview = WebView::default();
         webview.inject_script(PRELOAD_SCRIPT);
 
@@ -463,10 +679,7 @@ impl ApplicationImpl for Application {
             webview.inject_theme_css(&theme.content);
             info!(
                 "Theme loaded: {} v{} by {} ({})",
-                theme.metadata.name,
-                theme.metadata.version,
-                theme.metadata.author,
-                theme.file_name
+                theme.metadata.name, theme.metadata.version, theme.metadata.author, theme.file_name
             );
         }
 
@@ -495,29 +708,54 @@ impl ApplicationImpl for Application {
 
         video.connect_playback_started(clone!(
             #[weak]
+            video,
+            #[weak]
+            webview,
+            #[weak]
             mpris,
             move || {
+                video.set_visible(true);
+                webview.set_transparent(true);
                 mpris.start();
             }
         ));
 
         let thumbnail_tx_ready = thumbnail_tx.clone();
         let active_stream_url_ready = active_stream_url.clone();
-        video.connect_video_ready(move || {
-            let url = active_stream_url_ready.borrow().clone();
-            let _ = thumbnail_tx_ready.send(ThumbnailCmd::SetSource(url));
-        });
+        video.connect_video_ready(clone!(
+            #[weak]
+            video,
+            #[weak]
+            webview,
+            move || {
+                let url = active_stream_url_ready.borrow().clone();
+                let _ = thumbnail_tx_ready.send(ThumbnailCmd::SetSource(url));
+                let chapters = video.get_chapters();
+                if let Ok(json) = serde_json::to_string(&chapters) {
+                    let script =
+                        format!("window.__receiveChapters && window.__receiveChapters({json});");
+                    webview.evaluate_javascript(&script);
+                }
+            }
+        ));
 
         let thumbnail_tx_ended = thumbnail_tx.clone();
         video.connect_playback_ended(clone!(
             #[weak]
             window,
             #[weak]
+            video,
+            #[weak]
             webview,
             #[weak]
             mpris,
             move |reason| {
+                video.set_visible(false);
+                webview.set_transparent(false);
                 let _ = thumbnail_tx_ended.send(ThumbnailCmd::SetSource(None));
+                webview.evaluate_javascript(
+                    "window.__receiveChapters && window.__receiveChapters([]);",
+                );
                 mpris.stop();
                 window.enable_idling();
 
@@ -559,15 +797,21 @@ impl ApplicationImpl for Application {
             #[weak]
             mpris,
             move |webview: WebView, message: &str| {
-                if let Ok(action) = serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
+                if let Ok(action) =
+                    serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message)
+                {
                     handle_enhanced_action(
-                        &window,
-                        &webview,
-                        &enhanced_for_ipc,
-                        &server_for_ipc,
-                        &thumbnail_tx_for_ipc,
-                        &active_stream_url_for_ipc,
-                        dev_mode_for_ipc,
+                        EnhancedActionContext {
+                            app: &app,
+                            window: &window,
+                            webview: &webview,
+                            video: &video,
+                            enhanced: &enhanced_for_ipc,
+                            server: &server_for_ipc,
+                            thumbnail_tx: &thumbnail_tx_for_ipc,
+                            active_stream_url: &active_stream_url_for_ipc,
+                            dev_mode: dev_mode_for_ipc,
+                        },
                         action,
                     );
                     return;
@@ -638,11 +882,17 @@ impl ApplicationImpl for Application {
                                             let _ = thumbnail_tx_for_ipc
                                                 .send(ThumbnailCmd::SetSource(None));
                                         }
+                                        video.set_playing(true);
+                                        video.set_visible(true);
+                                        webview.set_transparent(true);
                                     }
                                     "stop" => {
                                         *active_stream_url_for_ipc.borrow_mut() = None;
                                         let _ = thumbnail_tx_for_ipc
                                             .send(ThumbnailCmd::SetSource(None));
+                                        video.set_playing(false);
+                                        video.set_visible(false);
+                                        webview.set_transparent(false);
                                     }
                                     _ => {}
                                 }
@@ -680,20 +930,26 @@ impl ApplicationImpl for Application {
         let dev_mode_flag = dev_mode;
         webview.connect_enhanced_ipc(clone!(
             #[weak]
+            app,
+            #[weak]
             window,
             #[weak]
-            webview,
-            move |_webview: WebView, message: &str| {
+            video,
+            move |webview: WebView, message: &str| {
                 match serde_json::from_str::<crate::app::enhanced::EnhancedAction>(message) {
                     Ok(action) => {
                         handle_enhanced_action(
-                            &window,
-                            &webview,
-                            &enhanced_ref,
-                            &server_ref,
-                            &thumbnail_tx_ref,
-                            &active_stream_url_ref,
-                            dev_mode_flag,
+                            EnhancedActionContext {
+                                app: &app,
+                                window: &window,
+                                webview: &webview,
+                                video: &video,
+                                enhanced: &enhanced_ref,
+                                server: &server_ref,
+                                thumbnail_tx: &thumbnail_tx_ref,
+                                active_stream_url: &active_stream_url_ref,
+                                dev_mode: dev_mode_flag,
+                            },
                             action,
                         );
                     }
@@ -777,6 +1033,19 @@ impl ApplicationImpl for Application {
         webview.load_uri(&startup_url);
 
         window.present();
+
+        gtk::glib::idle_add_local_once(clone!(
+            #[weak]
+            video,
+            #[weak]
+            webview,
+            move || {
+                if !video.is_playing() {
+                    video.set_visible(false);
+                    webview.set_transparent(false);
+                }
+            }
+        ));
 
         *self.tray.borrow_mut() = Some(tray);
         *self.mpris.borrow_mut() = Some(mpris);

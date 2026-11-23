@@ -1,5 +1,5 @@
 (() => {
-  // src/app/enhanced/src/core/permanentCore.ts
+  // src/core/permanentCore.ts
   var PermanentCore = {
     getState: null,
     dispatch: null
@@ -90,6 +90,8 @@
     fn.__isEnhancedWrapper = true;
     return fn;
   }
+  var sharedGetStateWrapper = createGetStateWrapper();
+  var sharedDispatchWrapper = createDispatchWrapper();
   function setupPermanentCore() {
     try {
       if (originalServices && originalServices.core) {
@@ -104,16 +106,16 @@
           if (!originalServices.core) originalServices.core = {};
           if (!originalServices.core.transport) originalServices.core.transport = {};
           if (!originalServices.core.getState || isOurWrapper(originalServices.core.getState)) {
-            originalServices.core.getState = createGetStateWrapper();
+            originalServices.core.getState = sharedGetStateWrapper;
           }
           if (!originalServices.core.dispatch || isOurWrapper(originalServices.core.dispatch)) {
-            originalServices.core.dispatch = createDispatchWrapper();
+            originalServices.core.dispatch = sharedDispatchWrapper;
           }
           if (!originalServices.core.transport.getState || isOurWrapper(originalServices.core.transport.getState)) {
-            originalServices.core.transport.getState = createGetStateWrapper();
+            originalServices.core.transport.getState = sharedGetStateWrapper;
           }
           if (!originalServices.core.transport.dispatch || isOurWrapper(originalServices.core.transport.dispatch)) {
-            originalServices.core.transport.dispatch = createDispatchWrapper();
+            originalServices.core.transport.dispatch = sharedDispatchWrapper;
           }
           return originalServices;
         },
@@ -131,16 +133,16 @@
           if (!originalCore) originalCore = {};
           if (!originalCore.transport) originalCore.transport = {};
           if (!originalCore.getState || isOurWrapper(originalCore.getState)) {
-            originalCore.getState = createGetStateWrapper();
+            originalCore.getState = sharedGetStateWrapper;
           }
           if (!originalCore.dispatch || isOurWrapper(originalCore.dispatch)) {
-            originalCore.dispatch = createDispatchWrapper();
+            originalCore.dispatch = sharedDispatchWrapper;
           }
           if (!originalCore.transport.getState || isOurWrapper(originalCore.transport.getState)) {
-            originalCore.transport.getState = createGetStateWrapper();
+            originalCore.transport.getState = sharedGetStateWrapper;
           }
           if (!originalCore.transport.dispatch || isOurWrapper(originalCore.transport.dispatch)) {
-            originalCore.transport.dispatch = createDispatchWrapper();
+            originalCore.transport.dispatch = sharedDispatchWrapper;
           }
           return originalCore;
         },
@@ -151,14 +153,16 @@
         configurable: true,
         enumerable: true
       });
+      let captureAttempts = 0;
       const captureInterval = setInterval(() => {
+        captureAttempts++;
         if (window.services && window.services.core) {
           captureCore(window.services.core);
         }
         if (window.core) {
           captureCore(window.core);
         }
-        if (PermanentCore.getState && PermanentCore.dispatch) {
+        if (PermanentCore.getState && PermanentCore.dispatch || captureAttempts >= 40) {
           clearInterval(captureInterval);
         }
       }, 500);
@@ -168,7 +172,7 @@
     }
   }
 
-  // src/app/enhanced/src/utils/dom.ts
+  // src/utils/dom.ts
   function escapeHtml(str) {
     if (!str) return "";
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -177,19 +181,19 @@
     return new Promise((resolve, reject) => {
       const elm = document.querySelector(selector);
       if (elm) return resolve(elm);
-      const observer2 = new MutationObserver(() => {
+      const observer3 = new MutationObserver(() => {
         const found = document.querySelector(selector);
         if (found) {
-          observer2.disconnect();
+          observer3.disconnect();
           resolve(found);
         }
       });
-      observer2.observe(document.body || document.documentElement, {
+      observer3.observe(document.body || document.documentElement, {
         childList: true,
         subtree: true
       });
       setTimeout(() => {
-        observer2.disconnect();
+        observer3.disconnect();
         reject(new Error("Timeout waiting for: " + selector));
       }, timeout);
     });
@@ -218,18 +222,12 @@
     style.id = "stremio-enhanced-injected-styles";
     style.textContent = `
         /* Native Player Transparency Bridge */
-        html:has([class*="player-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
-        html:has([class*="video-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
-        html:has(#stremio-shell-bridge-video):not(#__shell_guard_root):not(#__shell_guard_body),
-        body:has([class*="player-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
-        body:has([class*="video-container"]):not(#__shell_guard_root):not(#__shell_guard_body),
-        html:has([class*="player-container"]) body,
-        html:has([class*="video-container"]) body,
-        html:has([class*="player-container"]) #app,
-        html:has([class*="video-container"]) #app,
-        [class*="player-container"],
-        [class*="video-container"],
-        [class*="video-layer"] {
+        html.stremio-player-active,
+        html.stremio-player-active body,
+        html.stremio-player-active #app,
+        html.stremio-player-active [class*="player-container"],
+        html.stremio-player-active [class*="video-container"],
+        html.stremio-player-active [class*="video-layer"] {
             background: transparent !important;
             background-color: transparent !important;
         }
@@ -329,7 +327,7 @@
     }
   }
 
-  // src/app/enhanced/src/utils/logger.ts
+  // src/utils/logger.ts
   function setupLogger() {
     const origLog = console.log.bind(console);
     const origWarn = console.warn.bind(console);
@@ -352,19 +350,34 @@
         return String(arg);
       }).join(" ");
     }
+    const WATCHED_LOG_TAGS = ["[TheIntroDB]", "[Enhanced]", "[Plugin]", "Episode ID:", "[Aptabase]"];
+    function hasWatchedTag(args) {
+      for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (typeof arg === "string") {
+          for (let j = 0; j < WATCHED_LOG_TAGS.length; j++) {
+            if (arg.includes(WATCHED_LOG_TAGS[j])) return true;
+          }
+        } else if (arg instanceof Error) {
+          const text = `${arg.name || ""} ${arg.message || ""}`;
+          for (let j = 0; j < WATCHED_LOG_TAGS.length; j++) {
+            if (text.includes(WATCHED_LOG_TAGS[j])) return true;
+          }
+        }
+      }
+      return false;
+    }
     console.log = function(...args) {
       origLog(...args);
+      if (!hasWatchedTag(args)) return;
       const msg = formatConsoleArgs(args);
-      if (msg.includes("[TheIntroDB]") || msg.includes("[Enhanced]") || msg.includes("[Plugin]") || msg.includes("Episode ID:") || msg.includes("[Aptabase]")) {
-        postEnhancedMessage("log", { level: "info", message: msg });
-      }
+      postEnhancedMessage("log", { level: "info", message: msg });
     };
     console.warn = function(...args) {
       origWarn(...args);
+      if (!hasWatchedTag(args)) return;
       const msg = formatConsoleArgs(args);
-      if (msg.includes("[TheIntroDB]") || msg.includes("[Enhanced]") || msg.includes("[Plugin]") || msg.includes("[Aptabase]")) {
-        postEnhancedMessage("log", { level: "warn", message: msg });
-      }
+      postEnhancedMessage("log", { level: "warn", message: msg });
     };
     console.error = function(...args) {
       origError(...args);
@@ -379,7 +392,7 @@
     });
   }
 
-  // src/app/enhanced/src/network/fetchInterceptor.ts
+  // src/network/fetchInterceptor.ts
   var pendingHttpRequests = /* @__PURE__ */ new Map();
   function setupFetchInterceptor() {
     window.__receiveHttpResponse = function(id, status, bodyText) {
@@ -450,6 +463,9 @@
         }
         return res;
       } catch (fetchErr) {
+        if (fetchErr?.name === "AbortError" || init?.signal?.aborted) {
+          throw fetchErr;
+        }
         if (isHttp && isGet) {
           console.log(`[Enhanced Fetch] Direct fetch failed for ${url}, trying Rust proxy fallback... (${fetchErr?.message || fetchErr})`);
           try {
@@ -468,10 +484,10 @@
     };
   }
 
-  // src/app/enhanced/src/components/theme-item/theme-item.html
+  // src/components/theme-item/theme-item.html
   var theme_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 theme-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete theme" class="button-container-zVLH6 theme-delete-btn" style="display: {{ deleteDisplay }}; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="{{ buttonClass }} button-container-zVLH6 theme-apply-btn" data-theme="{{ fileName }}" id="theme-btn-{{ fileName }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.5rem 1.25rem; border-radius: 0.35rem; font-weight: 700;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ label }}</div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/app/enhanced/src/utils/templateCache.ts
+  // src/utils/templateCache.ts
   var TemplateCache = class {
     /**
      * Replaces placeholders formatted as {{ key }} with values from the data map.
@@ -486,19 +502,19 @@
     }
   };
 
-  // src/app/enhanced/src/components/modals/plugin-settings-modal.html
+  // src/components/modals/plugin-settings-modal.html
   var plugin_settings_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 800px; height: auto; max-height: 85vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); position: relative; box-sizing: border-box;">\n        <div class="modal-dialog-background-vZpB_"></div>\n        \n        <div tabindex="0" title="Close" class="close-button-container-cmxAp button-container-zVLH6" id="{{ modalId }}-close-x" style="position: absolute; top: 15px; right: 15px; cursor: pointer; z-index: 10; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">\n            <svg class="icon-OYzlV" style="width: 18px; height: 18px; fill: currentcolor;" viewBox="0 0 512 512"><path d="M289.9 256l95-95c4.5-4.5 7-10.6 7.1-17 0-6.4-2.5-12.5-7-17s-10.6-7.1-17-7.1c-3.2 0-6.3.6-9.2 1.8s-5.6 3-7.8 5.2l-95 95-95-95c-3.4-3.3-7.6-5.6-12.3-6.5-4.6-.9-9.4-.4-13.8 1.4-4.4 1.8-8.1 4.9-10.8 8.8-2.6 3.9-4 8.6-4 13.3-.1 3.2.5 6.3 1.7 9.2 1.2 2.9 3 5.6 5.2 7.8l95 95-95 95c-2.8 2.8-4.8 6.2-6 10-1.1 3.8-1.3 7.8-.5 11.6.8 3.9 2.5 7.5 5 10.5 2.5 3.1 5.8 5.4 9.4 6.9 4.4 1.8 9.2 2.3 13.8 1.4 4.7-.9 8.9-3.2 12.3-6.5l95-95 95 95c3.4 3.3 7.6 5.6 12.3 6.5 4.6.9 9.4.4 13.8-1.4 4.4-1.8 8.1-4.9 10.8-8.8 2.6-3.9 4-8.6 4-13.3.1-3.2-.5-6.3-1.7-9.2-1.2-2.9-3-5.6-5.2-7.8z"></path></svg>\n        </div>\n        \n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; max-height: 85vh; padding: 25px 25px 20px 25px; box-sizing: border-box; min-height: 0; flex: 1 1 auto; overflow: hidden;">\n            <div class="title-container-v2mmF" title="{{ pluginName }} Settings" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; color: white; flex-shrink: 0;">{{ pluginName }} Settings</div>\n            \n            <div class="body-container-H80dD" style="flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 12px; box-sizing: border-box;">\n                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">\n                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.5; padding-bottom: 35px; box-sizing: border-box;">\n                        {{ settingsHtml }}\n                    </div>\n                </div>\n            </div>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 15px; display: flex; justify-content: flex-end; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; box-sizing: border-box;">\n                <div tabindex="0" title="Close & Save" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-close-btn" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; font-weight: bold; background-color: var(--accent-color, var(--primary-accent-color, #735bf2));">\n                    <div class="label-wbfsE" style="color: white;">Close</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/app/enhanced/src/components/modals/prompt-modal.html
+  // src/components/modals/prompt-modal.html
   var prompt_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75);">\n    <div class="modal-dialog-container-DZMKq" style="width: 50%; max-width: 600px; height: auto; max-height: 80vh; display: flex; flex-direction: column; background: #16152b; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex; flex-direction: column; padding: 25px;">\n            <div class="title-container-v2mmF" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; color: white;">{{ title }}</div>\n            <div style="font-size: 0.95rem; color: #a0a0a0; margin-bottom: 20px; line-height: 1.4;">{{ message }}</div>\n            \n            <label class="search-bar-k7MXd search-bar-container-p4tSt" style="width: 100%; padding: 0; margin: 0; display: block;">\n                <input id="{{ modalId }}-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh text-input-hnLiz" type="text" value="{{ defaultValue }}" style="width: 100%; box-sizing: border-box; height: 42px; padding: 0 15px; background-color: rgba(255, 255, 255, 0.08); color: white; border: 1px solid transparent; border-radius: 0.35rem; outline: none;">\n            </label>\n            \n            <div class="buttons-container-e_JoR" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 15px;">\n                <div tabindex="0" title="Cancel" class="cancel-button-zuUX6 action-button-eprQG button-container-zVLH6" id="{{ modalId }}-cancel" style="cursor: pointer; padding: 10px 20px; border-radius: 4px; background-color: rgba(255,255,255,0.1);">\n                    <div class="label-wbfsE" style="color: #ccc;">Cancel</div>\n                </div>\n                <div tabindex="0" title="Submit" class="action-button-eprQG button-container-zVLH6 install-button-container-yfcq5" id="{{ modalId }}-save" style="cursor: pointer; padding: 10px 24px; border-radius: 4px; background-color: var(--accent-color, var(--primary-accent-color, #735bf2));">\n                    <div class="label-wbfsE" style="color: white; font-weight: bold;">Submit</div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/app/enhanced/src/components/modals/alert-modal.html
+  // src/components/modals/alert-modal.html
   var alert_modal_default = '<div data-focus-lock-disabled="false" class="addon-details-modal-container-aBFaQ modal-container-OuxEF modal-container" id="{{ modalId }}" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.75); box-sizing: border-box;">\n    <div class="modal-dialog-container-DZMKq" style="width: 90%; max-width: 660px; height: auto; max-height: 85vh; display: flex !important; flex-direction: column !important; background: #16152b; border-radius: 0.75rem; overflow: hidden !important; box-shadow: 0 10px 40px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box !important;">\n        <div class="modal-dialog-content-Xgv7Z" style="display: flex !important; flex-direction: column !important; max-height: 85vh !important; box-sizing: border-box !important; min-height: 0 !important; flex: 1 1 auto !important; overflow: hidden !important;">\n            <div class="title-container-v2mmF" style="padding: 20px 24px 14px 24px; font-size: 1.25rem; font-weight: bold; color: white; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0 !important; box-sizing: border-box !important;">{{ title }}</div>\n            \n            <div class="body-container-H80dD modal-dialog-message-scroll" tabindex="0" style="padding: 18px 24px; overflow-y: auto !important; overflow-x: hidden !important; flex: 1 1 auto !important; min-height: 0 !important; max-height: 52vh !important; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.35) rgba(0,0,0,0.2); box-sizing: border-box !important; overscroll-behavior: contain; outline: none;">\n                <div class="addon-details-container-VdGrt" style="width: 100%; box-sizing: border-box;">\n                    <div class="section-container-N6QHW" style="width: 100%; line-height: 1.6; font-size: 0.95rem; color: #ddd; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text;">{{ message }}</div>\n                </div>\n            </div>\n            \n            <div class="buttons-container-e_JoR" style="padding: 14px 24px 18px 24px; display: flex !important; justify-content: flex-end !important; align-items: center !important; gap: 10px !important; flex-wrap: wrap !important; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); flex-shrink: 0 !important; box-sizing: border-box !important;">\n                {{ buttonsHtml }}\n            </div>\n        </div>\n    </div>\n    <style>\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar {\n            width: 8px !important;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-track {\n            background: rgba(0, 0, 0, 0.25) !important;\n            border-radius: 4px;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb {\n            background: rgba(255, 255, 255, 0.35) !important;\n            border-radius: 4px;\n        }\n        #{{ modalId }} .modal-dialog-message-scroll::-webkit-scrollbar-thumb:hover {\n            background: rgba(255, 255, 255, 0.6) !important;\n        }\n    </style>\n</div>\n';
 
-  // src/app/enhanced/src/components/modals/toast.html
+  // src/components/modals/toast.html
   var toast_default = '<div tabindex="-1" class="toast-item-container-nG0uk button-container-zVLH6 {{ status }}" id="{{ id }}" style="margin-bottom: 10px; display: flex; align-items: center; padding: 12px 18px; border-radius: 6px; background-color: #1f1d36; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 4px solid var(--accent-color, var(--primary-accent-color, #735bf2)); transition: all 0.3s ease;">\n    <div class="icon-container-rjAiH" style="margin-right: 12px; display: flex; align-items: center;">\n        <svg class="icon-Y4I_O" style="width: 20px; height: 20px; fill: none; stroke: currentcolor; stroke-width: 50;" viewBox="0 0 512 512">\n            <path d="M421 128 197 384l-96-96" style="stroke-linecap: round; stroke-linejoin: round;"></path>\n        </svg>\n    </div>\n    <div class="info-container-xD9V6">\n        <div class="title-container-VFReJ" style="font-weight: bold; font-size: 0.95rem;">{{ title }}</div>\n        <div class="message-container-znkCj" style="font-size: 0.85rem; color: #bbb; margin-top: 2px;">{{ message }}</div>\n    </div>\n</div>\n';
 
-  // src/app/enhanced/src/components/modals/modalManager.ts
+  // src/components/modals/modalManager.ts
   var modalManager = {
     openPluginSettingsModal: (pluginFileName, displayNameOrSchema, schemaOrCurrentValues, currentValuesOrOnSave, onSaveCallback) => {
       let displayName;
@@ -669,6 +685,13 @@
       });
     },
     showAlert: (alertType, title, message, buttons = ["OK"]) => {
+      return modalManager._openAlertModal(alertType, title, escapeHtml(message), buttons);
+    },
+    showRichAlert: (alertType, title, bodyHtml, buttons = ["OK"]) => {
+      const wrappedHtml = `<div class="enhanced-rich-html" style="white-space: normal; line-height: 1.55;">${bodyHtml}</div>`;
+      return modalManager._openAlertModal(alertType, title, wrappedHtml, buttons);
+    },
+    _openAlertModal: (alertType, title, renderedMessageHtml, buttons = ["OK"]) => {
       return new Promise((resolve) => {
         const modalId = `alert-modal-${Math.random().toString(36).substring(2, 9)}`;
         document.getElementById(modalId)?.remove();
@@ -686,7 +709,7 @@
         const html = TemplateCache.render(alert_modal_default, {
           modalId,
           title: escapeHtml(title),
-          message: escapeHtml(message),
+          message: renderedMessageHtml,
           buttonsHtml
         });
         document.body.insertAdjacentHTML("beforeend", html);
@@ -725,11 +748,65 @@
         });
         const keyHandler = (e) => {
           if (e.key === "Escape") {
-            closeWithResult(btnList.length > 1 ? 1 : 0);
+            closeWithResult(btnList.length > 1 ? btnList.length - 1 : 0);
           }
         };
         window.addEventListener("keydown", keyHandler);
       });
+    },
+    openProgressModal: (id, title, initialMessage) => {
+      const modalId = `progress-modal-${id.replace(/[^a-zA-Z0-9]/g, "")}`;
+      document.getElementById(modalId)?.remove();
+      const bodyHtml = `
+            <div class="enhanced-rich-html" style="white-space: normal;">
+                <div id="${modalId}-msg" style="font-size:0.95rem;color:#f4f4f5;margin-bottom:12px;">${escapeHtml(initialMessage)}</div>
+                <div style="width:100%;height:10px;border-radius:999px;background:rgba(255,255,255,0.1);overflow:hidden;">
+                    <div id="${modalId}-bar" style="width:0%;height:100%;background:var(--accent-color, var(--primary-accent-color, #735bf2));transition:width 0.18s ease;"></div>
+                </div>
+                <div id="${modalId}-detail" style="margin-top:8px;font-size:0.82rem;color:rgba(255,255,255,0.65);font-variant-numeric:tabular-nums;">0%</div>
+            </div>
+        `;
+      const html = TemplateCache.render(alert_modal_default, {
+        modalId,
+        title: escapeHtml(title),
+        message: bodyHtml,
+        buttonsHtml: ""
+      });
+      document.body.insertAdjacentHTML("beforeend", html);
+      const modal = document.getElementById(modalId);
+      const msgEl = document.getElementById(`${modalId}-msg`);
+      const barEl = document.getElementById(`${modalId}-bar`);
+      const detailEl = document.getElementById(`${modalId}-detail`);
+      const btnsContainer = modal?.querySelector(".buttons-container-e_JoR");
+      const setButtons = (buttons) => {
+        if (!btnsContainer) return;
+        btnsContainer.innerHTML = "";
+        buttons.forEach((btnDef) => {
+          const btn = document.createElement("div");
+          btn.setAttribute("tabindex", "0");
+          btn.className = "button-container-zVLH6 alert-dialog-btn";
+          const bg = btnDef.primary ? "background-color: var(--accent-color, var(--primary-accent-color, #735bf2)); color: white;" : "background-color: rgba(255,255,255,0.1); color: #ccc;";
+          btn.setAttribute("style", `cursor: pointer; padding: 10px 22px; border-radius: 4px; font-weight: 600; ${bg}`);
+          const label = document.createElement("div");
+          label.className = "label-wbfsE";
+          label.textContent = btnDef.label;
+          btn.appendChild(label);
+          btn.addEventListener("click", btnDef.onClick);
+          btnsContainer.appendChild(btn);
+        });
+      };
+      return {
+        update: (percent, message, detail = "") => {
+          const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+          if (msgEl) msgEl.textContent = message;
+          if (barEl) barEl.style.width = `${clamped}%`;
+          if (detailEl) detailEl.textContent = detail || `${clamped}%`;
+        },
+        setButtons,
+        close: () => {
+          modal?.remove();
+        }
+      };
     },
     showToast: (id, title, message, status = "success") => {
       let container = document.querySelector(".toasts-container-oKECy");
@@ -770,7 +847,7 @@
     }
   };
 
-  // src/app/enhanced/src/components/theme-item/themeItem.ts
+  // src/components/theme-item/themeItem.ts
   function createThemeCard(fileName, meta, isApplied, onApply) {
     const buttonClass = isApplied ? "uninstall-button-container-oV4Yo disabled" : "install-button-container-yfcq5";
     const label = isApplied ? "Applied" : "Apply";
@@ -837,18 +914,18 @@ This will permanently remove the theme file from your themes folder.`,
     return card;
   }
 
-  // src/app/enhanced/src/components/marketplace-tab/marketplace-tab.html
+  // src/components/marketplace-tab/marketplace-tab.html
   var marketplace_tab_default = '<div class="marketplace-inline-view" style="width: 100%; box-sizing: border-box;">\n    <div style="margin-bottom: 1rem;">\n        <label title="Search themes/plugins" style="display: flex; align-items: center; background: var(--surface-background-color, rgba(255, 255, 255, 0.06)); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--border-radius, 0.75rem); padding: 0.65rem 1rem; width: 100%; box-sizing: border-box;">\n            <input id="marketplace-search-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh" type="text" placeholder="Search themes and plugins..." value="" style="flex: 1; background: transparent; border: none; outline: none; color: var(--foreground-color-primary, #fff); font-size: 1rem;">\n            <svg viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem; fill: rgba(255, 255, 255, 0.6); margin-left: 0.5rem; flex-shrink: 0;">\n                <path d="M456.882 415.7999999999997l-93.791-89.45c22.605-28.67 34.784-63.57 34.686-99.44 0-91.54-78.142-166.07-174.125-166.07s-174.125 74.53-174.125 166.17c0 91.54 78.142 166.07 174.125 166.07 37.586 0 74.161-11.61 104.256-33.08l93.79 89.45c3.535 3.04 7.91 5.05 12.604 5.79 4.696 0.74 9.515 0.18 13.887-1.61 4.374-1.79 8.117-4.74 10.788-8.49 2.671-3.76 4.157-8.17 4.284-12.7 0.108-6.11-2.165-12.04-6.379-16.64m-357.62-188.79c-0.01-29.43 11.453-57.8 32.162-79.61 20.709-21.82 49.183-35.49 79.884-38.39 30.7-2.9 61.433 5.2 86.221 22.72 24.787 17.52 41.858 43.2 47.891 72.05 6.034 28.86 0.598 58.83-15.249 84.07s-40.972 43.96-70.489 52.53c-29.518 8.55-61.317 6.33-89.213-6.24s-49.895-34.57-61.718-61.75c-6.258-14.38-9.483-29.81-9.488-45.38" style="fill: currentcolor;"></path>\n            </svg>\n        </label>\n    </div>\n\n    <div tabindex="0" title="Submit your themes and plugins here" style="margin-bottom: 1.25rem; text-align: center;">\n        <a href="https://github.com/REVENGE977/stremio-enhanced-registry" target="_blank" rel="noreferrer" class="enhanced-link" style="display: block; text-decoration: none;">\n            <span class="enhanced-link-label">Submit your themes and plugins here</span>\n        </a>\n    </div>\n\n    <div id="mods-list" style="display: flex; flex-direction: column; gap: 1rem; width: 100%; box-sizing: border-box;">\n        <div id="marketplace-loading" style="padding: 2.5rem; text-align: center; color: rgba(255, 255, 255, 0.7); font-size: 1.05rem;">\n            Loading community plugins &amp; themes...\n        </div>\n    </div>\n</div>\n';
 
-  // src/app/enhanced/src/components/marketplace-tab/marketplaceTab.ts
+  // src/components/marketplace-tab/marketplaceTab.ts
   function getMarketplaceTabHtml() {
     return TemplateCache.render(marketplace_tab_default, {});
   }
 
-  // src/app/enhanced/src/components/marketplace-item/marketplace-item.html
+  // src/components/marketplace-item/marketplace-item.html
   var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; box-sizing: border-box; margin: 0 0 1rem 0; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-logo-box" style="width: 4.5rem; height: 4.5rem; flex-shrink: 0; margin-right: 1.25rem; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n        {{ logoBlock }}\n    </div>\n\n    <div class="marketplace-info-container" style="flex: 1; min-width: 0; padding-right: 1.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n            <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n            <span class="marketplace-version" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;{{ versionStyle }}">{{ versionLabel }}</span>\n            <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n        </div>\n        <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n            <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n            <div><b>Author:</b> {{ author }}</div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: auto; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; margin-left: 1rem;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
 
-  // src/app/enhanced/src/components/marketplace-item/marketplaceItem.ts
+  // src/components/marketplace-item/marketplaceItem.ts
   function createMarketplaceCard(mod, type, isInstalled, onAction, resolvedVersion) {
     let logoBlock = "";
     if (mod.preview) {
@@ -919,7 +996,7 @@ This will permanently remove the theme file from your themes folder.`,
     return card;
   }
 
-  // src/app/enhanced/src/marketplace/marketplaceManager.ts
+  // src/marketplace/marketplaceManager.ts
   var REGISTRY_URL = "https://raw.githubusercontent.com/REVENGE977/stremio-enhanced-registry/refs/heads/main/registry.json";
   var currentEnhancedData = {
     plugins: [],
@@ -1177,7 +1254,7 @@ This will permanently remove the theme file from your themes folder.`,
     }
   }
 
-  // src/app/enhanced/src/updates/updateManager.ts
+  // src/updates/updateManager.ts
   var currentEnhancedData2 = { plugins: [], themes: [], activeTheme: null };
   var DEFAULT_CLIENT_VERSION = "1.2.2-enhanced.3";
   var CLIENT_RELEASES_URL = "https://github.com/REVENGE977/stremio-linux-shell/releases/latest";
@@ -1211,14 +1288,27 @@ This will permanently remove the theme file from your themes folder.`,
   ];
   var latestClientVersionCache = null;
   var clientUpdateCheckInProgress = false;
+  var selfUpdateInProgress = false;
   function updateUpdateManagerData(data) {
     currentEnhancedData2 = data;
+  }
+  function getInstallInfo() {
+    return currentEnhancedData2.installInfo || window.__INITIAL_ENHANCED_DATA__?.installInfo || {
+      installType: "native",
+      canSelfUpdate: false,
+      appimagePath: null,
+      arch: "x86_64"
+    };
   }
   function getCurrentClientVersion() {
     return currentEnhancedData2.clientVersion || window.__INITIAL_ENHANCED_DATA__?.clientVersion || DEFAULT_CLIENT_VERSION;
   }
   function getLatestClientVersion() {
     return latestClientVersionCache;
+  }
+  function canSelfUpdateAppImage(release) {
+    const info = getInstallInfo();
+    return Boolean(info.installType === "appimage" && info.canSelfUpdate && release?.appimageDownloadUrl);
   }
   function parseClientVersion(version) {
     const cleaned = version.trim().replace(/^v/i, "");
@@ -1408,45 +1498,58 @@ This will permanently remove the theme file from your themes folder.`,
     return { hasUpdate: false, installedMetaData: installed };
   }
   var inFlightChecks = /* @__PURE__ */ new Set();
-  async function checkForItemUpdatesUI(itemFile, type) {
+  var UPDATE_CHECK_COOLDOWN_MS = 5 * 60 * 1e3;
+  var itemUpdateCache = /* @__PURE__ */ new Map();
+  var lastAutoUpdateCheckAt = 0;
+  var autoUpdateCheckInFlight = false;
+  function bindItemUpdateButton(updateButton, itemFile, type, updateData) {
+    if (!updateData || !updateData.hasUpdate || !updateData.newContent || !updateData.newMetaData) {
+      updateButton.style.display = "none";
+      return false;
+    }
+    updateButton.style.display = "inline-flex";
+    updateButton.setAttribute("title", `Update available: v${updateData.newMetaData.version}`);
+    const label = updateButton.querySelector(".label-OnWh2") || updateButton;
+    label.textContent = `Update (v${updateData.newMetaData.version})`;
+    updateButton.onclick = async (e) => {
+      e.stopPropagation();
+      if (type === "plugin" && updateData.registryVersion !== updateData.newMetaData.version) {
+        const result = await modalManager.showAlert(
+          "warning",
+          "Confirm Update",
+          `This update for ${updateData.installedMetaData?.name || itemFile} (v${updateData.newMetaData.version}) isn't submitted to the registry (Community Marketplace) yet, and thus has not been confirmed safe.
+
+Are you sure you want to update? It's recommended to read the source code of the update before updating.`,
+          ["Yes", "No", "View Source Code"]
+        );
+        if (result === 0) {
+          await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
+        } else if (result === 2 && updateData.updateUrl) {
+          try {
+            window.open(updateData.updateUrl, "_blank");
+          } catch (_) {
+          }
+        }
+      } else {
+        await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
+      }
+    };
+    return true;
+  }
+  async function checkForItemUpdatesUI(itemFile, type, force = false) {
     const updateButton = document.getElementById(`${itemFile}-update`);
     if (!updateButton) return false;
+    const cacheKey = `${type}:${itemFile}`;
+    const cached = !force ? itemUpdateCache.get(cacheKey) : void 0;
+    if (cached && Date.now() - cached.checkedAt < UPDATE_CHECK_COOLDOWN_MS) {
+      return bindItemUpdateButton(updateButton, itemFile, type, cached.result);
+    }
     if (inFlightChecks.has(itemFile)) return false;
     inFlightChecks.add(itemFile);
     try {
       const updateData = await checkUpdateData(itemFile, type);
-      if (!updateData || !updateData.hasUpdate || !updateData.newContent || !updateData.newMetaData) {
-        updateButton.style.display = "none";
-        return false;
-      }
-      updateButton.style.display = "inline-flex";
-      updateButton.setAttribute("title", `Update available: v${updateData.newMetaData.version}`);
-      const label = updateButton.querySelector(".label-OnWh2") || updateButton;
-      label.textContent = `Update (v${updateData.newMetaData.version})`;
-      updateButton.onclick = async (e) => {
-        e.stopPropagation();
-        if (type === "plugin" && updateData.registryVersion !== updateData.newMetaData.version) {
-          const result = await modalManager.showAlert(
-            "warning",
-            "Confirm Update",
-            `This update for ${updateData.installedMetaData?.name || itemFile} (v${updateData.newMetaData.version}) isn't submitted to the registry (Community Marketplace) yet, and thus has not been confirmed safe.
-
-Are you sure you want to update? It's recommended to read the source code of the update before updating.`,
-            ["Yes", "No", "View Source Code"]
-          );
-          if (result === 0) {
-            await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
-          } else if (result === 2 && updateData.updateUrl) {
-            try {
-              window.open(updateData.updateUrl, "_blank");
-            } catch (_) {
-            }
-          }
-        } else {
-          await applyUpdate(type, itemFile, updateData.newContent, updateData.newMetaData);
-        }
-      };
-      return true;
+      itemUpdateCache.set(cacheKey, { checkedAt: Date.now(), result: updateData });
+      return bindItemUpdateButton(updateButton, itemFile, type, updateData);
     } catch (err) {
       console.error(`[Enhanced Update] Error updating UI for ${itemFile}:`, err);
       return false;
@@ -1460,6 +1563,7 @@ Are you sure you want to update? It's recommended to read the source code of the
     if (label) label.textContent = "Updating...";
     if (updateButton) updateButton.style.pointerEvents = "none";
     try {
+      itemUpdateCache.delete(`${type}:${itemFile}`);
       postEnhancedMessage("installMod", {
         modType: type,
         fileName: itemFile,
@@ -1497,6 +1601,14 @@ Are you sure you want to update? It's recommended to read the source code of the
     }
   }
   async function checkForAllUpdates(isManual = false) {
+    const now = Date.now();
+    if (!isManual) {
+      if (autoUpdateCheckInFlight || now - lastAutoUpdateCheckAt < UPDATE_CHECK_COOLDOWN_MS) {
+        return;
+      }
+      autoUpdateCheckInFlight = true;
+      lastAutoUpdateCheckAt = now;
+    }
     if (isManual) {
       modalManager.showToast(
         "check-updates-progress",
@@ -1514,12 +1626,12 @@ Are you sure you want to update? It's recommended to read the source code of the
     try {
       const plugins = currentEnhancedData2.plugins && currentEnhancedData2.plugins.length > 0 ? currentEnhancedData2.plugins : window.__INITIAL_ENHANCED_DATA__?.plugins || [];
       for (const p of plugins) {
-        const hasUp = await checkForItemUpdatesUI(p.fileName, "plugin");
+        const hasUp = await checkForItemUpdatesUI(p.fileName, "plugin", isManual);
         if (hasUp) updateCount++;
       }
       const themes = currentEnhancedData2.themes && currentEnhancedData2.themes.length > 0 ? currentEnhancedData2.themes : window.__INITIAL_ENHANCED_DATA__?.themes || [];
       for (const t of themes) {
-        const hasUp = await checkForItemUpdatesUI(t.fileName, "theme");
+        const hasUp = await checkForItemUpdatesUI(t.fileName, "theme", isManual);
         if (hasUp) updateCount++;
       }
       if (isManual) {
@@ -1540,6 +1652,9 @@ Are you sure you want to update? It's recommended to read the source code of the
         }
       }
     } finally {
+      if (!isManual) {
+        autoUpdateCheckInFlight = false;
+      }
       if (checkBtn) {
         checkBtn.style.pointerEvents = "";
         checkBtn.textContent = "Check for Updates";
@@ -1582,9 +1697,121 @@ Are you sure you want to update? It's recommended to read the source code of the
     }
     return null;
   }
+  function selectAppImageAsset(assets, arch) {
+    if (!Array.isArray(assets)) return null;
+    const isArm = arch.includes("aarch64") || arch.includes("arm64");
+    const archTokens = isArm ? ["aarch64", "arm64"] : ["x86_64", "amd64"];
+    const currentIsDevel = /-devel\b/i.test(getCurrentClientVersion());
+    const candidates = assets.filter((asset) => {
+      const name = String(asset?.name || "");
+      const url = String(asset?.browser_download_url || "");
+      if (!name.toLowerCase().endsWith(".appimage") || !url) return false;
+      if (!currentIsDevel && /-devel-/i.test(name)) return false;
+      return true;
+    });
+    const archMatched = candidates.find((asset) => {
+      const lower = String(asset.name || "").toLowerCase();
+      return archTokens.some((token) => lower.includes(token));
+    });
+    const chosen = archMatched || (candidates.length === 1 && !isArm ? candidates[0] : null);
+    if (!chosen) return null;
+    return {
+      url: String(chosen.browser_download_url),
+      name: String(chosen.name),
+      size: typeof chosen.size === "number" ? chosen.size : void 0
+    };
+  }
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MiB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KiB`;
+    return `${bytes} B`;
+  }
+  function formatInlineMarkdown(escapedLine) {
+    return escapedLine.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, text, url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${text}</a>`;
+    }).replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;font-size:0.86em;">$1</code>').replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  }
+  function renderPatchNotesMarkdown(markdown) {
+    if (!markdown || !markdown.trim()) {
+      return '<div style="color:rgba(255,255,255,0.55);font-style:italic;">No release notes provided for this release.</div>';
+    }
+    const lines = escapeHtml(markdown).split(/\r?\n/);
+    const out = [];
+    let inList = false;
+    const closeList = () => {
+      if (inList) {
+        out.push("</ul>");
+        inList = false;
+      }
+    };
+    for (const raw of lines) {
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        closeList();
+        continue;
+      }
+      if (/^---+$/.test(trimmed)) {
+        closeList();
+        out.push('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.12);margin:10px 0;">');
+        continue;
+      }
+      const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+      if (headingMatch) {
+        closeList();
+        const level = headingMatch[1].length;
+        const size = level === 1 ? "1.08rem" : level === 2 ? "0.98rem" : "0.9rem";
+        out.push(`<div style="font-weight:700;font-size:${size};color:#fff;margin:10px 0 4px;">${formatInlineMarkdown(headingMatch[2])}</div>`);
+        continue;
+      }
+      const bulletMatch = trimmed.match(/^[-*+]\s+(.+)$/);
+      if (bulletMatch) {
+        if (!inList) {
+          out.push('<ul style="margin:4px 0 8px 18px;padding:0;list-style:disc;">');
+          inList = true;
+        }
+        out.push(`<li style="margin:3px 0;color:#e4e4e7;">${formatInlineMarkdown(bulletMatch[1])}</li>`);
+        continue;
+      }
+      closeList();
+      out.push(`<p style="margin:4px 0;color:#d4d4d8;">${formatInlineMarkdown(trimmed)}</p>`);
+    }
+    closeList();
+    return out.join("");
+  }
   async function fetchLatestClientVersion(currentVersion) {
     let bestCandidate = null;
+    let releaseCandidate = null;
     const compareAgainst = currentVersion || getCurrentClientVersion();
+    const arch = getInstallInfo().arch || "x86_64";
+    for (const source of CLIENT_RELEASE_SOURCES) {
+      try {
+        const res = await fetch(source.apiUrl, { cache: "no-store" });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data || data.draft) continue;
+        const version = extractVersionToken(typeof data.name === "string" ? data.name : null) || extractVersionToken(typeof data.tag_name === "string" ? data.tag_name : null);
+        if (version) {
+          const releaseUrl = typeof data.html_url === "string" && data.html_url.trim() ? data.html_url.trim() : source.releaseUrl;
+          const asset = selectAppImageAsset(data.assets, arch);
+          releaseCandidate = {
+            version,
+            releaseUrl,
+            tagName: typeof data.tag_name === "string" ? data.tag_name : void 0,
+            releaseName: typeof data.name === "string" ? data.name : void 0,
+            publishedAt: typeof data.published_at === "string" ? data.published_at : void 0,
+            body: typeof data.body === "string" ? data.body : void 0,
+            appimageDownloadUrl: asset?.url,
+            appimageAssetName: asset?.name,
+            appimageSize: asset?.size
+          };
+          bestCandidate = releaseCandidate;
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Enhanced Client Update] Failed to fetch latest release from ${source.apiUrl}:`, err);
+      }
+    }
     for (const source of CLIENT_VERSION_SOURCES) {
       try {
         const res = await fetch(source.url, { cache: "no-store" });
@@ -1593,7 +1820,14 @@ Are you sure you want to update? It's recommended to read the source code of the
         const version = extractClientVersionFromRemote(text);
         if (version) {
           if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
-            bestCandidate = { version, releaseUrl: source.releaseUrl };
+            bestCandidate = {
+              version,
+              releaseUrl: releaseCandidate?.releaseUrl || source.releaseUrl,
+              tagName: releaseCandidate?.tagName,
+              releaseName: releaseCandidate?.releaseName,
+              publishedAt: releaseCandidate?.publishedAt,
+              body: releaseCandidate?.body
+            };
           }
           if (isNewerVersion(version, compareAgainst)) {
             latestClientVersionCache = bestCandidate;
@@ -1605,28 +1839,126 @@ Are you sure you want to update? It's recommended to read the source code of the
         console.warn(`[Enhanced Client Update] Failed to fetch ${source.url}:`, err);
       }
     }
-    for (const source of CLIENT_RELEASE_SOURCES) {
-      try {
-        const res = await fetch(source.apiUrl, { cache: "no-store" });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (!data || data.draft) continue;
-        const version = extractVersionToken(typeof data.name === "string" ? data.name : null) || extractVersionToken(typeof data.tag_name === "string" ? data.tag_name : null);
-        if (version) {
-          const releaseUrl = typeof data.html_url === "string" && data.html_url.trim() ? data.html_url.trim() : source.releaseUrl;
-          if (!bestCandidate || isNewerVersion(version, bestCandidate.version)) {
-            bestCandidate = { version, releaseUrl };
-          }
-          break;
-        }
-      } catch (err) {
-        console.warn(`[Enhanced Client Update] Failed to fetch latest release from ${source.apiUrl}:`, err);
-      }
-    }
     if (bestCandidate) {
       latestClientVersionCache = bestCandidate;
     }
     return bestCandidate;
+  }
+  async function startAppImageSelfUpdate(release) {
+    if (selfUpdateInProgress) return;
+    if (!release.appimageDownloadUrl) {
+      try {
+        window.open(release.releaseUrl, "_blank");
+      } catch (_) {
+      }
+      return;
+    }
+    selfUpdateInProgress = true;
+    const reqId = "appupd_" + Math.random().toString(36).substring(2, 9);
+    const modal = modalManager.openProgressModal(
+      reqId,
+      `Updating to v${release.version}`,
+      `Preparing download (${release.appimageAssetName || "AppImage"})...`
+    );
+    const prevHandler = window.__receiveAppImageUpdateProgress;
+    const cleanup = () => {
+      selfUpdateInProgress = false;
+      if (prevHandler) {
+        window.__receiveAppImageUpdateProgress = prevHandler;
+      } else {
+        delete window.__receiveAppImageUpdateProgress;
+      }
+    };
+    window.__receiveAppImageUpdateProgress = function(id, evt) {
+      if (id !== reqId) {
+        if (typeof prevHandler === "function") prevHandler(id, evt);
+        return;
+      }
+      const total = evt.totalBytes || release.appimageSize || 0;
+      const detail = total > 0 ? `${evt.percent}% (${formatBytes(evt.downloadedBytes)} / ${formatBytes(total)})` : evt.downloadedBytes > 0 ? `${formatBytes(evt.downloadedBytes)} downloaded` : `${evt.percent}%`;
+      modal.update(evt.percent, evt.message, detail);
+      if (evt.phase === "ready") {
+        cleanup();
+        modal.setButtons([
+          {
+            label: "Restart Now",
+            primary: true,
+            onClick: () => {
+              modal.close();
+              postEnhancedMessage("restartApp");
+            }
+          },
+          {
+            label: "Restart Later",
+            onClick: () => modal.close()
+          }
+        ]);
+      } else if (evt.phase === "error") {
+        cleanup();
+        modal.update(0, `Update failed: ${evt.error || evt.message}`, "You can download the update manually from GitHub Releases.");
+        modal.setButtons([
+          {
+            label: "Open Release Page",
+            primary: true,
+            onClick: () => {
+              modal.close();
+              try {
+                window.open(release.releaseUrl, "_blank");
+              } catch (_) {
+              }
+            }
+          },
+          {
+            label: "Close",
+            onClick: () => modal.close()
+          }
+        ]);
+      }
+    };
+    postEnhancedMessage("selfUpdateAppImage", {
+      id: reqId,
+      downloadUrl: release.appimageDownloadUrl,
+      expectedVersion: release.version
+    });
+  }
+  async function showPatchNotesModal(release) {
+    const target = release || getLatestClientVersion() || await fetchLatestClientVersion();
+    if (!target) {
+      modalManager.showToast("patch-notes-err", "Release Notes Unavailable", "Could not fetch release notes from GitHub.", "fail");
+      return;
+    }
+    const currentVersion = getCurrentClientVersion();
+    const hasUpdate = isNewerVersion(target.version, currentVersion);
+    const selfUpdateReady = hasUpdate && canSelfUpdateAppImage(target);
+    const dateLine = target.publishedAt ? `Published ${new Date(target.publishedAt).toLocaleDateString()}` : "";
+    const html = `
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="padding:3px 9px;border-radius:999px;background:rgba(123,91,245,0.28);color:#dcd4ff;font-weight:700;font-size:0.82rem;">v${escapeHtml(target.version)}</span>
+            ${dateLine ? `<span style="font-size:0.82rem;color:rgba(255,255,255,0.6);">${escapeHtml(dateLine)}</span>` : ""}
+        </div>
+        <div style="padding:12px 14px;border-radius:8px;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.08);">
+            ${renderPatchNotesMarkdown(target.body)}
+        </div>
+    `;
+    const buttons = selfUpdateReady ? ["Download & Install Update", "Open Release Page", "Close"] : ["Open Release Page", "Close"];
+    const choice = await modalManager.showRichAlert(
+      "info",
+      target.releaseName || `Release Notes (v${target.version})`,
+      html,
+      buttons
+    );
+    if (selfUpdateReady) {
+      if (choice === 0) await startAppImageSelfUpdate(target);
+      else if (choice === 1) try {
+        window.open(target.releaseUrl, "_blank");
+      } catch (_) {
+      }
+    } else if (choice === 0) {
+      try {
+        window.open(target.releaseUrl, "_blank");
+      } catch (_) {
+      }
+    }
   }
   async function checkClientUpdate(isManual = false) {
     if (clientUpdateCheckInProgress) return false;
@@ -1673,32 +2005,66 @@ Are you sure you want to update? It's recommended to read the source code of the
       const remBaseStr = remParsed.base.join(".");
       const curEnhNum = curParsed.enhanced.length > 0 ? curParsed.enhanced.join(".") : "0";
       const remEnhNum = remParsed.enhanced.length > 0 ? remParsed.enhanced.join(".") : "0";
-      const details = `A new version of Stremio Linux Shell Enhanced is available!
-
-Installed Version: v${currentVersion} (Base ${curBaseStr}, Enhanced build #${curEnhNum})
-Latest Version: v${remote.version} (Base ${remBaseStr}, Enhanced build #${remEnhNum})
-
-Would you like to open the GitHub Releases page to download the update?`;
-      const choice = await modalManager.showAlert(
+      const info = getInstallInfo();
+      const selfUpdateReady = canSelfUpdateAppImage(remote);
+      const installHint = selfUpdateReady ? `Running as AppImage (${escapeHtml(remote.appimageAssetName || "ready")}). One-click update will download and replace the AppImage automatically.` : info.installType === "flatpak" ? "Running as Flatpak. Update automatically via GNOME Software / KDE Discover or <code>flatpak update</code>, or grab the release below." : "Install or update from the GitHub Releases page (or your distro/AUR package).";
+      const detailsHtml = `
+            <div style="margin-bottom:10px;color:#e4e4e7;">A new version of <strong>Stremio Linux Shell Enhanced</strong> is available!</div>
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.88rem;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.05);margin-bottom:12px;">
+                <div style="color:rgba(255,255,255,0.6);">Installed:</div>
+                <div>v${escapeHtml(currentVersion)} (Base ${escapeHtml(curBaseStr)}, Enhanced #${escapeHtml(curEnhNum)})</div>
+                <div style="color:rgba(255,255,255,0.6);">Latest:</div>
+                <div style="color:#a78bfa;font-weight:700;">v${escapeHtml(remote.version)} (Base ${escapeHtml(remBaseStr)}, Enhanced #${escapeHtml(remEnhNum)})</div>
+            </div>
+            <div style="font-size:0.84rem;color:rgba(255,255,255,0.7);margin-bottom:12px;">${installHint}</div>
+            ${remote.body ? `
+                <div style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.58);margin-bottom:6px;">What's New</div>
+                <div style="padding:10px 12px;border-radius:8px;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.08);">
+                    ${renderPatchNotesMarkdown(remote.body)}
+                </div>
+            ` : ""}
+        `;
+      const buttons = selfUpdateReady ? ["Download & Install Update", "Open Release Page", "Skip This Version", "Later"] : ["Download / Open Release Page", "Skip This Version", "Later"];
+      const choice = await modalManager.showRichAlert(
         "info",
         "Client Update Available",
-        details,
-        ["Download / Open Release Page", "Skip This Version", "Later"]
+        detailsHtml,
+        buttons
       );
-      if (choice === 0) {
-        try {
-          window.open(remote.releaseUrl, "_blank");
-        } catch (_) {
+      if (selfUpdateReady) {
+        if (choice === 0) {
+          await startAppImageSelfUpdate(remote);
+        } else if (choice === 1) {
+          try {
+            window.open(remote.releaseUrl, "_blank");
+          } catch (_) {
+          }
+        } else if (choice === 2) {
+          currentEnhancedData2.skippedClientVersion = remote.version;
+          postEnhancedMessage("skipClientVersion", { version: remote.version });
+          modalManager.showToast(
+            "client-update-skipped",
+            "Version Skipped",
+            `Skipped client update v${remote.version}.`,
+            "info"
+          );
         }
-      } else if (choice === 1) {
-        currentEnhancedData2.skippedClientVersion = remote.version;
-        postEnhancedMessage("skipClientVersion", { version: remote.version });
-        modalManager.showToast(
-          "client-update-skipped",
-          "Version Skipped",
-          `Skipped client update v${remote.version}.`,
-          "info"
-        );
+      } else {
+        if (choice === 0) {
+          try {
+            window.open(remote.releaseUrl, "_blank");
+          } catch (_) {
+          }
+        } else if (choice === 1) {
+          currentEnhancedData2.skippedClientVersion = remote.version;
+          postEnhancedMessage("skipClientVersion", { version: remote.version });
+          modalManager.showToast(
+            "client-update-skipped",
+            "Version Skipped",
+            `Skipped client update v${remote.version}.`,
+            "info"
+          );
+        }
       }
       return true;
     } catch (err) {
@@ -1721,7 +2087,7 @@ Would you like to open the GitHub Releases page to download the update?`;
     }
   }
 
-  // src/app/enhanced/src/themes/themeManager.ts
+  // src/themes/themeManager.ts
   var headMutationObserver = null;
   var currentEnhancedData3 = { plugins: [], themes: [], activeTheme: null };
   function updateThemeManagerData(data) {
@@ -1730,6 +2096,10 @@ Would you like to open the GitHub Releases page to download the update?`;
   function applyThemeCSS(fileName) {
     let activeStyle = document.getElementById("activeTheme");
     if (fileName === "Default" || !fileName) {
+      if (headMutationObserver) {
+        headMutationObserver.disconnect();
+        headMutationObserver = null;
+      }
       if (activeStyle) activeStyle.remove();
       try {
         localStorage.setItem("currentTheme", "Default");
@@ -1809,14 +2179,14 @@ Would you like to open the GitHub Releases page to download the update?`;
       listContainer.querySelectorAll(".theme-apply-btn").forEach((btn) => {
         const targetTheme = (btn.getAttribute("data-theme") || "").toLowerCase();
         const isThisApplied = !currentActive && targetTheme === "default" || currentActive && targetTheme === currentActive;
-        if (isThisApplied) {
-          btn.className = "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Applied";
-        } else {
-          btn.className = "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Apply";
+        const nextClass = isThisApplied ? "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn" : "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
+        const nextLabel = isThisApplied ? "Applied" : "Apply";
+        if (btn.className !== nextClass) {
+          btn.className = nextClass;
+        }
+        const lbl = btn.querySelector(".label-OnWh2");
+        if (lbl && lbl.textContent !== nextLabel) {
+          lbl.textContent = nextLabel;
         }
       });
     }
@@ -1847,14 +2217,14 @@ Would you like to open the GitHub Releases page to download the update?`;
       existingBtns.forEach((btn) => {
         const targetTheme = (btn.getAttribute("data-theme") || "").toLowerCase();
         const isThisApplied = !currentActive && targetTheme === "default" || currentActive && targetTheme === currentActive;
-        if (isThisApplied) {
-          btn.className = "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Applied";
-        } else {
-          btn.className = "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
-          const lbl = btn.querySelector(".label-OnWh2");
-          if (lbl) lbl.textContent = "Apply";
+        const nextClass = isThisApplied ? "uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn" : "install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn";
+        const nextLabel = isThisApplied ? "Applied" : "Apply";
+        if (btn.className !== nextClass) {
+          btn.className = nextClass;
+        }
+        const lbl = btn.querySelector(".label-OnWh2");
+        if (lbl && lbl.textContent !== nextLabel) {
+          lbl.textContent = nextLabel;
         }
       });
       return;
@@ -1876,10 +2246,10 @@ Would you like to open the GitHub Releases page to download the update?`;
     }
   }
 
-  // src/app/enhanced/src/components/plugin-item/plugin-item.html
+  // src/components/plugin-item/plugin-item.html
   var plugin_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 plugin-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1.2rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="-1" id="{{ fileName }}-settings" title="Plugin settings" class="nav-tab-button-tW6qT nav-tab-button-container-dYhs0 button-container-zVLH6 plugin-settings-btn" style="display: {{ settingsDisplay }}; cursor: pointer; margin-right: 0.75rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); transition: background-color 0.2s;">\n                <svg class="icon-TzPrK" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;" viewBox="0 0 512 512">\n                    <path d="M464 250c0-2.7-1-5-3-7l-6-3-26-4-3-2-2-3-1-9v-4l2-2 23-13 5-5v-8l-4-11c-.7-2-2.3-3.7-5-5-2-1.3-4.3-1.7-7-.7l-25 5-4-1-2-2-5-8c-.6-1.1-.8-2.4-.6-3.7.2-1.3.7-2.4 1.6-3.3l17-19 2-7c.7-2.7 0-5-2-7l-7-9c-1.6-2.1-4-3.5-6.6-3.9-2.6-.4-5.3.3-7.4 1.9l-22 13c-.9.9-2.2 1.4-3.5 1.4s-2.6-.5-3.5-1.4l-7-7-2-2v-4l9-24c1.1-2.3 1.3-4.9.6-7.3-.8-2.4-2.4-4.4-4.6-5.7l-10-6c-2-2-4.3-2.3-7-1-2.7.7-5 2-7 4l-16 20-2 2h-4l-9-4-3-2-1-3v-26c.7-2.7 0-5-2-7-1.3-2.7-3.3-4-6-4l-12-2c-2-.7-4.3-.4-7 1l-4 6-9 25-2 3h-13c-1.3.7-2.3.4-3-1l-2-2-9-25c0-2-1.3-4-4-6l-7-1-12 2c-2.7 0-4.7 1.3-6 4-2 2-2.7 4.3-2 7v26l-1 3-3 2-9 4c-2.7.7-4.7 0-6-2l-17-20c-.7-2-2.7-3.3-6-4-2-.7-4.3-.3-7 1l-10 6-5 5v8l10 24v3c0 2-.7 3-2 3l-7 6c-.4.5-.9 1-1.5 1.3-.6.3-1.2.6-1.8.7-.7.1-1.3.1-2-.1-.6-.2-1.2-.5-1.7-.8l-22-14-7-1-7 3-7 9c-1.8 1.9-2.9 4.4-2.9 7s1 5.1 2.9 7l18 20 1 3-1 3-5 9-2 2h-4l-25-4c-2.4-.7-4.9-.4-7.2.7s-3.9 3.1-4.8 5.3l-4 11v7c1.3 3.3 3 5.3 5 6l23 13 2 2v5l-2 8-1 3-3 2-26 4c-2.5.2-4.8 1.4-6.4 3.3-1.7 1.8-2.6 4.3-2.6 6.7v12c0 2.5.9 4.9 2.6 6.7s3.9 3.1 6.4 3.3l26 4 3 2 1 3 2 9v4l-2 2-23 13-5 5v8l4 11c.7 2 2.3 3.7 5 5 2 1.3 4.3 1.7 7 .7l25-5 4 1 2 2 5 8c.7 1.1 1.1 2.3 1.1 3.6 0 1.3-.4 2.5-1.1 3.5l-17 20c-1.7 1.7-2.7 3.9-2.9 6.3-.2 2.4.5 4.8 1.9 6.7l7 9c1.6 2.1 4 3.5 6.6 3.9 2.6.4 5.3-.4 7.4-2l22-13c1.1-.8 2.4-1.1 3.7-.9 1.3.2 2.5.9 3.3 1.9l7 6 2 3v3l-9 24c-1.1 2.3-1.3 4.9-.5 7.3.7 2.4 2.4 4.4 4.5 5.7l10 6c1.1.7 2.4 1.2 3.7 1.5 1.3.2 2.7.2 4-.1 1.3-.3 2.6-.8 3.6-1.6 1.1-.8 2-1.7 2.7-2.8l16-20 5-2 10 4 3 2 1 3v26c-.7 2.7 0 5 2 7 1.3 2.7 3.3 4 6 4l12 2c2.3.2 4.7-.4 6.6-1.7 2-1.3 3.5-3.1 4.4-5.3l9-25 2-2c1.3-1.3 2.3-1.7 3-1.3h10l3 1 2 2 9 25c.7 2 2 3.7 4 5 1.9 1.3 4.3 1.9 6.7 1.7l12-2c2.7-.7 4.7-2 6-4.7.7-2.7.7-5.3.7-7.3v-26l1-3 3-2 9-3c3.3-.7 5.3-.3 6 1.3l17 20c1.4 2 3.5 3.4 5.9 4 2.4.6 4.9.2 7.1-1l10-6 5-5v-8l-10-24v-3l2-3 7-6 4-2 3 1 22 13c2.7 1.3 5 1 7-1l7-9c1-1.3 1.7-2.7 2-4.3.3-1.6.2-3.3-.4-4.8l-17-20-2-3 1-4 5-9 3-2 3-1 25 5c1.2.5 2.6.7 3.9.7 1.3 0 2.6-.4 3.8-1 1.2-.6 2.3-1.4 3.2-2.3.9-1 1.6-2.1 2.1-3.4l3-11v-8l-5-5-23-13-3-2v-5l2-8 1-3 3-2 26-4c2.5-.2 4.8-1.4 6.5-3.3 1.6-1.8 2.5-4.3 2.5-6.7v-12zm-282 94c-1.3 2-3.3 3.7-6 5-2 1.4-4.3 2.3-6.8 2.6-2.4.3-4.9 0-7.2-.8l-6-4c-22.7-24.9-35.3-57.3-35.3-91s12.6-66.1 35.3-91l7-4 7-1c2.5.3 4.9 1.2 7 2.6 2.1 1.4 3.8 3.3 4.9 5.4l46 80c1.4 2.4 2.1 5.2 2.1 8s-.7 5.6-2.1 8l-46 80zm74 47c-10 0-19.3-1-28-3-3.7-.7-7-2.7-9.4-5.6-2.4-2.9-3.7-6.6-3.6-10.3l2-7 46-80 6-6 8-2h92c2.5-.1 5 .4 7.2 1.5s4.2 2.6 5.8 4.6l3 7 1 7c-17 55-68 94-128 94zm7-164l-45-80-2-7c-1.1-3.6 0-7.2 2.2-10.1 2.2-2.9 5.3-5 8.8-5.9 32.7-6.8 66.7-1.2 95.5 15.6 28.8 16.8 50.4 43.7 60.5 75.5l1 7c-.7 3.7-2.7 7-5.6 9.4-2.9 2.4-6.6 3.7-10.4 3.7h-92c-2.7.7-5.3 0-8-2l-6-6.2z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete plugin" class="button-container-zVLH6 plugin-delete-btn" style="display: flex; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="toggle-container-lZfHP button-container-zVLH6 plugin-toggle {{ checkedClass }}" data-plugin="{{ fileName }}" style="outline: none; cursor: pointer;">\n                <div class="toggle-toOWM"></div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
-  // src/app/enhanced/src/components/plugin-item/pluginItem.ts
+  // src/components/plugin-item/pluginItem.ts
   function createPluginCard(fileName, meta, isEnabled, onToggle) {
     const checkedClass = isEnabled ? "checked" : "";
     const pluginBaseName = fileName.replace(/\.plugin\.js$/, "").replace(/\.js$/, "");
@@ -1991,7 +2361,7 @@ This will permanently remove the plugin file from your plugins folder.`,
     return card;
   }
 
-  // src/app/enhanced/src/plugins/pluginManager.ts
+  // src/plugins/pluginManager.ts
   var currentEnhancedData4 = { plugins: [], themes: [], activeTheme: null };
   function updatePluginManagerData(data) {
     currentEnhancedData4 = data;
@@ -2135,7 +2505,7 @@ This will permanently remove the plugin file from your plugins folder.`,
     }
   }
 
-  // src/app/enhanced/src/server/serverManager.ts
+  // src/server/serverManager.ts
   var DEFAULT_SERVER_JS_URL = "https://dl.strem.io/server/v4.21.1/desktop/server.js";
   var CARGO_TOML_URL = "https://raw.githubusercontent.com/Stremio/stremio-service/refs/heads/master/Cargo.toml";
   var currentServerStatus = {
@@ -2494,7 +2864,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     }
   }
 
-  // src/app/enhanced/src/api/stremioEnhancedApi.ts
+  // src/api/stremioEnhancedApi.ts
   var currentEnhancedData5 = { plugins: [], themes: [], activeTheme: null };
   function updateApiData(data) {
     currentEnhancedData5 = data;
@@ -2816,28 +3186,55 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     };
   }
 
-  // src/app/enhanced/src/bridge/transparencyBridge.ts
+  // src/bridge/transparencyBridge.ts
   var isTransparent = false;
   var isEnforcing = false;
   var modifiedElements = /* @__PURE__ */ new Set();
   var observer = null;
-  var pollTimer = null;
-  function isPlayerRoute() {
+  var rafId = null;
+  function isPlayerHash() {
     const hash = window.location.hash || "";
-    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
-    if (document.querySelector('[class*="player-container"]') !== null) return true;
-    if (document.querySelector('[class*="video-container"]') !== null) return true;
-    return false;
+    return hash.startsWith("#/player") || hash.includes("/player/");
+  }
+  function stopTransparencyObserver() {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+  }
+  function startTransparencyObserver() {
+    if (observer) return;
+    const target = document.getElementById("app") || document.body;
+    if (!target) return;
+    observer = new MutationObserver(() => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (isPlayerHash() || isTransparent) {
+          enforceTransparency();
+        }
+      });
+    });
+    observer.observe(target, {
+      childList: true,
+      subtree: true
+    });
   }
   function enforceTransparency(force) {
     if (isEnforcing) return;
     isEnforcing = true;
     try {
-      const shouldBeTransparent = force !== void 0 ? force : isPlayerRoute();
+      const shouldBeTransparent = force !== void 0 ? force : isPlayerHash();
       const html = document.documentElement;
       const body = document.body;
       const app = document.getElementById("app");
-      const playerContainer = document.querySelector('[class*="player-container"]');
+      if (html && html.classList.contains("stremio-player-active") !== shouldBeTransparent) {
+        html.classList.toggle("stremio-player-active", shouldBeTransparent);
+      }
       if (shouldBeTransparent) {
         if (!html || !body) return;
         isTransparent = true;
@@ -2851,6 +3248,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         makeTransparent(html);
         makeTransparent(body);
         if (app) makeTransparent(app);
+        const playerContainer = document.querySelector('[class*="player-container"]');
         if (playerContainer) {
           makeTransparent(playerContainer);
           let curr = playerContainer.parentElement;
@@ -2859,22 +3257,26 @@ Please place server.js in the folder or start Stremio Service. Would you like to
             curr = curr.parentElement;
           }
         }
-      } else if (isTransparent) {
-        isTransparent = false;
-        modifiedElements.forEach((el) => {
-          try {
-            el.style.removeProperty("background");
-            el.style.removeProperty("background-color");
-          } catch (_) {
-          }
-        });
-        modifiedElements.clear();
-        html?.style.removeProperty("background");
-        html?.style.removeProperty("background-color");
-        body?.style.removeProperty("background");
-        body?.style.removeProperty("background-color");
-        app?.style.removeProperty("background");
-        app?.style.removeProperty("background-color");
+        startTransparencyObserver();
+      } else {
+        stopTransparencyObserver();
+        if (isTransparent) {
+          isTransparent = false;
+          modifiedElements.forEach((el) => {
+            try {
+              el.style.removeProperty("background");
+              el.style.removeProperty("background-color");
+            } catch (_) {
+            }
+          });
+          modifiedElements.clear();
+          html?.style.removeProperty("background");
+          html?.style.removeProperty("background-color");
+          body?.style.removeProperty("background");
+          body?.style.removeProperty("background-color");
+          app?.style.removeProperty("background");
+          app?.style.removeProperty("background-color");
+        }
       }
     } finally {
       isEnforcing = false;
@@ -2882,41 +3284,66 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   }
   function setupTransparencyBridge() {
     enforceTransparency();
-    window.addEventListener("hashchange", () => enforceTransparency());
-    window.addEventListener("popstate", () => enforceTransparency());
-    const attachObserver = () => {
-      if (observer) return;
-      const target = document.documentElement || document.body;
-      if (!target) return;
-      observer = new MutationObserver(() => {
-        enforceTransparency();
-      });
-      observer.observe(target, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["class", "style"]
-      });
-    };
-    if (document.documentElement || document.body) {
-      attachObserver();
-    } else {
-      document.addEventListener("DOMContentLoaded", attachObserver, { once: true });
-    }
-    if (!pollTimer) {
-      pollTimer = setInterval(() => {
-        if (isPlayerRoute()) {
-          enforceTransparency(true);
-        }
-      }, 300);
+    const onRouteChange = () => enforceTransparency();
+    window.addEventListener("hashchange", onRouteChange);
+    window.addEventListener("popstate", onRouteChange);
+    if (!document.body) {
+      document.addEventListener("DOMContentLoaded", onRouteChange, { once: true });
     }
   }
 
-  // src/app/enhanced/src/bridge/videoBridge.ts
+  // src/bridge/videoBridge.ts
   var bridgeHost = null;
   var bridgeVideo = null;
   var pipActive = false;
   var pipListenersInitialized = false;
+  var playbackTimer = null;
+  var playerMountObserver = null;
+  var lastPlayerHash = "";
+  function isPlayerHash2() {
+    const hash = window.location.hash || "";
+    return hash.startsWith("#/player") || hash.includes("/player/");
+  }
+  function stopPlayerMountObserver() {
+    if (playerMountObserver) {
+      playerMountObserver.disconnect();
+      playerMountObserver = null;
+    }
+  }
+  function ensureMountedIntoPlayerContainer() {
+    if (!bridgeHost) return;
+    if (!isPlayerHash2()) {
+      stopPlayerMountObserver();
+      return;
+    }
+    const playerContainer = document.querySelector('[class*="player-container"]');
+    if (playerContainer) {
+      if (bridgeHost.parentElement !== playerContainer) {
+        playerContainer.appendChild(bridgeHost);
+        console.log("[Enhanced] Mounted bridge video host to player-container");
+      }
+      stopPlayerMountObserver();
+      return;
+    }
+    if (playerMountObserver) return;
+    const target = document.getElementById("app") || document.body;
+    if (!target) return;
+    playerMountObserver = new MutationObserver(() => {
+      if (!isPlayerHash2()) {
+        stopPlayerMountObserver();
+        return;
+      }
+      const container = document.querySelector('[class*="player-container"]');
+      if (container && bridgeHost) {
+        if (bridgeHost.parentElement !== container) {
+          container.appendChild(bridgeHost);
+          console.log("[Enhanced] Mounted bridge video host to player-container");
+        }
+        stopPlayerMountObserver();
+      }
+    });
+    playerMountObserver.observe(target, { childList: true, subtree: true });
+  }
   var currentTimeVal = 0;
   var durationVal = 0;
   var pausedVal = false;
@@ -2944,6 +3371,30 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     }
     if (bridgeVideo) {
       bridgeVideo.dispatchEvent(new Event(pipActive ? "enterpictureinpicture" : "leavepictureinpicture", { bubbles: true }));
+    }
+    syncPlaybackTimer();
+  }
+  function syncPlaybackTimer() {
+    const shouldRun = isPlayerHash2() && !pausedVal && !endedVal || pipActive;
+    if (shouldRun && !playbackTimer) {
+      playbackTimer = setInterval(() => {
+        if (!isPlayerHash2() && !pipActive) {
+          syncPlaybackTimer();
+          return;
+        }
+        mountBridgeHost();
+        if (pipActive && !isPlayerHash2()) {
+          setPipState(false, true);
+        }
+        const dur = durationVal > 0 ? durationVal : PermanentCore.getState?.("player")?.duration / 1e3 || 0;
+        const cur = currentTimeVal > 0 ? currentTimeVal : PermanentCore.getState?.("player")?.time / 1e3 || 0;
+        if (!pausedVal && (dur > 0 || cur > 0) && bridgeVideo) {
+          bridgeVideo.dispatchEvent(new Event("timeupdate"));
+        }
+      }, 250);
+    } else if (!shouldRun && playbackTimer) {
+      clearInterval(playbackTimer);
+      playbackTimer = null;
     }
   }
   function setupPipWindowInteractions() {
@@ -3083,22 +3534,34 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   }
   function mountBridgeHost() {
     if (!bridgeHost) return;
-    const playerContainer = document.querySelector('[class*="player-container"]');
-    const targetParent = playerContainer || document.body;
+    if (isPlayerHash2()) {
+      ensureMountedIntoPlayerContainer();
+      if (bridgeHost.parentElement) return;
+    } else {
+      stopPlayerMountObserver();
+    }
+    const targetParent = document.body;
     if (targetParent && bridgeHost.parentElement !== targetParent) {
       targetParent.appendChild(bridgeHost);
-      console.log(`[Enhanced] Mounted bridge video host to ${playerContainer ? "player-container" : "document.body"}`);
+      console.log("[Enhanced] Mounted bridge video host to document.body");
     }
   }
   function ensureBridgeVideo() {
+    const hash = window.location.hash || "";
+    const inPlayer = isPlayerHash2();
+    if (inPlayer && hash !== lastPlayerHash) {
+      endedVal = false;
+      lastPlayerHash = hash;
+    } else if (!inPlayer) {
+      lastPlayerHash = "";
+    }
     mountBridgeHost();
     enforceTransparency();
-    if (pipActive) {
-      const inPlayer = window.location.hash.startsWith("#/player") || Boolean(document.querySelector('[class*="player-container"]'));
-      if (!inPlayer) {
-        setPipState(false, true);
-      }
+    if (pipActive && !inPlayer) {
+      setPipState(false, true);
     }
+    syncPlaybackTimer();
+    if (!inPlayer) return;
     const dur = durationVal > 0 ? durationVal : PermanentCore.getState?.("player")?.duration / 1e3 || 0;
     if (dur > 0 && bridgeVideo) {
       bridgeVideo.dispatchEvent(new Event("loadedmetadata"));
@@ -3139,9 +3602,9 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       const origElemQS = Element.prototype.querySelector;
       Document.prototype.querySelector = function(selectors) {
         const result = origDocQS.call(this, selectors);
-        if (!result && bridgeVideo && typeof selectors === "string") {
+        if (!result && bridgeVideo && typeof selectors === "string" && isPlayerHash2()) {
           if (selectors === "video" || selectors.endsWith(" video") || selectors.includes("player-container") && selectors.includes("video")) {
-            if (document.querySelector('[class*="player-container"]') || window.location.hash.includes("player")) {
+            if (origDocQS.call(document, '[class*="player-container"]') || window.location.hash.includes("player")) {
               return bridgeVideo;
             }
           }
@@ -3149,14 +3612,14 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         return result;
       };
       Document.prototype.querySelectorAll = function(selectors) {
-        if (typeof selectors === "string" && selectors.includes("video")) {
+        if (typeof selectors === "string" && selectors.includes("video") && isPlayerHash2()) {
           mountBridgeHost();
         }
         return origDocQSA.call(this, selectors);
       };
       Element.prototype.querySelector = function(selectors) {
         const result = origElemQS.call(this, selectors);
-        if (!result && bridgeVideo && typeof selectors === "string") {
+        if (!result && bridgeVideo && typeof selectors === "string" && isPlayerHash2()) {
           if (selectors === "video" || selectors.endsWith(" video")) {
             if (this.matches?.('[class*="player-container"]') || this.closest?.('[class*="player-container"]')) {
               return bridgeVideo;
@@ -3507,6 +3970,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
                 pausedVal = newPaused;
                 bridgeVideo.dispatchEvent(new Event(pausedVal ? "pause" : "play"));
               }
+              syncPlaybackTimer();
             } else if (name === "seeking") {
               seekingVal = Boolean(data);
               if (seekingVal) {
@@ -3520,8 +3984,11 @@ Please place server.js in the folder or start Stremio Service. Would you like to
                 srcVal = String(data);
                 endedVal = false;
                 bridgeVideo.setAttribute("src", srcVal);
+                mountBridgeHost();
                 bridgeVideo.dispatchEvent(new Event("loadstart"));
                 bridgeVideo.dispatchEvent(new Event("loadedmetadata"));
+                enforceTransparency(true);
+                syncPlaybackTimer();
               }
             } else if (name === "speed") {
               speedVal = Number(data) || 1;
@@ -3544,6 +4011,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
             }
           } else if (action === "mpv-event-ended") {
             endedVal = true;
+            syncPlaybackTimer();
             bridgeVideo.dispatchEvent(new Event("ended"));
           }
         } catch (_) {
@@ -3556,24 +4024,13 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       document.addEventListener("DOMContentLoaded", mountBridgeHost, { once: true });
       window.addEventListener("load", mountBridgeHost, { once: true });
     }
-    setInterval(() => {
-      mountBridgeHost();
-      if (pipActive) {
-        const inPlayer = window.location.hash.startsWith("#/player") || Boolean(document.querySelector('[class*="player-container"]'));
-        if (!inPlayer) {
-          setPipState(false, true);
-        }
-      }
-      const dur = durationVal > 0 ? durationVal : PermanentCore.getState?.("player")?.duration / 1e3 || 0;
-      const cur = currentTimeVal > 0 ? currentTimeVal : PermanentCore.getState?.("player")?.time / 1e3 || 0;
-      if (!pausedVal && (dur > 0 || cur > 0) && bridgeVideo) {
-        bridgeVideo.dispatchEvent(new Event("timeupdate"));
-      }
-    }, 250);
+    window.addEventListener("hashchange", syncPlaybackTimer);
+    window.addEventListener("popstate", syncPlaybackTimer);
+    syncPlaybackTimer();
     return bridgeVideo;
   }
 
-  // src/app/enhanced/src/bridge/mediaCapabilitiesBridge.ts
+  // src/bridge/mediaCapabilitiesBridge.ts
   function setupMediaCapabilitiesBridge() {
     const isAdvancedCodec = (codecStr) => {
       if (!codecStr) return false;
@@ -3610,7 +4067,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     }
   }
 
-  // src/app/enhanced/src/components/settings/settingsStyles.ts
+  // src/components/settings/settingsStyles.ts
   var SETTINGS_STYLE_ID = "enhanced-settings-style";
   var SETTINGS_STYLES = `
 .enhanced-page-container { display: none; }
@@ -3711,9 +4168,95 @@ Please place server.js in the folder or start Stremio Service. Would you like to
 .enhanced-link a { color: inherit; text-decoration: none; }
 .enhanced-link-label { color: var(--foreground-color-primary, var(--primary-foreground-color, #fff)); font-weight: 600; }
 .enhanced-link:hover { background: var(--accent-color, var(--primary-accent-color, #7b5bf5)); }
+
+.enhanced-shader-group-title {
+    color: var(--foreground-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0.9rem 0 0.45rem 0.2rem;
+}
+.enhanced-shader-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 0.5rem;
+}
+.enhanced-shader-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--border-radius, 0.75rem);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--surface-background-color, var(--overlay-color, rgba(255, 255, 255, 0.05)));
+    color: var(--foreground-color-primary, var(--primary-foreground-color, #fff));
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s, opacity 0.2s;
+}
+.enhanced-shader-card:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.09);
+}
+.enhanced-shader-card.active {
+    border-color: var(--accent-color, var(--primary-accent-color, #7b5bf5));
+    background: rgba(123, 91, 245, 0.18);
+}
+.enhanced-shader-card:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+.enhanced-shader-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.enhanced-shader-card-name {
+    font-weight: 600;
+    font-size: 0.94rem;
+}
+.enhanced-shader-card-desc {
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: var(--foreground-color-secondary, rgba(255, 255, 255, 0.58));
+}
+.enhanced-shader-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.14rem 0.5rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+.enhanced-shader-badge.ready {
+    background: rgba(81, 207, 102, 0.18);
+    color: #8ce99a;
+}
+.enhanced-shader-badge.download {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.82);
+}
+.enhanced-shader-badge.loading {
+    background: rgba(252, 196, 25, 0.2);
+    color: #ffe066;
+}
+.enhanced-patch-notes {
+    margin-top: 0.9rem;
+    padding: 1rem 1.15rem;
+    border-radius: var(--border-radius, 0.75rem);
+    background: var(--surface-background-color, var(--overlay-color, rgba(255, 255, 255, 0.05)));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
 `;
 
-  // src/app/enhanced/src/utils/icons.ts
+  // src/utils/icons.ts
   var THEME_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 512 512">
     <path d="M204.3 5C104.9 24.4 24.4 104.9 5 204.3c-26.1 133.4 75.3 247.9 203 247.9 24.3 0 44-19.7 44-44 0-11.4-4.3-21.8-11.4-29.6-7-7.8-11.6-18.1-11.6-29.4 0-24.3 19.7-44 44-44h52.8c97 0 175.2-78.2 175.2-175.2C501 77.2 360.5-25.3 204.3 5zM112 256c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64-96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm128 0c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm64 96c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32z"></path>
 </svg>`;
@@ -3736,18 +4279,245 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"></path>
 </svg>`;
 
-  // src/app/enhanced/src/player/thumbnailPreview.ts
+  // src/player/chapterMarkers.ts
+  var chapters = [];
+  var chapterMarkersEnabled = true;
+  var initialized = false;
+  var observer2 = null;
+  var renderScheduled = false;
+  function isPlayerRoute() {
+    const hash = window.location.hash || "";
+    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
+    return Boolean(document.documentElement?.classList.contains("stremio-player-active"));
+  }
+  function syncChapterObserver() {
+    const shouldObserve = isPlayerRoute() && chapterMarkersEnabled && chapters.length > 0;
+    if (shouldObserve) {
+      if (observer2 || !document.body) return;
+      const target = document.getElementById("app") || document.body;
+      observer2 = new MutationObserver(() => {
+        if (isPlayerRoute() && chapterMarkersEnabled && chapters.length > 0) {
+          scheduleRenderChapterTicks();
+        } else {
+          syncChapterObserver();
+        }
+      });
+      observer2.observe(target, { childList: true, subtree: true });
+    } else if (observer2) {
+      observer2.disconnect();
+      observer2 = null;
+    }
+  }
+  function isEditableTarget(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+  }
+  function getDurationSeconds() {
+    const coreDur = Number(PermanentCore.getState?.("player")?.duration || 0) / 1e3;
+    if (Number.isFinite(coreDur) && coreDur > 0) return coreDur;
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    const bridgeDur = Number(bridge?.duration || 0);
+    return Number.isFinite(bridgeDur) && bridgeDur > 0 ? bridgeDur : 0;
+  }
+  function getCurrentTimeSeconds() {
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    const bridgeTime = Number(bridge?.currentTime || 0);
+    if (Number.isFinite(bridgeTime) && bridgeTime >= 0) return bridgeTime;
+    const coreTime = Number(PermanentCore.getState?.("player")?.time || 0) / 1e3;
+    return Number.isFinite(coreTime) && coreTime >= 0 ? coreTime : 0;
+  }
+  function isChapterMarkersEnabled() {
+    return chapterMarkersEnabled;
+  }
+  function getChapters() {
+    return chapters;
+  }
+  function getChapterAtTime(timeSec) {
+    if (!chapterMarkersEnabled || chapters.length === 0 || !Number.isFinite(timeSec)) {
+      return null;
+    }
+    let active = null;
+    for (const ch of chapters) {
+      if (ch.time <= timeSec + 0.25) {
+        active = ch;
+      } else {
+        break;
+      }
+    }
+    return active;
+  }
+  function updateChapterMarkersData(data) {
+    if (typeof data.chapterMarkers === "boolean") {
+      chapterMarkersEnabled = data.chapterMarkers;
+      syncChapterMarkersToggle();
+      syncChapterObserver();
+      scheduleRenderChapterTicks();
+    }
+  }
+  function syncChapterMarkersToggle() {
+    const toggle = document.getElementById("chaptermarkersToggle");
+    if (!toggle) return;
+    toggle.classList.toggle("checked", chapterMarkersEnabled);
+    toggle.setAttribute("aria-checked", chapterMarkersEnabled ? "true" : "false");
+  }
+  function scheduleRenderChapterTicks() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      renderChapterTicks();
+    });
+  }
+  function renderChapterTicks() {
+    const existingOverlay = document.getElementById("stremio-enhanced-chapter-overlay");
+    if (!chapterMarkersEnabled || chapters.length === 0 || !isPlayerRoute()) {
+      existingOverlay?.remove();
+      return;
+    }
+    const slider = document.querySelector(
+      '[class*="seek-bar-container-"] [class*="slider-container-"]'
+    );
+    if (!slider) return;
+    const seekContainer = slider.closest('[class*="seek-bar-container-"]');
+    if (slider.classList.contains("disabled") || seekContainer?.querySelector('[class*="live-badge-layer-"]')) {
+      existingOverlay?.remove();
+      return;
+    }
+    const duration = getDurationSeconds();
+    if (!Number.isFinite(duration) || duration <= 0) {
+      existingOverlay?.remove();
+      return;
+    }
+    if (window.getComputedStyle(slider).position === "static") {
+      slider.style.position = "relative";
+    }
+    let overlay = slider.querySelector("#stremio-enhanced-chapter-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "stremio-enhanced-chapter-overlay";
+      Object.assign(overlay.style, {
+        position: "absolute",
+        inset: "0",
+        pointerEvents: "none",
+        zIndex: "4",
+        overflow: "visible"
+      });
+      slider.appendChild(overlay);
+    }
+    const signature = `${duration.toFixed(1)}|${chapters.map((c) => `${c.time.toFixed(2)}:${c.title}`).join(",")}`;
+    if (overlay.dataset.signature === signature) return;
+    overlay.dataset.signature = signature;
+    overlay.innerHTML = "";
+    for (const chapter of chapters) {
+      if (chapter.time <= 0.5 || chapter.time >= duration - 0.5) continue;
+      const pct = Math.min(99.5, Math.max(0.5, chapter.time / duration * 100));
+      const tick = document.createElement("div");
+      tick.className = "stremio-enhanced-chapter-tick";
+      Object.assign(tick.style, {
+        position: "absolute",
+        left: `${pct}%`,
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "2px",
+        height: "10px",
+        borderRadius: "1px",
+        background: "rgba(255, 255, 255, 0.78)",
+        boxShadow: "0 0 3px rgba(0, 0, 0, 0.75)",
+        pointerEvents: "none"
+      });
+      overlay.appendChild(tick);
+    }
+  }
+  function jumpChapter(direction) {
+    if (!chapterMarkersEnabled || chapters.length === 0) return;
+    const now = getCurrentTimeSeconds();
+    let target = null;
+    if (direction > 0) {
+      target = chapters.find((c) => c.time > now + 1) || null;
+    } else {
+      for (let i = chapters.length - 1; i >= 0; i--) {
+        if (chapters[i].time < now - 2) {
+          target = chapters[i];
+          break;
+        }
+      }
+      if (!target && chapters.length > 0) {
+        target = chapters[0];
+      }
+    }
+    if (!target) return;
+    try {
+      window.ipc?.postMessage?.(
+        JSON.stringify({
+          type: 6,
+          args: ["mpv-command", ["seek", String(target.time), "absolute"]]
+        })
+      );
+      modalManager.showToast("chapter-jump", "Chapter", target.title, "info");
+    } catch (_) {
+    }
+  }
+  function setupChapterMarkers() {
+    if (initialized) return;
+    initialized = true;
+    window.__receiveChapters = function(list) {
+      chapters = Array.isArray(list) ? list.filter((c) => c && typeof c.time === "number" && Number.isFinite(c.time)).map((c) => ({ title: String(c.title || "Chapter"), time: c.time })).sort((a, b) => a.time - b.time) : [];
+      const overlay = document.getElementById("stremio-enhanced-chapter-overlay");
+      if (overlay) delete overlay.dataset.signature;
+      syncChapterObserver();
+      scheduleRenderChapterTicks();
+    };
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (!isPlayerRoute() || !chapterMarkersEnabled || isEditableTarget(e.target)) return;
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            e.stopPropagation();
+            jumpChapter(1);
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            e.stopPropagation();
+            jumpChapter(-1);
+          }
+        }
+      },
+      true
+    );
+    const onRouteChange = () => {
+      if (isPlayerRoute()) {
+        postEnhancedMessage("getChapters");
+        syncChapterObserver();
+        scheduleRenderChapterTicks();
+      } else {
+        chapters = [];
+        syncChapterObserver();
+        document.getElementById("stremio-enhanced-chapter-overlay")?.remove();
+      }
+    };
+    window.addEventListener("hashchange", onRouteChange);
+    window.addEventListener("popstate", onRouteChange);
+    if (isPlayerRoute()) {
+      postEnhancedMessage("getChapters");
+    }
+  }
+
+  // src/player/thumbnailPreview.ts
   var MAX_JS_CACHE_ENTRIES = 150;
   var REQUEST_THROTTLE_MS = 80;
   var NORMAL_PREVIEW_WIDTH = 240;
   var PIP_PREVIEW_WIDTH = 160;
   var previewEnabled = true;
-  var initialized = false;
+  var initialized2 = false;
+  var inPlayerRoute = false;
   var currentStreamKey = "";
   var thumbCache = /* @__PURE__ */ new Map();
   var previewEl = null;
   var frameWrapEl = null;
   var imgEl = null;
+  var chapterEl = null;
   var timeEl = null;
   var isVisible = false;
   var draggingSlider = null;
@@ -3776,7 +4546,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     toggle.classList.toggle("checked", previewEnabled);
     toggle.setAttribute("aria-checked", previewEnabled ? "true" : "false");
   }
-  function getDurationSeconds() {
+  function getDurationSeconds2() {
     const coreDur = Number(PermanentCore.getState?.("player")?.duration || 0) / 1e3;
     if (Number.isFinite(coreDur) && coreDur > 0) return coreDur;
     const bridge = document.getElementById("stremio-shell-bridge-video");
@@ -3863,6 +4633,23 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         opacity: "0",
         transition: "opacity 0.1s ease"
       });
+      chapterEl = document.createElement("div");
+      Object.assign(chapterEl.style, {
+        width: "100%",
+        maxWidth: `${NORMAL_PREVIEW_WIDTH}px`,
+        textAlign: "center",
+        padding: "5px 10px 0px",
+        fontSize: "0.78rem",
+        fontWeight: "600",
+        color: "rgba(205, 196, 255, 0.96)",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        display: "none",
+        lineHeight: "1.25"
+      });
       timeEl = document.createElement("div");
       Object.assign(timeEl.style, {
         width: "100%",
@@ -3880,6 +4667,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       timeEl.textContent = "0:00";
       frameWrapEl.appendChild(imgEl);
       previewEl.appendChild(frameWrapEl);
+      previewEl.appendChild(chapterEl);
       previewEl.appendChild(timeEl);
     }
     const playerContainer = document.querySelector('[class*="player-container"]');
@@ -3945,12 +4733,15 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     if (!seekContainer) return true;
     return seekContainer.querySelector('[class*="live-badge-layer-"]') !== null;
   }
+  function canShowTooltip() {
+    return previewEnabled || isChapterMarkersEnabled() && getChapters().length > 0;
+  }
   function updatePreviewAtPointer(slider, clientX) {
-    if (!previewEnabled || isLiveSeekBar(slider)) {
+    if (!canShowTooltip() || isLiveSeekBar(slider)) {
       hidePreview();
       return;
     }
-    const duration = getDurationSeconds();
+    const duration = getDurationSeconds2();
     if (!Number.isFinite(duration) || duration <= 0) {
       hidePreview();
       return;
@@ -3968,23 +4759,41 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     lastHoveredTime = targetTime;
     ensurePreviewElement();
     if (!previewEl || !frameWrapEl || !imgEl || !timeEl) return;
-    const streamKey = ensureStreamCacheScope();
-    const qTime = quantizeTime(targetTime, duration);
-    const cacheKey = makeCacheKey(streamKey, qTime, previewW);
-    const cached = thumbCache.get(cacheKey);
-    if (cached) {
-      applyThumbToDom(cached);
-    } else {
-      const defaultH = lastDisplayFrameSize ? Math.round(previewW * lastDisplayFrameSize.height / lastDisplayFrameSize.width) : Math.round(previewW * 9 / 16);
-      frameWrapEl.style.width = `${previewW}px`;
-      frameWrapEl.style.height = `${defaultH}px`;
-      if (!imgEl.getAttribute("src")) {
-        imgEl.style.opacity = "0";
+    if (previewEnabled) {
+      frameWrapEl.style.display = "flex";
+      const streamKey = ensureStreamCacheScope();
+      const qTime = quantizeTime(targetTime, duration);
+      const cacheKey = makeCacheKey(streamKey, qTime, previewW);
+      const cached = thumbCache.get(cacheKey);
+      if (cached) {
+        applyThumbToDom(cached);
+      } else {
+        const defaultH = lastDisplayFrameSize ? Math.round(previewW * lastDisplayFrameSize.height / lastDisplayFrameSize.width) : Math.round(previewW * 9 / 16);
+        frameWrapEl.style.width = `${previewW}px`;
+        frameWrapEl.style.height = `${defaultH}px`;
+        if (!imgEl.getAttribute("src")) {
+          imgEl.style.opacity = "0";
+        }
+        dispatchThumbnailRequest(targetTime, previewW);
       }
-      dispatchThumbnailRequest(targetTime, previewW);
+    } else {
+      frameWrapEl.style.display = "none";
+    }
+    const chapter = isChapterMarkersEnabled() ? getChapterAtTime(targetTime) : null;
+    if (chapterEl) {
+      if (chapter && chapter.title) {
+        chapterEl.textContent = chapter.title;
+        chapterEl.style.maxWidth = `${previewEnabled ? previewW : 240}px`;
+        chapterEl.style.display = "block";
+        timeEl.style.borderTop = "none";
+      } else {
+        chapterEl.style.display = "none";
+        timeEl.style.borderTop = "1px solid rgba(255, 255, 255, 0.08)";
+      }
     }
     timeEl.textContent = formatTimestamp(targetTime);
-    const cardWidth = Number.parseFloat(frameWrapEl.style.width) || previewW;
+    previewEl.style.display = "flex";
+    const cardWidth = previewEnabled ? Number.parseFloat(frameWrapEl.style.width) || previewW : Math.max(110, previewEl.offsetWidth || 160);
     const clampedLeft = Math.min(
       window.innerWidth - cardWidth - 12,
       Math.max(12, clientX - cardWidth / 2)
@@ -3992,15 +4801,20 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     const bottomOffset = Math.max(12, window.innerHeight - rect.top + 14);
     previewEl.style.left = `${Math.round(clampedLeft)}px`;
     previewEl.style.bottom = `${Math.round(bottomOffset)}px`;
-    previewEl.style.display = "flex";
     isVisible = true;
   }
+  function updateInPlayerRoute() {
+    const hash = window.location.hash || "";
+    inPlayerRoute = hash.startsWith("#/player") || hash.includes("/player/") || Boolean(document.documentElement?.classList.contains("stremio-player-active"));
+    return inPlayerRoute;
+  }
   function setupThumbnailPreview() {
-    if (initialized) return;
-    initialized = true;
+    if (initialized2) return;
+    initialized2 = true;
+    updateInPlayerRoute();
     window.__receiveThumbnailPreview = function(payload) {
       if (!payload || !payload.dataUrl || !Number.isFinite(payload.time)) return;
-      const duration = getDurationSeconds();
+      const duration = getDurationSeconds2();
       const streamKey = ensureStreamCacheScope();
       const widthKey = payload.width || lastPreviewWidth || NORMAL_PREVIEW_WIDTH;
       const qTime = quantizeTime(payload.time, duration);
@@ -4024,7 +4838,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       }
     };
     document.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || !inPlayerRoute && !updateInPlayerRoute()) return;
       const slider = findSeekSlider(e.target);
       if (slider) {
         draggingSlider = slider;
@@ -4032,7 +4846,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       }
     }, true);
     document.addEventListener("pointermove", (e) => {
-      if (!previewEnabled) {
+      if (!inPlayerRoute || !canShowTooltip()) {
         if (isVisible) hidePreview();
         return;
       }
@@ -4070,8 +4884,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       hidePreview();
     });
     const onRouteChange = () => {
-      const inPlayer = window.location.hash.startsWith("#/player") || document.querySelector('[class*="player-container"]') !== null;
-      if (!inPlayer) {
+      if (!updateInPlayerRoute()) {
         draggingSlider = null;
         hidePreview();
       }
@@ -4080,7 +4893,311 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     window.addEventListener("popstate", onRouteChange);
   }
 
-  // src/app/enhanced/src/components/settings/settingsInjector.ts
+  // src/player/shaderControls.ts
+  var currentShaderPreset = "off";
+  var shaderPresets = [];
+  var applyingPresetId = null;
+  var initialized3 = false;
+  var popoverEl = null;
+  var osdEl = null;
+  var osdTimer = null;
+  var pendingShaderRequests = /* @__PURE__ */ new Map();
+  function isPlayerRoute2() {
+    const hash = window.location.hash || "";
+    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
+    return document.querySelector('[class*="player-container"]') !== null;
+  }
+  function isEditableTarget2(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+  }
+  function getActiveShaderPresetName() {
+    const found = shaderPresets.find((p) => p.id === currentShaderPreset);
+    return found ? found.name : currentShaderPreset === "off" ? "Off (Default)" : currentShaderPreset;
+  }
+  function updateShaderControlsData(data) {
+    if (typeof data.shaderPreset === "string" && data.shaderPreset) {
+      currentShaderPreset = data.shaderPreset;
+    }
+    if (Array.isArray(data.shaderPresets)) {
+      shaderPresets = data.shaderPresets;
+    }
+    syncShaderSettingsUI();
+    renderShaderPopover();
+  }
+  function showPlayerOsd(text) {
+    const container = document.querySelector('[class*="player-container"]') || document.body;
+    if (!container) return;
+    if (!osdEl) {
+      osdEl = document.createElement("div");
+      osdEl.id = "stremio-enhanced-shader-osd";
+      Object.assign(osdEl.style, {
+        position: "fixed",
+        top: "20px",
+        right: "24px",
+        zIndex: "2147483200",
+        padding: "8px 14px",
+        borderRadius: "10px",
+        backgroundColor: "rgba(14, 13, 22, 0.88)",
+        border: "1px solid rgba(255, 255, 255, 0.16)",
+        color: "#fff",
+        fontSize: "0.88rem",
+        fontWeight: "600",
+        boxShadow: "0 8px 28px rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(12px)",
+        pointerEvents: "none",
+        opacity: "0",
+        transition: "opacity 0.18s ease"
+      });
+    }
+    if (osdEl.parentElement !== container) {
+      container.appendChild(osdEl);
+    }
+    osdEl.textContent = text;
+    osdEl.style.opacity = "1";
+    if (osdTimer) clearTimeout(osdTimer);
+    osdTimer = setTimeout(() => {
+      if (osdEl) osdEl.style.opacity = "0";
+    }, 2400);
+  }
+  async function applyShaderPreset(presetId) {
+    if (applyingPresetId) return false;
+    applyingPresetId = presetId;
+    syncShaderSettingsUI();
+    renderShaderPopover();
+    const preset = shaderPresets.find((p) => p.id === presetId);
+    if (preset && preset.id !== "off" && !preset.installed) {
+      modalManager.showToast(
+        "shader-downloading",
+        "Downloading Shaders",
+        `Installing ${preset.name} GLSL shader(s)...`,
+        "info"
+      );
+      if (isPlayerRoute2()) {
+        showPlayerOsd(`Downloading ${preset.name}...`);
+      }
+    }
+    const result = await new Promise((resolve) => {
+      const id = "sh_" + Math.random().toString(36).substring(2, 9);
+      const timer = setTimeout(() => {
+        if (pendingShaderRequests.has(id)) {
+          pendingShaderRequests.delete(id);
+          resolve({ success: false, preset: presetId, error: "Timed out while applying shader preset." });
+        }
+      }, 12e4);
+      pendingShaderRequests.set(id, (res) => {
+        clearTimeout(timer);
+        resolve(res);
+      });
+      postEnhancedMessage("setShaderPreset", { id, preset: presetId });
+    });
+    applyingPresetId = null;
+    if (result.success) {
+      currentShaderPreset = result.preset;
+      const name = getActiveShaderPresetName();
+      if (isPlayerRoute2()) {
+        showPlayerOsd(`Shader: ${name}`);
+      } else {
+        modalManager.showToast("shader-applied", "Shader Applied", `Active upscaling preset: ${name}`, "success");
+      }
+    } else {
+      modalManager.showToast(
+        "shader-error",
+        "Shader Error",
+        result.error || "Failed to download or apply shader preset.",
+        "fail"
+      );
+    }
+    syncShaderSettingsUI();
+    renderShaderPopover();
+    return result.success;
+  }
+  function syncShaderSettingsUI() {
+    const container = document.getElementById("enhanced-shaders-grid");
+    if (!container) return;
+    if (shaderPresets.length === 0) {
+      container.innerHTML = `<div class="enhanced-option-description">Loading shader presets...</div>`;
+      return;
+    }
+    const categoryOrder = ["Default", "Sharpening (1:1)", "Anime4K", "FSRCNNX", "ArtCNN"];
+    const grouped = /* @__PURE__ */ new Map();
+    for (const cat of categoryOrder) grouped.set(cat, []);
+    for (const preset of shaderPresets) {
+      if (!grouped.has(preset.category)) grouped.set(preset.category, []);
+      grouped.get(preset.category).push(preset);
+    }
+    let html = "";
+    for (const [category, list] of grouped.entries()) {
+      if (list.length === 0) continue;
+      html += `<div class="enhanced-shader-group-title">${escapeHtml(category)}</div>`;
+      html += `<div class="enhanced-shader-grid">`;
+      for (const preset of list) {
+        const isActive = preset.id === currentShaderPreset;
+        const isLoading = preset.id === applyingPresetId;
+        const badgeText = isLoading ? "Installing..." : preset.id === "off" ? "Bypass" : preset.installed ? "Ready" : "Download";
+        const badgeClass = isLoading ? "loading" : preset.installed || preset.id === "off" ? "ready" : "download";
+        html += `
+                <button type="button"
+                    class="enhanced-shader-card${isActive ? " active" : ""}${isLoading ? " loading" : ""}"
+                    data-shader-preset="${escapeHtml(preset.id)}"
+                    ${applyingPresetId ? "disabled" : ""}>
+                    <div class="enhanced-shader-card-top">
+                        <span class="enhanced-shader-card-name">${escapeHtml(preset.name)}</span>
+                        <span class="enhanced-shader-badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+                    </div>
+                    <div class="enhanced-shader-card-desc">${escapeHtml(preset.description)}</div>
+                </button>
+            `;
+      }
+      html += `</div>`;
+    }
+    container.innerHTML = html;
+    container.querySelectorAll("[data-shader-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-shader-preset");
+        if (id) applyShaderPreset(id);
+      });
+    });
+  }
+  function renderShaderPopover() {
+    if (!popoverEl || popoverEl.style.display === "none") return;
+    const categoryOrder = ["Default", "Sharpening (1:1)", "Anime4K", "FSRCNNX", "ArtCNN"];
+    const grouped = /* @__PURE__ */ new Map();
+    for (const cat of categoryOrder) grouped.set(cat, []);
+    for (const p of shaderPresets) {
+      if (!grouped.has(p.category)) grouped.set(p.category, []);
+      grouped.get(p.category).push(p);
+    }
+    let itemsHtml = "";
+    for (const [cat, list] of grouped.entries()) {
+      if (list.length === 0) continue;
+      itemsHtml += `<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin:10px 4px 4px;">${escapeHtml(cat)}</div>`;
+      for (const preset of list) {
+        const active = preset.id === currentShaderPreset;
+        const loading = preset.id === applyingPresetId;
+        const tag = loading ? "Installing..." : preset.id === "off" ? "Bypass" : preset.installed ? "Ready" : "Download";
+        itemsHtml += `
+                <button type="button" data-popover-shader="${escapeHtml(preset.id)}" ${applyingPresetId ? "disabled" : ""}
+                    style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;margin-bottom:4px;border-radius:8px;border:1px solid ${active ? "var(--accent-color, #7b5bf5)" : "rgba(255,255,255,0.08)"};background:${active ? "rgba(123,91,245,0.25)" : "rgba(255,255,255,0.04)"};color:#fff;cursor:${applyingPresetId ? "wait" : "pointer"};text-align:left;font-size:0.86rem;">
+                    <span style="font-weight:${active ? "700" : "500"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(preset.name)}</span>
+                    <span style="font-size:0.72rem;padding:2px 7px;border-radius:999px;background:${active ? "rgba(123,91,245,0.45)" : "rgba(255,255,255,0.1)"};color:rgba(255,255,255,0.88);flex-shrink:0;">${escapeHtml(tag)}</span>
+                </button>
+            `;
+      }
+    }
+    const bodyEl = popoverEl.querySelector("#stremio-enhanced-shader-popover-body");
+    if (bodyEl) {
+      bodyEl.innerHTML = itemsHtml;
+      bodyEl.querySelectorAll("[data-popover-shader]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute("data-popover-shader");
+          if (id) applyShaderPreset(id);
+        });
+      });
+    }
+  }
+  function closeShaderPopover() {
+    if (popoverEl) {
+      popoverEl.style.display = "none";
+    }
+  }
+  function toggleShaderPopover(force) {
+    const show = force !== void 0 ? force : !(popoverEl && popoverEl.style.display !== "none");
+    if (!show) {
+      closeShaderPopover();
+      return;
+    }
+    if (!popoverEl) {
+      popoverEl = document.createElement("div");
+      popoverEl.id = "stremio-enhanced-shader-popover";
+      Object.assign(popoverEl.style, {
+        position: "fixed",
+        top: "64px",
+        right: "20px",
+        width: "330px",
+        maxHeight: "72vh",
+        display: "none",
+        flexDirection: "column",
+        zIndex: "2147483150",
+        backgroundColor: "rgba(13, 12, 22, 0.94)",
+        border: "1px solid rgba(255, 255, 255, 0.16)",
+        borderRadius: "12px",
+        boxShadow: "0 16px 40px rgba(0, 0, 0, 0.72)",
+        backdropFilter: "blur(16px)",
+        color: "#fff",
+        overflow: "hidden",
+        userSelect: "none"
+      });
+      popoverEl.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.1);">
+                <div>
+                    <div style="font-weight:700;font-size:0.95rem;">Upscaling &amp; GLSL Shaders</div>
+                    <div style="font-size:0.74rem;color:rgba(255,255,255,0.55);margin-top:2px;">Shortcut: Ctrl+Shift+U</div>
+                </div>
+                <button type="button" id="stremio-enhanced-shader-popover-close"
+                    style="background:rgba(255,255,255,0.08);border:none;color:#fff;width:26px;height:26px;border-radius:999px;cursor:pointer;font-size:1rem;line-height:1;">&times;</button>
+            </div>
+            <div id="stremio-enhanced-shader-popover-body" style="padding:8px 12px 12px;overflow-y:auto;"></div>
+        `;
+      popoverEl.querySelector("#stremio-enhanced-shader-popover-close")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closeShaderPopover();
+      });
+    }
+    const parent = document.querySelector('[class*="player-container"]') || document.body;
+    if (parent && popoverEl.parentElement !== parent) {
+      parent.appendChild(popoverEl);
+    }
+    popoverEl.style.display = "flex";
+    renderShaderPopover();
+  }
+  function setupShaderControls() {
+    if (initialized3) return;
+    initialized3 = true;
+    window.__receiveShaderPresetResult = function(id, success, preset, error) {
+      const resolver = pendingShaderRequests.get(id);
+      if (resolver) {
+        pendingShaderRequests.delete(id);
+        resolver({ success, preset, error });
+      }
+    };
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (!isPlayerRoute2() || isEditableTarget2(e.target)) return;
+        if (e.key === "Escape" && popoverEl && popoverEl.style.display !== "none") {
+          e.preventDefault();
+          e.stopPropagation();
+          closeShaderPopover();
+          return;
+        }
+        if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === "u") {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleShaderPopover();
+        }
+      },
+      true
+    );
+    document.addEventListener("pointerdown", (e) => {
+      if (!popoverEl || popoverEl.style.display === "none") return;
+      const target = e.target;
+      if (target && !popoverEl.contains(target)) {
+        closeShaderPopover();
+      }
+    });
+    const onRoute = () => {
+      if (!isPlayerRoute2()) {
+        closeShaderPopover();
+      }
+    };
+    window.addEventListener("hashchange", onRoute);
+    window.addEventListener("popstate", onRoute);
+  }
+
+  // src/components/settings/settingsInjector.ts
   var SELECTORS = {
     SETTINGS_CONTENT: '[class*="settings-content-"]',
     NAV_MENU: '[class*="settings-content-"] > nav',
@@ -4326,6 +5443,13 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       marketplaceCategory.appendChild(marketplaceContent);
       page.appendChild(marketplaceCategory);
       const playerCategory = createCategory("enhanced-player-category", "player", "Player", sampleGroup);
+      const createPlayerSubsection = (title) => {
+        const sub = document.createElement("div");
+        sub.className = "enhanced-subsection-title";
+        sub.textContent = title;
+        return sub;
+      };
+      playerCategory.appendChild(createPlayerSubsection("Playback & Overlay"));
       const thumbOption = document.createElement("div");
       thumbOption.className = "enhanced-option";
       const thumbHeading = document.createElement("div");
@@ -4334,7 +5458,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       thumbLabel.className = "enhanced-option-label";
       thumbLabel.textContent = "Thumbnail Preview (ThumbFast)";
       const thumbDesc = document.createElement("div");
-      thumbDesc.style.cssText = "font-size: 0.85rem; color: rgba(255, 255, 255, 0.55); margin-top: 0.25rem;";
+      thumbDesc.className = "enhanced-option-description";
       thumbDesc.textContent = "Show frame preview thumbnails when hovering or scrubbing the seek bar.";
       thumbHeading.appendChild(thumbLabel);
       thumbHeading.appendChild(thumbDesc);
@@ -4368,6 +5492,71 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       thumbOption.appendChild(thumbHeading);
       thumbOption.appendChild(thumbContent);
       playerCategory.appendChild(thumbOption);
+      const chapterOption = document.createElement("div");
+      chapterOption.className = "enhanced-option";
+      const chapterHeading = document.createElement("div");
+      chapterHeading.className = "enhanced-option-heading";
+      const chapterLabel = document.createElement("div");
+      chapterLabel.className = "enhanced-option-label";
+      chapterLabel.textContent = "Chapter Markers on Seek Bar";
+      const chapterDesc = document.createElement("div");
+      chapterDesc.className = "enhanced-option-description";
+      chapterDesc.textContent = "Show chapter ticks on the seek bar, chapter titles in tooltips, and skip chapters with Alt+Left / Alt+Right.";
+      chapterHeading.appendChild(chapterLabel);
+      chapterHeading.appendChild(chapterDesc);
+      const chapterContent = document.createElement("div");
+      chapterContent.className = "enhanced-option-content";
+      const chapterToggle = document.createElement("div");
+      chapterToggle.id = "chaptermarkersToggle";
+      chapterToggle.setAttribute("tabindex", "0");
+      chapterToggle.setAttribute("role", "switch");
+      chapterToggle.setAttribute("title", "Chapter Markers on Seek Bar");
+      chapterToggle.className = `toggle-container-lZfHP button-container-zVLH6${isChapterMarkersEnabled() ? " checked" : ""}`;
+      chapterToggle.setAttribute("aria-checked", isChapterMarkersEnabled() ? "true" : "false");
+      chapterToggle.style.cssText = "outline: none; cursor: pointer;";
+      const chapterKnob = document.createElement("div");
+      chapterKnob.className = "toggle-toOWM";
+      chapterToggle.appendChild(chapterKnob);
+      const onToggleChapterMarkers = () => {
+        const next = !isChapterMarkersEnabled();
+        chapterToggle.classList.toggle("checked", next);
+        chapterToggle.setAttribute("aria-checked", next ? "true" : "false");
+        postEnhancedMessage("setChapterMarkers", { enabled: next });
+      };
+      chapterToggle.addEventListener("click", onToggleChapterMarkers);
+      chapterToggle.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggleChapterMarkers();
+        }
+      });
+      chapterContent.appendChild(chapterToggle);
+      chapterOption.appendChild(chapterHeading);
+      chapterOption.appendChild(chapterContent);
+      playerCategory.appendChild(chapterOption);
+      const statsOption = document.createElement("div");
+      statsOption.className = "enhanced-option";
+      const statsHeading = document.createElement("div");
+      statsHeading.className = "enhanced-option-heading";
+      const statsLabel = document.createElement("div");
+      statsLabel.className = "enhanced-option-label";
+      statsLabel.textContent = "Stats for Nerds & Quick Shader Menu";
+      const statsDesc = document.createElement("div");
+      statsDesc.className = "enhanced-option-description";
+      statsDesc.textContent = "During playback, press I to toggle live codec/HDR/hwdec/cache telemetry, or press Ctrl+Shift+U to switch GLSL shaders live.";
+      statsHeading.appendChild(statsLabel);
+      statsHeading.appendChild(statsDesc);
+      statsOption.appendChild(statsHeading);
+      playerCategory.appendChild(statsOption);
+      playerCategory.appendChild(createPlayerSubsection("Upscaling & GLSL Shaders"));
+      const openShadersBtn = createOptionButton("openshadersfolderBtn", "Open Shaders Folder");
+      openShadersBtn.onclick = () => {
+        postEnhancedMessage("openShadersFolder");
+      };
+      playerCategory.appendChild(createOptionRow([openShadersBtn]));
+      const shadersGrid = document.createElement("div");
+      shadersGrid.id = "enhanced-shaders-grid";
+      playerCategory.appendChild(shadersGrid);
       page.appendChild(playerCategory);
       const serverCategory = createCategory("enhanced-server-category", "server", "Streaming Server", sampleGroup);
       const openServerBtn = createOptionButton("openserverfolderBtn", "Open Server Folder");
@@ -4553,25 +5742,58 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       page.appendChild(preferencesCategory);
       const updatesCategory = createCategory("enhanced-updates-category", "updates", "Client Updates", sampleGroup);
       const checkClientUpdatesBtn = createOptionButton("checkclientupdatesBtn", "Check for Client Updates");
+      const installClientUpdateBtn = createOptionButton("installclientupdateBtn", "Download & Install Update");
+      installClientUpdateBtn.style.display = "none";
+      installClientUpdateBtn.style.backgroundColor = "var(--accent-color, var(--primary-accent-color, #7b5bf5))";
+      const viewPatchNotesBtn = createOptionButton("viewpatchnotesBtn", "View Patch Notes");
       const openClientReleasesBtn = createOptionButton("openclientreleasesBtn", "View Releases");
       openClientReleasesBtn.setAttribute("title", "View Releases on GitHub");
       const clientVersionInfo = document.createElement("div");
       clientVersionInfo.id = "enhanced-client-version-info";
       clientVersionInfo.style.cssText = "font-size: 0.9rem; color: #a0a0a0; margin-top: 0.5rem; margin-left: 0.2rem;";
+      const patchNotesContainer = document.createElement("div");
+      patchNotesContainer.id = "enhanced-client-patch-notes";
+      patchNotesContainer.className = "enhanced-patch-notes";
+      patchNotesContainer.style.display = "none";
       const renderClientVersionInfo = () => {
         const currentVer = getCurrentClientVersion();
         const latest = getLatestClientVersion();
+        const info = getInstallInfo();
+        const installLabel = info.installType === "appimage" ? info.canSelfUpdate ? "AppImage (Auto-Update Ready)" : "AppImage (Read-Only)" : info.installType === "flatpak" ? "Flatpak" : "Native";
+        const installPill = `<span style="margin-left:0.5rem;padding:0.12rem 0.55rem;border-radius:999px;font-size:0.78rem;background:rgba(255,255,255,0.09);color:#d4d4d8;">${escapeHtml(installLabel)}</span>`;
         if (!latest) {
-          clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}`;
+          clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)}${installPill}`;
+          installClientUpdateBtn.style.display = "none";
+          patchNotesContainer.style.display = "none";
           return;
         }
         const hasUpdate = isNewerVersion(latest.version, currentVer);
         const badge = hasUpdate ? `<span style="color: #fcc419; font-weight: 600;">\u25CF Update available: v${escapeHtml(latest.version)}</span>` : `<span style="color: #51cf66;">\u25CF Up to date (v${escapeHtml(latest.version)})</span>`;
-        clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}`;
+        clientVersionInfo.innerHTML = `<span style="color: #ddd; font-weight: 600;">Installed Version:</span> v${escapeHtml(currentVer)} &bull; ${badge}${installPill}`;
+        installClientUpdateBtn.style.display = hasUpdate && canSelfUpdateAppImage(latest) ? "inline-flex" : "none";
+        if (latest.body && latest.body.trim()) {
+          const releaseTitle = latest.releaseName || `Release v${latest.version}`;
+          patchNotesContainer.innerHTML = `
+                        <div style="font-weight:700;font-size:0.94rem;color:#fff;margin-bottom:8px;">Latest Release Notes \u2014 ${escapeHtml(releaseTitle)}</div>
+                        ${renderPatchNotesMarkdown(latest.body)}
+                    `;
+          patchNotesContainer.style.display = "block";
+        } else {
+          patchNotesContainer.style.display = "none";
+        }
       };
       checkClientUpdatesBtn.onclick = async () => {
         await checkClientUpdate(true);
         renderClientVersionInfo();
+      };
+      installClientUpdateBtn.onclick = async () => {
+        const latest = getLatestClientVersion() || await fetchLatestClientVersion();
+        if (latest && canSelfUpdateAppImage(latest)) {
+          await startAppImageSelfUpdate(latest);
+        }
+      };
+      viewPatchNotesBtn.onclick = async () => {
+        await showPatchNotesModal(getLatestClientVersion());
       };
       openClientReleasesBtn.onclick = () => {
         const url = getLatestClientVersion()?.releaseUrl || CLIENT_RELEASES_URL;
@@ -4580,8 +5802,11 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         } catch (_) {
         }
       };
-      updatesCategory.appendChild(createOptionRow([checkClientUpdatesBtn, openClientReleasesBtn]));
+      updatesCategory.appendChild(
+        createOptionRow([checkClientUpdatesBtn, installClientUpdateBtn, viewPatchNotesBtn, openClientReleasesBtn])
+      );
       updatesCategory.appendChild(clientVersionInfo);
+      updatesCategory.appendChild(patchNotesContainer);
       page.appendChild(updatesCategory);
       container.appendChild(page);
       pane.appendChild(container);
@@ -4598,6 +5823,8 @@ Please place server.js in the folder or start Stremio Service. Would you like to
         window.StremioEnhancedAPI.togglePlugin(fileName, enabled);
       });
       syncThumbnailPreviewToggle();
+      syncChapterMarkersToggle();
+      syncShaderSettingsUI();
       syncShellPreferencesUI();
       updateRoute();
     }).catch((err) => {
@@ -4624,7 +5851,362 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     });
   }
 
-  // src/app/enhanced/src/index.ts
+  // src/player/statsOverlay.ts
+  var POLL_INTERVAL_MS = 500;
+  var MAX_SPEED_SAMPLES = 30;
+  var statsVisible = false;
+  var initialized4 = false;
+  var pollTimer = null;
+  var hudEl = null;
+  var lastStats = null;
+  var lastServerStats = null;
+  var speedHistory = [];
+  var pendingStatsRequests = /* @__PURE__ */ new Map();
+  function isPlayerRoute3() {
+    const hash = window.location.hash || "";
+    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
+    return document.querySelector('[class*="player-container"]') !== null;
+  }
+  function isEditableTarget3(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+  }
+  function formatBitrate(bps) {
+    if (!bps || !Number.isFinite(bps) || bps <= 0) return "N/A";
+    if (bps >= 1e6) return `${(bps / 1e6).toFixed(2)} Mbps`;
+    return `${Math.round(bps / 1e3)} kbps`;
+  }
+  function formatRate(bytesPerSec) {
+    if (!bytesPerSec || !Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return "0 B/s";
+    if (bytesPerSec >= 1048576) return `${(bytesPerSec / 1048576).toFixed(2)} MiB/s`;
+    if (bytesPerSec >= 1024) return `${(bytesPerSec / 1024).toFixed(0)} KiB/s`;
+    return `${Math.round(bytesPerSec)} B/s`;
+  }
+  function formatFps(fps) {
+    if (!fps || !Number.isFinite(fps) || fps <= 0) return "\u2014";
+    return fps.toFixed(2);
+  }
+  function getResolutionBadge(w, h) {
+    if (!w || !h) return "VIDEO";
+    if (h >= 2100 || w >= 3800) return "4K UHD";
+    if (h >= 1400 || w >= 2500) return "1440p";
+    if (h >= 1050 || w >= 1900) return "1080p";
+    if (h >= 700 || w >= 1200) return "720p";
+    return `${w}x${h}`;
+  }
+  function isHdrStream(stats) {
+    const gamma = (stats.colorGamma || "").toLowerCase();
+    const primaries = (stats.colorPrimaries || "").toLowerCase();
+    return gamma === "pq" || gamma === "hlg" || gamma.includes("2084") || primaries.includes("2020");
+  }
+  function buildSparklineSvg(samples) {
+    const width = 260;
+    const height = 28;
+    if (samples.length < 2) {
+      return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;opacity:0.35;"><line x1="0" y1="${height - 4}" x2="${width}" y2="${height - 4}" stroke="rgba(255,255,255,0.25)" stroke-width="1"/></svg>`;
+    }
+    const maxVal = Math.max(1024, ...samples);
+    const points = samples.map((val, idx) => {
+      const x = idx / (MAX_SPEED_SAMPLES - 1) * width;
+      const y = height - 3 - Math.max(0, val) / maxVal * (height - 6);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    return `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;">
+            <polyline fill="none" stroke="#8b74ff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" points="${points.join(" ")}" />
+        </svg>
+    `;
+  }
+  function computeVideoScaleFactor(stats) {
+    const srcW = stats.dwidth || stats.width;
+    const srcH = stats.dheight || stats.height;
+    const outW = stats.outputWidth;
+    const outH = stats.outputHeight;
+    if (!srcW || !srcH || !outW || !outH || srcW <= 0 || srcH <= 0 || outW <= 0 || outH <= 0) {
+      return null;
+    }
+    return Math.min(outW / srcW, outH / srcH);
+  }
+  function getShaderActivityStatus(stats, scale) {
+    const shaders = stats.activeShaders || [];
+    if (shaders.length === 0) return null;
+    let alwaysOnCount = 0;
+    let upscalerCount = 0;
+    let firingUpscalers = 0;
+    let minUpscalerThreshold = Infinity;
+    for (const file of shaders) {
+      const lower = file.toLowerCase();
+      if (lower.includes("fsrcnnx") || lower.includes("artcnn")) {
+        upscalerCount++;
+        minUpscalerThreshold = Math.min(minUpscalerThreshold, 1.3);
+        if (scale !== null && scale > 1.3) firingUpscalers++;
+      } else if (lower.includes("anime4k_upscale")) {
+        upscalerCount++;
+        minUpscalerThreshold = Math.min(minUpscalerThreshold, 1.2);
+        if (scale !== null && scale > 1.2) firingUpscalers++;
+      } else if (lower.includes("autodownscale")) {
+      } else {
+        alwaysOnCount++;
+      }
+    }
+    const scaleStr = scale !== null ? `${scale.toFixed(2)}x` : "?";
+    if (upscalerCount > 0 && scale !== null) {
+      if (firingUpscalers > 0) {
+        return {
+          badgeText: `Firing (${scaleStr})`,
+          badgeBg: "rgba(34,197,94,0.22)",
+          badgeColor: "#86efac",
+          detail: `Upscaler active at ${scaleStr} scale`
+        };
+      }
+      if (alwaysOnCount > 0) {
+        return {
+          badgeText: `1:1 Active (${scaleStr})`,
+          badgeBg: "rgba(56,189,248,0.22)",
+          badgeColor: "#7dd3fc",
+          detail: `1:1 restore/sharpen pass active; upscaler needs >${minUpscalerThreshold.toFixed(1)}x scale`
+        };
+      }
+      return {
+        badgeText: `Bypassed (${scaleStr} <= ${minUpscalerThreshold.toFixed(1)}x)`,
+        badgeBg: "rgba(245,158,11,0.24)",
+        badgeColor: "#fcd34d",
+        detail: `Upscaler skipped until output exceeds ${minUpscalerThreshold.toFixed(1)}x source size`
+      };
+    }
+    return {
+      badgeText: alwaysOnCount > 0 ? `Active (${scaleStr})` : "Loaded",
+      badgeBg: "rgba(34,197,94,0.22)",
+      badgeColor: "#86efac",
+      detail: "Running at native resolution"
+    };
+  }
+  function formatPlainDiagnostics(stats) {
+    const res = stats.width && stats.height ? `${stats.width}x${stats.height}` : "Unknown";
+    const outRes = stats.outputWidth && stats.outputHeight ? `${stats.outputWidth}x${stats.outputHeight}` : stats.dwidth && stats.dheight ? `${stats.dwidth}x${stats.dheight}` : res;
+    const scale = computeVideoScaleFactor(stats);
+    const scaleLabel = scale !== null ? ` (${scale.toFixed(2)}x)` : "";
+    const hdr = isHdrStream(stats) ? "HDR" : "SDR";
+    const shaders = stats.activeShaders && stats.activeShaders.length > 0 ? stats.activeShaders.join(", ") : "None";
+    const shaderStatus = getShaderActivityStatus(stats, scale);
+    return [
+      `Title: ${stats.mediaTitle || "N/A"}`,
+      `Video: ${stats.videoCodec || "N/A"} | ${res} -> ${outRes}${scaleLabel} | ${formatFps(stats.estimatedVfFps || stats.containerFps)} fps | ${formatBitrate(stats.videoBitrate)}`,
+      `Color/HDR: ${hdr} (${stats.colorPrimaries || "?"} / ${stats.colorGamma || "?"} / ${stats.pixelFormat || "?"})`,
+      `HWDEC: ${stats.hwdecCurrent || "software"} | Display FPS: ${formatFps(stats.displayFps)}`,
+      `Audio: ${stats.audioCodec || "N/A"} | ${stats.audioChannels || "?"} | ${stats.audioSampleRate ? `${(stats.audioSampleRate / 1e3).toFixed(1)} kHz` : "?"} | ${formatBitrate(stats.audioBitrate)}`,
+      `Sync/Drops: A/V ${stats.avsync !== null && stats.avsync !== void 0 ? `${(stats.avsync * 1e3).toFixed(1)} ms` : "N/A"} | Dropped ${stats.droppedFrames ?? 0} (dec ${stats.decoderDroppedFrames ?? 0})`,
+      `Buffer: ${stats.cacheDuration !== null && stats.cacheDuration !== void 0 ? `${stats.cacheDuration.toFixed(1)}s` : "N/A"} | Speed ${formatRate(stats.cacheSpeed)}`,
+      `Shaders (${getActiveShaderPresetName()}${shaderStatus ? ` - ${shaderStatus.badgeText}` : ""}): ${shaders}`
+    ].join("\n");
+  }
+  function renderHud(stats) {
+    if (!hudEl || !statsVisible) return;
+    const hdr = isHdrStream(stats);
+    const resBadge = getResolutionBadge(stats.width, stats.height);
+    const resText = stats.width && stats.height ? `${stats.width}x${stats.height}` : "\u2014";
+    const outText = stats.outputWidth && stats.outputHeight ? `${stats.outputWidth}x${stats.outputHeight}` : stats.dwidth && stats.dheight ? `${stats.dwidth}x${stats.dheight}` : resText;
+    const scale = computeVideoScaleFactor(stats);
+    const scaleText = scale !== null ? ` (${scale.toFixed(2)}x)` : "";
+    const hwdec = stats.hwdecCurrent || "sw (none)";
+    const shaderLabel = stats.activeShaders && stats.activeShaders.length > 0 ? `${getActiveShaderPresetName()} (${stats.activeShaders.length})` : "Off";
+    const shaderStatus = getShaderActivityStatus(stats, scale);
+    const shaderBadgeHtml = shaderStatus ? `<span style="margin-left:6px;padding:1px 6px;border-radius:999px;font-size:0.68rem;font-weight:700;background:${shaderStatus.badgeBg};color:${shaderStatus.badgeColor};white-space:nowrap;" title="${escapeHtml(shaderStatus.detail)}">${escapeHtml(shaderStatus.badgeText)}</span>` : "";
+    const cacheSec = stats.cacheDuration !== null && stats.cacheDuration !== void 0 ? `${stats.cacheDuration.toFixed(1)} s` : "\u2014";
+    const cacheRate = formatRate(lastServerStats?.downloadSpeed ?? stats.cacheSpeed);
+    const peersInfo = lastServerStats && typeof lastServerStats.peers === "number" ? ` \u2022 ${lastServerStats.peers} peers` : "";
+    const avsync = stats.avsync !== null && stats.avsync !== void 0 ? `${(stats.avsync * 1e3).toFixed(1)} ms` : "\u2014";
+    const bodyEl = hudEl.querySelector("#stremio-enhanced-stats-body");
+    if (!bodyEl) return;
+    bodyEl.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:rgba(123,91,245,0.28);border:1px solid rgba(139,116,255,0.45);color:#d8cfff;">${escapeHtml(resBadge)}</span>
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:${hdr ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.09)"};color:${hdr ? "#fcd34d" : "#d4d4d8"};">${hdr ? "HDR" : "SDR"}</span>
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:rgba(255,255,255,0.09);color:#e4e4e7;">${escapeHtml((stats.videoCodec || "unknown").toUpperCase())}</span>
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:${stats.hwdecCurrent ? "rgba(34,197,94,0.22)" : "rgba(255,255,255,0.09)"};color:${stats.hwdecCurrent ? "#86efac" : "#d4d4d8"};">HWDEC: ${escapeHtml(hwdec)}</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:88px 1fr;gap:4px 10px;font-size:0.79rem;line-height:1.45;font-variant-numeric:tabular-nums;">
+            <div style="color:rgba(255,255,255,0.52);">Video</div>
+            <div>${escapeHtml(resText)} &rarr; ${escapeHtml(outText)}${escapeHtml(scaleText)} &bull; ${formatFps(stats.estimatedVfFps || stats.containerFps)}/${formatFps(stats.displayFps)} fps &bull; ${escapeHtml(formatBitrate(stats.videoBitrate))}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Color</div>
+            <div>${escapeHtml(stats.colorPrimaries || "\u2014")} / ${escapeHtml(stats.colorGamma || "\u2014")} / ${escapeHtml(stats.pixelFormat || "\u2014")}${stats.sigPeak ? ` (${stats.sigPeak.toFixed(1)}x)` : ""}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Audio</div>
+            <div>${escapeHtml(stats.audioCodec || "\u2014")} &bull; ${escapeHtml(stats.audioChannels || "\u2014")}${stats.audioSampleRate ? ` &bull; ${(stats.audioSampleRate / 1e3).toFixed(1)} kHz` : ""} &bull; ${escapeHtml(formatBitrate(stats.audioBitrate))}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Drops / Sync</div>
+            <div>VO: ${stats.droppedFrames ?? 0} &bull; Dec: ${stats.decoderDroppedFrames ?? 0} &bull; Mistimed: ${stats.mistimedFrames ?? 0} &bull; A/V: ${escapeHtml(avsync)}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Shaders</div>
+            <div style="display:flex;align-items:center;min-width:0;" title="${escapeHtml((stats.activeShaders || []).join(", ") + (shaderStatus ? ` \u2014 ${shaderStatus.detail}` : ""))}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(shaderLabel)}</span>${shaderBadgeHtml}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Cache</div>
+            <div>${escapeHtml(cacheSec)} &bull; ${escapeHtml(cacheRate)}${escapeHtml(peersInfo)}${stats.pausedForCache ? ' <span style="color:#fbbf24;">(Buffering)</span>' : ""}</div>
+        </div>
+
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span style="font-size:0.7rem;color:rgba(255,255,255,0.48);">Cache I/O</span>
+            ${buildSparklineSvg(speedHistory)}
+        </div>
+    `;
+  }
+  async function pollOnce() {
+    if (!statsVisible || !isPlayerRoute3()) {
+      toggleStatsOverlay(false);
+      return;
+    }
+    const id = "st_" + Math.random().toString(36).substring(2, 9);
+    const stats = await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        pendingStatsRequests.delete(id);
+        resolve(null);
+      }, 1200);
+      pendingStatsRequests.set(id, (s) => {
+        clearTimeout(timer);
+        resolve(s);
+      });
+      postEnhancedMessage("getPlaybackStats", { id });
+    });
+    if (!stats || !statsVisible) return;
+    lastStats = stats;
+    const path = stats.path || "";
+    const match = path.match(/^(https?:\/\/127\.0\.0\.1:11470\/[^/]+\/\d+)/);
+    if (match) {
+      try {
+        const ctrl = new AbortController();
+        const abortId = setTimeout(() => ctrl.abort(), 700);
+        const res = await fetch(`${match[1]}/stats.json`, { signal: ctrl.signal });
+        clearTimeout(abortId);
+        if (res.ok) {
+          lastServerStats = await res.json();
+        }
+      } catch (_) {
+        lastServerStats = null;
+      }
+    } else {
+      lastServerStats = null;
+    }
+    const rateVal = Number(lastServerStats?.downloadSpeed ?? stats.cacheSpeed ?? 0);
+    if (Number.isFinite(rateVal) && rateVal >= 0) {
+      speedHistory.push(rateVal);
+      if (speedHistory.length > MAX_SPEED_SAMPLES) {
+        speedHistory.shift();
+      }
+    }
+    renderHud(stats);
+  }
+  function ensureHudElement() {
+    if (!hudEl) {
+      hudEl = document.createElement("div");
+      hudEl.id = "stremio-enhanced-stats-hud";
+      Object.assign(hudEl.style, {
+        position: "fixed",
+        top: "64px",
+        left: "20px",
+        width: "360px",
+        maxWidth: "calc(100vw - 40px)",
+        zIndex: "2147483100",
+        backgroundColor: "rgba(11, 11, 18, 0.86)",
+        border: "1px solid rgba(255, 255, 255, 0.14)",
+        borderRadius: "12px",
+        boxShadow: "0 14px 36px rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(14px)",
+        color: "#f4f4f5",
+        padding: "12px 14px",
+        fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
+        display: "none",
+        userSelect: "text"
+      });
+      hudEl.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.09);">
+                <div style="font-weight:700;font-size:0.9rem;letter-spacing:0.01em;">Stats for Nerds <span style="font-weight:400;font-size:0.74rem;color:rgba(255,255,255,0.5);">[I]</span></div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <button type="button" id="stremio-stats-shaders-btn"
+                        style="background:rgba(123,91,245,0.28);border:1px solid rgba(139,116,255,0.45);color:#e9e4ff;border-radius:6px;padding:3px 8px;font-size:0.74rem;font-weight:600;cursor:pointer;">Shaders</button>
+                    <button type="button" id="stremio-stats-copy-btn"
+                        style="background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:6px;padding:3px 8px;font-size:0.74rem;font-weight:600;cursor:pointer;">Copy</button>
+                    <button type="button" id="stremio-stats-close-btn"
+                        style="background:rgba(255,255,255,0.09);border:none;color:#fff;width:22px;height:22px;border-radius:999px;cursor:pointer;font-size:0.95rem;line-height:1;">&times;</button>
+                </div>
+            </div>
+            <div id="stremio-enhanced-stats-body" style="font-size:0.8rem;color:rgba(255,255,255,0.8);">Collecting playback telemetry...</div>
+        `;
+      hudEl.querySelector("#stremio-stats-shaders-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleShaderPopover();
+      });
+      hudEl.querySelector("#stremio-stats-copy-btn")?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!lastStats) return;
+        try {
+          await navigator.clipboard.writeText(formatPlainDiagnostics(lastStats));
+          modalManager.showToast("stats-copied", "Copied", "Playback telemetry copied to clipboard.", "success");
+        } catch (_) {
+        }
+      });
+      hudEl.querySelector("#stremio-stats-close-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleStatsOverlay(false);
+      });
+    }
+    const parent = document.querySelector('[class*="player-container"]') || document.body;
+    if (parent && hudEl.parentElement !== parent) {
+      parent.appendChild(hudEl);
+    }
+  }
+  function toggleStatsOverlay(force) {
+    const next = force !== void 0 ? force : !statsVisible;
+    if (next && !isPlayerRoute3()) return;
+    statsVisible = next;
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    if (!statsVisible) {
+      speedHistory.length = 0;
+      if (hudEl) hudEl.style.display = "none";
+      return;
+    }
+    ensureHudElement();
+    if (hudEl) hudEl.style.display = "block";
+    pollOnce();
+    pollTimer = setInterval(pollOnce, POLL_INTERVAL_MS);
+  }
+  function setupStatsOverlay() {
+    if (initialized4) return;
+    initialized4 = true;
+    window.__receivePlaybackStats = function(id, stats) {
+      const resolver = pendingStatsRequests.get(id);
+      if (resolver) {
+        pendingStatsRequests.delete(id);
+        resolver(stats);
+      }
+    };
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (!isPlayerRoute3() || isEditableTarget3(e.target)) return;
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "i") {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleStatsOverlay();
+        }
+      },
+      true
+    );
+    const onRoute = () => {
+      if (!isPlayerRoute3() && statsVisible) {
+        toggleStatsOverlay(false);
+      }
+    };
+    window.addEventListener("hashchange", onRoute);
+    window.addEventListener("popstate", onRoute);
+  }
+
+  // src/index.ts
   (function() {
     "use strict";
     if (window.__STREMIO_ENHANCED_INITIALIZED__) return;
@@ -4640,12 +6222,16 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     setupTransparencyBridge();
     setupVideoBridge();
     setupThumbnailPreview();
+    setupShaderControls();
+    setupStatsOverlay();
+    setupChapterMarkers();
     injectFallbackStyles();
     let currentData = {
       plugins: [],
       themes: [],
       activeTheme: null
     };
+    let lastAppliedThemeKey;
     function updateAllSubsystemData(data) {
       currentData = data;
       updateApiData(data);
@@ -4654,6 +6240,8 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       updateMarketplaceData(data);
       updateUpdateManagerData(data);
       updateThumbnailPreviewData(data);
+      updateShaderControlsData(data);
+      updateChapterMarkersData(data);
       updateShellPreferencesData(data);
       if (data.serverStatus) {
         updateServerManagerData(data.serverStatus);
@@ -4662,10 +6250,11 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     window.__receiveEnhancedData = function(data) {
       if (!data) return;
       updateAllSubsystemData(data);
-      if (currentData.activeTheme) {
-        applyThemeUI(currentData.activeTheme);
-      } else {
-        applyThemeUI("Default");
+      const nextTheme = currentData.activeTheme || "Default";
+      const activeThemeMissing = nextTheme !== "Default" && !document.getElementById("activeTheme");
+      if (nextTheme !== lastAppliedThemeKey || activeThemeMissing) {
+        lastAppliedThemeKey = nextTheme;
+        applyThemeUI(nextTheme);
       }
       loadEnabledPlugins();
       syncLocalStorage();
@@ -4682,7 +6271,10 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     if (window.__INITIAL_ENHANCED_DATA__) {
       updateAllSubsystemData(window.__INITIAL_ENHANCED_DATA__);
       if (currentData.activeTheme) {
+        lastAppliedThemeKey = currentData.activeTheme;
         applyThemeUI(currentData.activeTheme);
+      } else {
+        lastAppliedThemeKey = "Default";
       }
       syncLocalStorage();
     }

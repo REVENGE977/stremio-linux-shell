@@ -181,7 +181,10 @@ fn parse_gtk_settings_ini(path: &Path) -> (Option<String>, Option<bool>) {
             if key == "gtk-theme-name" && !value.is_empty() {
                 theme = Some(value.to_string());
             } else if key == "gtk-application-prefer-dark-theme" {
-                prefer_dark = Some(matches!(value.to_lowercase().as_str(), "1" | "true" | "yes"));
+                prefer_dark = Some(matches!(
+                    value.to_lowercase().as_str(),
+                    "1" | "true" | "yes"
+                ));
             }
         }
     }

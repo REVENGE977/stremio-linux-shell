@@ -15,16 +15,15 @@ use crate::config::IPC_KEY;
 
 pub fn server_dir() -> PathBuf {
     let dir = if let Some(home) = dirs::home_dir() {
-        let host_dir = home.join(".config").join("stremio-enhanced").join("streamingserver");
+        let host_dir = home
+            .join(".config")
+            .join("stremio-enhanced")
+            .join("streamingserver");
         if host_dir.exists() {
             host_dir
         } else if let Some(cfg) = dirs::config_dir() {
             let cfg_dir = cfg.join("stremio-enhanced").join("streamingserver");
-            if cfg_dir.exists() {
-                cfg_dir
-            } else {
-                host_dir
-            }
+            if cfg_dir.exists() { cfg_dir } else { host_dir }
         } else {
             host_dir
         }
@@ -180,7 +179,10 @@ pub fn download_and_extract_ffmpeg() -> Result<(), String> {
     }
 
     let url = ffmpeg_download_url();
-    info!("[FFmpeg] Downloading FFmpeg from {url} to {}...", dir.display());
+    info!(
+        "[FFmpeg] Downloading FFmpeg from {url} to {}...",
+        dir.display()
+    );
 
     let millis = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -191,14 +193,7 @@ pub fn download_and_extract_ffmpeg() -> Result<(), String> {
     let archive_path = temp_dir.join("ffmpeg.tar.xz");
 
     let status = Command::new("curl")
-        .args([
-            "-sL",
-            "--connect-timeout",
-            "15",
-            "--max-time",
-            "300",
-            "-o",
-        ])
+        .args(["-sL", "--connect-timeout", "15", "--max-time", "300", "-o"])
         .arg(&archive_path)
         .arg(url)
         .status()
@@ -282,14 +277,21 @@ pub fn find_server_script() -> Option<PathBuf> {
     }
 
     if let Some(home) = dirs::home_dir() {
-        let host_path = home.join(".config").join("stremio-enhanced").join("streamingserver").join("server.js");
+        let host_path = home
+            .join(".config")
+            .join("stremio-enhanced")
+            .join("streamingserver")
+            .join("server.js");
         if host_path.exists() {
             return Some(host_path);
         }
     }
 
     if let Some(cfg) = dirs::config_dir() {
-        let cfg_path = cfg.join("stremio-enhanced").join("streamingserver").join("server.js");
+        let cfg_path = cfg
+            .join("stremio-enhanced")
+            .join("streamingserver")
+            .join("server.js");
         if cfg_path.exists() {
             return Some(cfg_path);
         }
@@ -349,7 +351,9 @@ impl Server {
         }
 
         let Some(ref file) = self.file else {
-            warn!("server.js not found in expected locations. Server will remain unstarted until setup.");
+            warn!(
+                "server.js not found in expected locations. Server will remain unstarted until setup."
+            );
             return Ok(false);
         };
 
@@ -392,7 +396,9 @@ impl Server {
             });
         }
 
-        let mut child = command.spawn().context("Failed to spawn node process for server.js")?;
+        let mut child = command
+            .spawn()
+            .context("Failed to spawn node process for server.js")?;
 
         if let Some(stdout) = child.stdout.take() {
             let reader = BufReader::new(stdout);

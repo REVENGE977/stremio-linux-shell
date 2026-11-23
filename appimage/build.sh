@@ -143,11 +143,13 @@ VERSION="$(awk '
 if [[ "$BUILD_PROFILE" == "debug" ]]; then
     APP_ID="${BASE_APP_ID}.Devel"
     BINARY_PATH="$ROOT_DIR/target/debug/$BIN_NAME"
-    ICON_SOURCE="$ROOT_DIR/data/icons/${APP_ID}.svg"
+    ICON_SVG_SOURCE="$ROOT_DIR/data/icons/${APP_ID}.svg"
+    ICON_PNG_SOURCE="$ROOT_DIR/data/icons/${APP_ID}.png"
 else
     APP_ID="$BASE_APP_ID"
     BINARY_PATH="$ROOT_DIR/target/release/$BIN_NAME"
-    ICON_SOURCE="$ROOT_DIR/data/icons/${APP_ID}.svg"
+    ICON_SVG_SOURCE="$ROOT_DIR/data/icons/${APP_ID}.svg"
+    ICON_PNG_SOURCE="$ROOT_DIR/data/icons/${APP_ID}.png"
 fi
 
 if [[ -z "$OUTPUT_PATH" ]]; then
@@ -248,6 +250,7 @@ mkdir -p \
     "$APPDIR/usr/lib" \
     "$APPDIR/usr/share/applications" \
     "$APPDIR/usr/share/glib-2.0/schemas" \
+    "$APPDIR/usr/share/icons/hicolor/256x256/apps" \
     "$APPDIR/usr/share/icons/hicolor/scalable/apps" \
     "$APPDIR/usr/share/licenses/stremio" \
     "$APPDIR/usr/share/locale" \
@@ -488,8 +491,22 @@ log "Running linuxdeploy..."
     --appdir "$APPDIR" \
     --executable "$STAGE_DIR/stremio" \
     --desktop-file "$DESKTOP_STAGED" \
-    --icon-file "$ICON_SOURCE" \
+    --icon-file "$ICON_PNG_SOURCE" \
     ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}
+
+# Ensure both scalable SVG and 256x256 PNG icons + Type 2 AppImage .DirIcon are installed cleanly
+rm -f "$APPDIR/${APP_ID}.svg" "$APPDIR/${APP_ID}.png" "$APPDIR/.DirIcon"
+if [[ -f "$ICON_SVG_SOURCE" ]]; then
+    install -Dm644 "$ICON_SVG_SOURCE" "$APPDIR/usr/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
+fi
+if [[ -f "$ICON_PNG_SOURCE" ]]; then
+    install -Dm644 "$ICON_PNG_SOURCE" "$APPDIR/usr/share/icons/hicolor/256x256/apps/${APP_ID}.png"
+    install -Dm644 "$ICON_PNG_SOURCE" "$APPDIR/${APP_ID}.png"
+    install -Dm644 "$ICON_PNG_SOURCE" "$APPDIR/.DirIcon"
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f -t "$APPDIR/usr/share/icons/hicolor" || true
+fi
 
 # Step 6b: Relocate hardcoded WebKitGTK helper/bundle paths inside libwebkitgtk-6.0.so*
 # Release builds of WebKitGTK ignore WEBKIT_EXEC_PATH and hardcode the build distro's path

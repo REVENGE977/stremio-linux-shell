@@ -79,6 +79,9 @@ export function setupFetchInterceptor(): void {
             }
             return res;
         } catch (fetchErr: any) {
+            if (fetchErr?.name === 'AbortError' || init?.signal?.aborted) {
+                throw fetchErr;
+            }
             if (isHttp && isGet) {
                 console.log(`[Enhanced Fetch] Direct fetch failed for ${url}, trying Rust proxy fallback... (${fetchErr?.message || fetchErr})`);
                 try {

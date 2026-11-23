@@ -6,6 +6,56 @@ let bridgeHost: HTMLDivElement | null = null;
 let bridgeVideo: HTMLVideoElement | null = null;
 let pipActive = false;
 let pipListenersInitialized = false;
+let playbackTimer: ReturnType<typeof setInterval> | null = null;
+let playerMountObserver: MutationObserver | null = null;
+let lastPlayerHash = '';
+
+function isPlayerHash(): boolean {
+    const hash = window.location.hash || '';
+    return hash.startsWith('#/player') || hash.includes('/player/');
+}
+
+function stopPlayerMountObserver(): void {
+    if (playerMountObserver) {
+        playerMountObserver.disconnect();
+        playerMountObserver = null;
+    }
+}
+
+function ensureMountedIntoPlayerContainer(): void {
+    if (!bridgeHost) return;
+    if (!isPlayerHash()) {
+        stopPlayerMountObserver();
+        return;
+    }
+    const playerContainer = document.querySelector<HTMLElement>('[class*="player-container"]');
+    if (playerContainer) {
+        if (bridgeHost.parentElement !== playerContainer) {
+            playerContainer.appendChild(bridgeHost);
+            console.log('[Enhanced] Mounted bridge video host to player-container');
+        }
+        stopPlayerMountObserver();
+        return;
+    }
+    if (playerMountObserver) return;
+    const target = document.getElementById('app') || document.body;
+    if (!target) return;
+    playerMountObserver = new MutationObserver(() => {
+        if (!isPlayerHash()) {
+            stopPlayerMountObserver();
+            return;
+        }
+        const container = document.querySelector<HTMLElement>('[class*="player-container"]');
+        if (container && bridgeHost) {
+            if (bridgeHost.parentElement !== container) {
+                container.appendChild(bridgeHost);
+                console.log('[Enhanced] Mounted bridge video host to player-container');
+            }
+            stopPlayerMountObserver();
+        }
+    });
+    playerMountObserver.observe(target, { childList: true, subtree: true });
+}
 
 let currentTimeVal = 0;
 let durationVal = 0;
@@ -38,6 +88,31 @@ function setPipState(enabled: boolean, notifyRust = true): void {
 
     if (bridgeVideo) {
         bridgeVideo.dispatchEvent(new Event(pipActive ? 'enterpictureinpicture' : 'leavepictureinpicture', { bubbles: true }));
+    }
+    syncPlaybackTimer();
+}
+
+function syncPlaybackTimer(): void {
+    const shouldRun = (isPlayerHash() && !pausedVal && !endedVal) || pipActive;
+    if (shouldRun && !playbackTimer) {
+        playbackTimer = setInterval(() => {
+            if (!isPlayerHash() && !pipActive) {
+                syncPlaybackTimer();
+                return;
+            }
+            mountBridgeHost();
+            if (pipActive && !isPlayerHash()) {
+                setPipState(false, true);
+            }
+            const dur = (durationVal > 0) ? durationVal : ((PermanentCore.getState?.('player')?.duration / 1000) || 0);
+            const cur = (currentTimeVal > 0) ? currentTimeVal : ((PermanentCore.getState?.('player')?.time / 1000) || 0);
+            if (!pausedVal && (dur > 0 || cur > 0) && bridgeVideo) {
+                bridgeVideo.dispatchEvent(new Event('timeupdate'));
+            }
+        }, 250);
+    } else if (!shouldRun && playbackTimer) {
+        clearInterval(playbackTimer);
+        playbackTimer = null;
     }
 }
 
@@ -202,23 +277,35 @@ function createTimeRanges(start: number, end: number) {
 
 export function mountBridgeHost(): void {
     if (!bridgeHost) return;
-    const playerContainer = document.querySelector<HTMLElement>('[class*="player-container"]');
-    const targetParent = playerContainer || document.body;
+    if (isPlayerHash()) {
+        ensureMountedIntoPlayerContainer();
+        if (bridgeHost.parentElement) return;
+    } else {
+        stopPlayerMountObserver();
+    }
+    const targetParent = document.body;
     if (targetParent && bridgeHost.parentElement !== targetParent) {
         targetParent.appendChild(bridgeHost);
-        console.log(`[Enhanced] Mounted bridge video host to ${playerContainer ? 'player-container' : 'document.body'}`);
+        console.log('[Enhanced] Mounted bridge video host to document.body');
     }
 }
 
 export function ensureBridgeVideo(): void {
+    const hash = window.location.hash || '';
+    const inPlayer = isPlayerHash();
+    if (inPlayer && hash !== lastPlayerHash) {
+        endedVal = false;
+        lastPlayerHash = hash;
+    } else if (!inPlayer) {
+        lastPlayerHash = '';
+    }
     mountBridgeHost();
     enforceTransparency();
-    if (pipActive) {
-        const inPlayer = window.location.hash.startsWith('#/player') || Boolean(document.querySelector('[class*="player-container"]'));
-        if (!inPlayer) {
-            setPipState(false, true);
-        }
+    if (pipActive && !inPlayer) {
+        setPipState(false, true);
     }
+    syncPlaybackTimer();
+    if (!inPlayer) return;
     const dur = (durationVal > 0) ? durationVal : ((PermanentCore.getState?.('player')?.duration / 1000) || 0);
     if (dur > 0 && bridgeVideo) {
         bridgeVideo.dispatchEvent(new Event('loadedmetadata'));
@@ -265,9 +352,9 @@ export function setupVideoBridge(): HTMLVideoElement {
 
         Document.prototype.querySelector = function <E extends Element = Element>(selectors: string): E | null {
             const result = origDocQS.call(this, selectors);
-            if (!result && bridgeVideo && typeof selectors === 'string') {
+            if (!result && bridgeVideo && typeof selectors === 'string' && isPlayerHash()) {
                 if (selectors === 'video' || selectors.endsWith(' video') || (selectors.includes('player-container') && selectors.includes('video'))) {
-                    if (document.querySelector('[class*="player-container"]') || window.location.hash.includes('player')) {
+                    if (origDocQS.call(document, '[class*="player-container"]') || window.location.hash.includes('player')) {
                         return bridgeVideo as unknown as E;
                     }
                 }
@@ -276,7 +363,7 @@ export function setupVideoBridge(): HTMLVideoElement {
         };
 
         Document.prototype.querySelectorAll = function <E extends Element = Element>(selectors: string): NodeListOf<E> {
-            if (typeof selectors === 'string' && selectors.includes('video')) {
+            if (typeof selectors === 'string' && selectors.includes('video') && isPlayerHash()) {
                 mountBridgeHost();
             }
             return origDocQSA.call(this, selectors);
@@ -284,7 +371,7 @@ export function setupVideoBridge(): HTMLVideoElement {
 
         Element.prototype.querySelector = function <E extends Element = Element>(selectors: string): E | null {
             const result = origElemQS.call(this, selectors);
-            if (!result && bridgeVideo && typeof selectors === 'string') {
+            if (!result && bridgeVideo && typeof selectors === 'string' && isPlayerHash()) {
                 if (selectors === 'video' || selectors.endsWith(' video')) {
                     if (this.matches?.('[class*="player-container"]') || this.closest?.('[class*="player-container"]')) {
                         return bridgeVideo as unknown as E;
@@ -650,6 +737,7 @@ export function setupVideoBridge(): HTMLVideoElement {
                             pausedVal = newPaused;
                             bridgeVideo!.dispatchEvent(new Event(pausedVal ? 'pause' : 'play'));
                         }
+                        syncPlaybackTimer();
                     } else if (name === 'seeking') {
                         seekingVal = Boolean(data);
                         if (seekingVal) {
@@ -663,8 +751,11 @@ export function setupVideoBridge(): HTMLVideoElement {
                             srcVal = String(data);
                             endedVal = false;
                             bridgeVideo!.setAttribute('src', srcVal);
+                            mountBridgeHost();
                             bridgeVideo!.dispatchEvent(new Event('loadstart'));
                             bridgeVideo!.dispatchEvent(new Event('loadedmetadata'));
+                            enforceTransparency(true);
+                            syncPlaybackTimer();
                         }
                     } else if (name === 'speed') {
                         speedVal = Number(data) || 1;
@@ -686,6 +777,7 @@ export function setupVideoBridge(): HTMLVideoElement {
                     }
                 } else if (action === 'mpv-event-ended') {
                     endedVal = true;
+                    syncPlaybackTimer();
                     bridgeVideo!.dispatchEvent(new Event('ended'));
                 }
             } catch (_) {}
@@ -699,21 +791,9 @@ export function setupVideoBridge(): HTMLVideoElement {
         window.addEventListener('load', mountBridgeHost, { once: true });
     }
 
-    // Periodic timeupdate and host mount verification when playing
-    setInterval(() => {
-        mountBridgeHost();
-        if (pipActive) {
-            const inPlayer = window.location.hash.startsWith('#/player') || Boolean(document.querySelector('[class*="player-container"]'));
-            if (!inPlayer) {
-                setPipState(false, true);
-            }
-        }
-        const dur = (durationVal > 0) ? durationVal : ((PermanentCore.getState?.('player')?.duration / 1000) || 0);
-        const cur = (currentTimeVal > 0) ? currentTimeVal : ((PermanentCore.getState?.('player')?.time / 1000) || 0);
-        if (!pausedVal && (dur > 0 || cur > 0) && bridgeVideo) {
-            bridgeVideo.dispatchEvent(new Event('timeupdate'));
-        }
-    }, 250);
+    window.addEventListener('hashchange', syncPlaybackTimer);
+    window.addEventListener('popstate', syncPlaybackTimer);
+    syncPlaybackTimer();
 
     return bridgeVideo;
 }

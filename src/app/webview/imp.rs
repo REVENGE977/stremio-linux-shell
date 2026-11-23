@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use adw::subclass::prelude::*;
 use gtk::{
     GestureClick,
@@ -5,13 +7,14 @@ use gtk::{
     glib::{self, clone},
     prelude::*,
 };
-use webkit::{WebView as WebKitWebView, prelude::*};
+use webkit::{HardwareAccelerationPolicy, WebView as WebKitWebView, prelude::*};
 
 use super::ext::SettingsExt;
 
 #[derive(Default)]
 pub struct WebView {
     pub webview: WebKitWebView,
+    pub transparent: Cell<bool>,
 }
 
 #[glib::object_subclass]
@@ -30,7 +33,7 @@ impl ObjectImpl for WebView {
         self.webview.set_vexpand(true);
         self.webview.set_hexpand(true);
         self.webview
-            .set_background_color(&RGBA::new(0.0, 0.0, 0.0, 0.0));
+            .set_background_color(&RGBA::new(0.047, 0.043, 0.071, 1.0));
 
         if let Some(settings) = WebViewExt::settings(&self.webview) {
             settings.set_enable_media(false);
@@ -38,6 +41,10 @@ impl ObjectImpl for WebView {
             settings.set_enable_media_stream(false);
             settings.set_enable_webaudio(false);
             settings.set_javascript_can_access_clipboard(true);
+            settings.set_hardware_acceleration_policy(HardwareAccelerationPolicy::Always);
+            settings.set_enable_smooth_scrolling(true);
+            settings.set_enable_page_cache(true);
+            settings.set_enable_back_forward_navigation_gestures(false);
 
             // https://github.com/Stremio/stremio-linux-shell/issues/170
             if webkit::functions::major_version() == 2 && webkit::functions::minor_version() == 54 {

@@ -1,6 +1,7 @@
 import { PermanentCore } from '../core/permanentCore';
 import { postEnhancedMessage } from '../utils/dom';
 import { EnhancedData } from '../types';
+import { getChapterAtTime, getChapters, isChapterMarkersEnabled } from './chapterMarkers';
 
 interface ThumbnailPayload {
     time: number;
@@ -22,12 +23,14 @@ const PIP_PREVIEW_WIDTH = 160;
 
 let previewEnabled = true;
 let initialized = false;
+let inPlayerRoute = false;
 let currentStreamKey = '';
 const thumbCache = new Map<string, CachedThumbnail>();
 
 let previewEl: HTMLDivElement | null = null;
 let frameWrapEl: HTMLDivElement | null = null;
 let imgEl: HTMLImageElement | null = null;
+let chapterEl: HTMLDivElement | null = null;
 let timeEl: HTMLDivElement | null = null;
 
 let isVisible = false;
@@ -157,6 +160,24 @@ function ensurePreviewElement(): void {
             transition: 'opacity 0.1s ease'
         });
 
+        chapterEl = document.createElement('div');
+        Object.assign(chapterEl.style, {
+            width: '100%',
+            maxWidth: `${NORMAL_PREVIEW_WIDTH}px`,
+            textAlign: 'center',
+            padding: '5px 10px 0px',
+            fontSize: '0.78rem',
+            fontWeight: '600',
+            color: 'rgba(205, 196, 255, 0.96)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'none',
+            lineHeight: '1.25'
+        });
+
         timeEl = document.createElement('div');
         Object.assign(timeEl.style, {
             width: '100%',
@@ -175,6 +196,7 @@ function ensurePreviewElement(): void {
 
         frameWrapEl.appendChild(imgEl);
         previewEl.appendChild(frameWrapEl);
+        previewEl.appendChild(chapterEl);
         previewEl.appendChild(timeEl);
     }
 
@@ -249,8 +271,12 @@ function isLiveSeekBar(slider: HTMLElement): boolean {
     return seekContainer.querySelector('[class*="live-badge-layer-"]') !== null;
 }
 
+function canShowTooltip(): boolean {
+    return previewEnabled || (isChapterMarkersEnabled() && getChapters().length > 0);
+}
+
 function updatePreviewAtPointer(slider: HTMLElement, clientX: number): void {
-    if (!previewEnabled || isLiveSeekBar(slider)) {
+    if (!canShowTooltip() || isLiveSeekBar(slider)) {
         hidePreview();
         return;
     }
@@ -278,28 +304,49 @@ function updatePreviewAtPointer(slider: HTMLElement, clientX: number): void {
     ensurePreviewElement();
     if (!previewEl || !frameWrapEl || !imgEl || !timeEl) return;
 
-    const streamKey = ensureStreamCacheScope();
-    const qTime = quantizeTime(targetTime, duration);
-    const cacheKey = makeCacheKey(streamKey, qTime, previewW);
-    const cached = thumbCache.get(cacheKey);
+    if (previewEnabled) {
+        frameWrapEl.style.display = 'flex';
+        const streamKey = ensureStreamCacheScope();
+        const qTime = quantizeTime(targetTime, duration);
+        const cacheKey = makeCacheKey(streamKey, qTime, previewW);
+        const cached = thumbCache.get(cacheKey);
 
-    if (cached) {
-        applyThumbToDom(cached);
-    } else {
-        const defaultH = lastDisplayFrameSize
-            ? Math.round((previewW * lastDisplayFrameSize.height) / lastDisplayFrameSize.width)
-            : Math.round((previewW * 9) / 16);
-        frameWrapEl.style.width = `${previewW}px`;
-        frameWrapEl.style.height = `${defaultH}px`;
-        if (!imgEl.getAttribute('src')) {
-            imgEl.style.opacity = '0';
+        if (cached) {
+            applyThumbToDom(cached);
+        } else {
+            const defaultH = lastDisplayFrameSize
+                ? Math.round((previewW * lastDisplayFrameSize.height) / lastDisplayFrameSize.width)
+                : Math.round((previewW * 9) / 16);
+            frameWrapEl.style.width = `${previewW}px`;
+            frameWrapEl.style.height = `${defaultH}px`;
+            if (!imgEl.getAttribute('src')) {
+                imgEl.style.opacity = '0';
+            }
+            dispatchThumbnailRequest(targetTime, previewW);
         }
-        dispatchThumbnailRequest(targetTime, previewW);
+    } else {
+        frameWrapEl.style.display = 'none';
+    }
+
+    const chapter = isChapterMarkersEnabled() ? getChapterAtTime(targetTime) : null;
+    if (chapterEl) {
+        if (chapter && chapter.title) {
+            chapterEl.textContent = chapter.title;
+            chapterEl.style.maxWidth = `${previewEnabled ? previewW : 240}px`;
+            chapterEl.style.display = 'block';
+            timeEl.style.borderTop = 'none';
+        } else {
+            chapterEl.style.display = 'none';
+            timeEl.style.borderTop = '1px solid rgba(255, 255, 255, 0.08)';
+        }
     }
 
     timeEl.textContent = formatTimestamp(targetTime);
+    previewEl.style.display = 'flex';
 
-    const cardWidth = Number.parseFloat(frameWrapEl.style.width) || previewW;
+    const cardWidth = previewEnabled
+        ? Number.parseFloat(frameWrapEl.style.width) || previewW
+        : Math.max(110, previewEl.offsetWidth || 160);
     const clampedLeft = Math.min(
         window.innerWidth - cardWidth - 12,
         Math.max(12, clientX - cardWidth / 2)
@@ -308,13 +355,22 @@ function updatePreviewAtPointer(slider: HTMLElement, clientX: number): void {
 
     previewEl.style.left = `${Math.round(clampedLeft)}px`;
     previewEl.style.bottom = `${Math.round(bottomOffset)}px`;
-    previewEl.style.display = 'flex';
     isVisible = true;
+}
+
+function updateInPlayerRoute(): boolean {
+    const hash = window.location.hash || '';
+    inPlayerRoute =
+        hash.startsWith('#/player') ||
+        hash.includes('/player/') ||
+        Boolean(document.documentElement?.classList.contains('stremio-player-active'));
+    return inPlayerRoute;
 }
 
 export function setupThumbnailPreview(): void {
     if (initialized) return;
     initialized = true;
+    updateInPlayerRoute();
 
     (window as any).__receiveThumbnailPreview = function (payload: ThumbnailPayload) {
         if (!payload || !payload.dataUrl || !Number.isFinite(payload.time)) return;
@@ -346,7 +402,7 @@ export function setupThumbnailPreview(): void {
     };
 
     document.addEventListener('pointerdown', (e: PointerEvent) => {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || (!inPlayerRoute && !updateInPlayerRoute())) return;
         const slider = findSeekSlider(e.target);
         if (slider) {
             draggingSlider = slider;
@@ -355,7 +411,7 @@ export function setupThumbnailPreview(): void {
     }, true);
 
     document.addEventListener('pointermove', (e: PointerEvent) => {
-        if (!previewEnabled) {
+        if (!inPlayerRoute || !canShowTooltip()) {
             if (isVisible) hidePreview();
             return;
         }
@@ -399,10 +455,7 @@ export function setupThumbnailPreview(): void {
     });
 
     const onRouteChange = () => {
-        const inPlayer =
-            window.location.hash.startsWith('#/player') ||
-            document.querySelector('[class*="player-container"]') !== null;
-        if (!inPlayer) {
+        if (!updateInPlayerRoute()) {
             draggingSlider = null;
             hidePreview();
         }

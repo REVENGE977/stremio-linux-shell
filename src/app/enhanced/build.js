@@ -1,10 +1,31 @@
 const { execSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const isWatch = process.argv.includes('--watch');
 
+function findLocalEsbuild() {
+    const localBin = path.join(__dirname, 'node_modules', '.bin', 'esbuild');
+    if (fs.existsSync(localBin)) {
+        return JSON.stringify(localBin);
+    }
+
+    const npxCacheDir = path.join(os.homedir(), '.npm', '_npx');
+    if (fs.existsSync(npxCacheDir)) {
+        for (const entry of fs.readdirSync(npxCacheDir)) {
+            const candidate = path.join(npxCacheDir, entry, 'node_modules', '.bin', 'esbuild');
+            if (fs.existsSync(candidate)) {
+                return JSON.stringify(candidate);
+            }
+        }
+    }
+
+    return 'npx -y esbuild';
+}
+
 const cmd = [
-    'npx -y esbuild',
+    findLocalEsbuild(),
     JSON.stringify(path.join(__dirname, 'src', 'index.ts')),
     '--bundle',
     '--format=iife',

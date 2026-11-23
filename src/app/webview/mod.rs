@@ -11,7 +11,7 @@ use gtk::{
 use tracing::error;
 use webkit::{
     NavigationPolicyDecision, PolicyDecisionType, UserContentInjectedFrames, UserScript,
-    UserScriptInjectionTime, UserStyleSheet, UserStyleLevel, prelude::WebViewExt,
+    UserScriptInjectionTime, UserStyleLevel, UserStyleSheet, prelude::WebViewExt,
 };
 
 glib::wrapper! {
@@ -34,6 +34,21 @@ impl WebView {
         let widget = self.imp();
 
         widget.webview.load_uri(uri);
+    }
+
+    /// Toggles WebKit background transparency so menu routes avoid full-window alpha blending.
+    pub fn set_transparent(&self, transparent: bool) {
+        let widget = self.imp();
+        if widget.transparent.get() == transparent {
+            return;
+        }
+        widget.transparent.set(transparent);
+        let color = if transparent {
+            gtk::gdk::RGBA::new(0.0, 0.0, 0.0, 0.0)
+        } else {
+            gtk::gdk::RGBA::new(0.047, 0.043, 0.071, 1.0)
+        };
+        webkit::prelude::WebViewExt::set_background_color(&widget.webview, &color);
     }
 
     pub fn inject_script(&self, script: &str) {

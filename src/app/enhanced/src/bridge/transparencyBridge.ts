@@ -2,14 +2,48 @@ let isTransparent = false;
 let isEnforcing = false;
 const modifiedElements = new Set<HTMLElement>();
 let observer: MutationObserver | null = null;
-let pollTimer: any = null;
+let rafId: number | null = null;
+
+function isPlayerHash(): boolean {
+    const hash = window.location.hash || '';
+    return hash.startsWith('#/player') || hash.includes('/player/');
+}
 
 export function isPlayerRoute(): boolean {
-    const hash = window.location.hash || '';
-    if (hash.startsWith('#/player') || hash.includes('/player/')) return true;
-    if (document.querySelector('[class*="player-container"]') !== null) return true;
-    if (document.querySelector('[class*="video-container"]') !== null) return true;
-    return false;
+    if (isPlayerHash()) return true;
+    return Boolean(document.documentElement?.classList.contains('stremio-player-active'));
+}
+
+function stopTransparencyObserver(): void {
+    if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+    if (observer) {
+        observer.disconnect();
+        observer = null;
+    }
+}
+
+function startTransparencyObserver(): void {
+    if (observer) return;
+    const target = document.getElementById('app') || document.body;
+    if (!target) return;
+
+    observer = new MutationObserver(() => {
+        if (rafId !== null) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            if (isPlayerHash() || isTransparent) {
+                enforceTransparency();
+            }
+        });
+    });
+
+    observer.observe(target, {
+        childList: true,
+        subtree: true
+    });
 }
 
 export function enforceTransparency(force?: boolean): void {
@@ -17,11 +51,14 @@ export function enforceTransparency(force?: boolean): void {
     isEnforcing = true;
 
     try {
-        const shouldBeTransparent = force !== undefined ? force : isPlayerRoute();
+        const shouldBeTransparent = force !== undefined ? force : isPlayerHash();
         const html = document.documentElement;
         const body = document.body;
         const app = document.getElementById('app');
-        const playerContainer = document.querySelector<HTMLElement>('[class*="player-container"]');
+
+        if (html && html.classList.contains('stremio-player-active') !== shouldBeTransparent) {
+            html.classList.toggle('stremio-player-active', shouldBeTransparent);
+        }
 
         if (shouldBeTransparent) {
             if (!html || !body) return;
@@ -39,6 +76,7 @@ export function enforceTransparency(force?: boolean): void {
             makeTransparent(body);
             if (app) makeTransparent(app);
 
+            const playerContainer = document.querySelector<HTMLElement>('[class*="player-container"]');
             if (playerContainer) {
                 makeTransparent(playerContainer);
 
@@ -48,22 +86,28 @@ export function enforceTransparency(force?: boolean): void {
                     curr = curr.parentElement;
                 }
             }
-        } else if (isTransparent) {
-            isTransparent = false;
-            modifiedElements.forEach(el => {
-                try {
-                    el.style.removeProperty('background');
-                    el.style.removeProperty('background-color');
-                } catch (_) {}
-            });
-            modifiedElements.clear();
 
-            html?.style.removeProperty('background');
-            html?.style.removeProperty('background-color');
-            body?.style.removeProperty('background');
-            body?.style.removeProperty('background-color');
-            app?.style.removeProperty('background');
-            app?.style.removeProperty('background-color');
+            startTransparencyObserver();
+        } else {
+            stopTransparencyObserver();
+
+            if (isTransparent) {
+                isTransparent = false;
+                modifiedElements.forEach(el => {
+                    try {
+                        el.style.removeProperty('background');
+                        el.style.removeProperty('background-color');
+                    } catch (_) {}
+                });
+                modifiedElements.clear();
+
+                html?.style.removeProperty('background');
+                html?.style.removeProperty('background-color');
+                body?.style.removeProperty('background');
+                body?.style.removeProperty('background-color');
+                app?.style.removeProperty('background');
+                app?.style.removeProperty('background-color');
+            }
         }
     } finally {
         isEnforcing = false;
@@ -73,37 +117,11 @@ export function enforceTransparency(force?: boolean): void {
 export function setupTransparencyBridge(): void {
     enforceTransparency();
 
-    window.addEventListener('hashchange', () => enforceTransparency());
-    window.addEventListener('popstate', () => enforceTransparency());
+    const onRouteChange = () => enforceTransparency();
+    window.addEventListener('hashchange', onRouteChange);
+    window.addEventListener('popstate', onRouteChange);
 
-    const attachObserver = () => {
-        if (observer) return;
-        const target = document.documentElement || document.body;
-        if (!target) return;
-
-        observer = new MutationObserver(() => {
-            enforceTransparency();
-        });
-
-        observer.observe(target, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style']
-        });
-    };
-
-    if (document.documentElement || document.body) {
-        attachObserver();
-    } else {
-        document.addEventListener('DOMContentLoaded', attachObserver, { once: true });
-    }
-
-    if (!pollTimer) {
-        pollTimer = setInterval(() => {
-            if (isPlayerRoute()) {
-                enforceTransparency(true);
-            }
-        }, 300);
+    if (!document.body) {
+        document.addEventListener('DOMContentLoaded', onRouteChange, { once: true });
     }
 }

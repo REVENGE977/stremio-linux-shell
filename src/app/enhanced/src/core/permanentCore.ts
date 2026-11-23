@@ -101,6 +101,9 @@ export function createDispatchWrapper(): (a: any) => void {
     return fn;
 }
 
+const sharedGetStateWrapper = createGetStateWrapper();
+const sharedDispatchWrapper = createDispatchWrapper();
+
 export function setupPermanentCore(): void {
     try {
         if (originalServices && originalServices.core) {
@@ -117,16 +120,16 @@ export function setupPermanentCore(): void {
                 if (!originalServices.core.transport) originalServices.core.transport = {};
 
                 if (!originalServices.core.getState || isOurWrapper(originalServices.core.getState)) {
-                    originalServices.core.getState = createGetStateWrapper();
+                    originalServices.core.getState = sharedGetStateWrapper;
                 }
                 if (!originalServices.core.dispatch || isOurWrapper(originalServices.core.dispatch)) {
-                    originalServices.core.dispatch = createDispatchWrapper();
+                    originalServices.core.dispatch = sharedDispatchWrapper;
                 }
                 if (!originalServices.core.transport.getState || isOurWrapper(originalServices.core.transport.getState)) {
-                    originalServices.core.transport.getState = createGetStateWrapper();
+                    originalServices.core.transport.getState = sharedGetStateWrapper;
                 }
                 if (!originalServices.core.transport.dispatch || isOurWrapper(originalServices.core.transport.dispatch)) {
-                    originalServices.core.transport.dispatch = createDispatchWrapper();
+                    originalServices.core.transport.dispatch = sharedDispatchWrapper;
                 }
 
                 return originalServices;
@@ -147,16 +150,16 @@ export function setupPermanentCore(): void {
                 if (!originalCore.transport) originalCore.transport = {};
 
                 if (!originalCore.getState || isOurWrapper(originalCore.getState)) {
-                    originalCore.getState = createGetStateWrapper();
+                    originalCore.getState = sharedGetStateWrapper;
                 }
                 if (!originalCore.dispatch || isOurWrapper(originalCore.dispatch)) {
-                    originalCore.dispatch = createDispatchWrapper();
+                    originalCore.dispatch = sharedDispatchWrapper;
                 }
                 if (!originalCore.transport.getState || isOurWrapper(originalCore.transport.getState)) {
-                    originalCore.transport.getState = createGetStateWrapper();
+                    originalCore.transport.getState = sharedGetStateWrapper;
                 }
                 if (!originalCore.transport.dispatch || isOurWrapper(originalCore.transport.dispatch)) {
-                    originalCore.transport.dispatch = createDispatchWrapper();
+                    originalCore.transport.dispatch = sharedDispatchWrapper;
                 }
 
                 return originalCore;
@@ -169,15 +172,17 @@ export function setupPermanentCore(): void {
             enumerable: true
         });
 
-        // Poller to capture core once instantiated by Stremio
+        // Poller to capture core once instantiated by Stremio (capped so it never loops indefinitely)
+        let captureAttempts = 0;
         const captureInterval = setInterval(() => {
+            captureAttempts++;
             if ((window as any).services && (window as any).services.core) {
                 captureCore((window as any).services.core);
             }
             if ((window as any).core) {
                 captureCore((window as any).core);
             }
-            if (PermanentCore.getState && PermanentCore.dispatch) {
+            if ((PermanentCore.getState && PermanentCore.dispatch) || captureAttempts >= 40) {
                 clearInterval(captureInterval);
             }
         }, 500);

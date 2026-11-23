@@ -41,8 +41,8 @@
     <project_license>GPL-3.0-only</project_license>
     <content_rating type="oars-1.1" />
 
-    <url type="homepage">https://github.com/REVENGE977/stremio-linux-shell-enhanced</url>
-    <url type="bugtracker">https://github.com/REVENGE977/stremio-linux-shell-enhanced/issues</url>
+    <url type="homepage">https://github.com/REVENGE977/stremio-linux-shell</url>
+    <url type="bugtracker">https://github.com/REVENGE977/stremio-linux-shell/issues</url>
 
     <translation type="gettext">stremio</translation>
 

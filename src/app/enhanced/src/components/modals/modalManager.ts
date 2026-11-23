@@ -214,6 +214,15 @@ export const modalManager = {
     },
 
     showAlert: (alertType: string, title: string, message: string, buttons: string[] = ['OK']): Promise<number> => {
+        return modalManager._openAlertModal(alertType, title, escapeHtml(message), buttons);
+    },
+
+    showRichAlert: (alertType: string, title: string, bodyHtml: string, buttons: string[] = ['OK']): Promise<number> => {
+        const wrappedHtml = `<div class="enhanced-rich-html" style="white-space: normal; line-height: 1.55;">${bodyHtml}</div>`;
+        return modalManager._openAlertModal(alertType, title, wrappedHtml, buttons);
+    },
+
+    _openAlertModal: (alertType: string, title: string, renderedMessageHtml: string, buttons: string[] = ['OK']): Promise<number> => {
         return new Promise((resolve) => {
             const modalId = `alert-modal-${Math.random().toString(36).substring(2, 9)}`;
             document.getElementById(modalId)?.remove();
@@ -237,7 +246,7 @@ export const modalManager = {
             const html = TemplateCache.render(alertModalTemplate, {
                 modalId,
                 title: escapeHtml(title),
-                message: escapeHtml(message),
+                message: renderedMessageHtml,
                 buttonsHtml
             });
 
@@ -280,11 +289,81 @@ export const modalManager = {
 
             const keyHandler = (e: KeyboardEvent) => {
                 if (e.key === 'Escape') {
-                    closeWithResult(btnList.length > 1 ? 1 : 0);
+                    closeWithResult(btnList.length > 1 ? btnList.length - 1 : 0);
                 }
             };
             window.addEventListener('keydown', keyHandler);
         });
+    },
+
+    openProgressModal: (
+        id: string,
+        title: string,
+        initialMessage: string
+    ): {
+        update: (percent: number, message: string, detail?: string) => void;
+        setButtons: (buttons: { label: string; primary?: boolean; onClick: () => void }[]) => void;
+        close: () => void;
+    } => {
+        const modalId = `progress-modal-${id.replace(/[^a-zA-Z0-9]/g, '')}`;
+        document.getElementById(modalId)?.remove();
+
+        const bodyHtml = `
+            <div class="enhanced-rich-html" style="white-space: normal;">
+                <div id="${modalId}-msg" style="font-size:0.95rem;color:#f4f4f5;margin-bottom:12px;">${escapeHtml(initialMessage)}</div>
+                <div style="width:100%;height:10px;border-radius:999px;background:rgba(255,255,255,0.1);overflow:hidden;">
+                    <div id="${modalId}-bar" style="width:0%;height:100%;background:var(--accent-color, var(--primary-accent-color, #735bf2));transition:width 0.18s ease;"></div>
+                </div>
+                <div id="${modalId}-detail" style="margin-top:8px;font-size:0.82rem;color:rgba(255,255,255,0.65);font-variant-numeric:tabular-nums;">0%</div>
+            </div>
+        `;
+
+        const html = TemplateCache.render(alertModalTemplate, {
+            modalId,
+            title: escapeHtml(title),
+            message: bodyHtml,
+            buttonsHtml: ''
+        });
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        const modal = document.getElementById(modalId);
+        const msgEl = document.getElementById(`${modalId}-msg`);
+        const barEl = document.getElementById(`${modalId}-bar`);
+        const detailEl = document.getElementById(`${modalId}-detail`);
+        const btnsContainer = modal?.querySelector<HTMLElement>('.buttons-container-e_JoR');
+
+        const setButtons = (buttons: { label: string; primary?: boolean; onClick: () => void }[]) => {
+            if (!btnsContainer) return;
+            btnsContainer.innerHTML = '';
+            buttons.forEach(btnDef => {
+                const btn = document.createElement('div');
+                btn.setAttribute('tabindex', '0');
+                btn.className = 'button-container-zVLH6 alert-dialog-btn';
+                const bg = btnDef.primary
+                    ? 'background-color: var(--accent-color, var(--primary-accent-color, #735bf2)); color: white;'
+                    : 'background-color: rgba(255,255,255,0.1); color: #ccc;';
+                btn.setAttribute('style', `cursor: pointer; padding: 10px 22px; border-radius: 4px; font-weight: 600; ${bg}`);
+                const label = document.createElement('div');
+                label.className = 'label-wbfsE';
+                label.textContent = btnDef.label;
+                btn.appendChild(label);
+                btn.addEventListener('click', btnDef.onClick);
+                btnsContainer.appendChild(btn);
+            });
+        };
+
+        return {
+            update: (percent: number, message: string, detail = '') => {
+                const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+                if (msgEl) msgEl.textContent = message;
+                if (barEl) barEl.style.width = `${clamped}%`;
+                if (detailEl) detailEl.textContent = detail || `${clamped}%`;
+            },
+            setButtons,
+            close: () => {
+                modal?.remove();
+            }
+        };
     },
 
     showToast: (id: string, title: string, message: string, status: 'success' | 'fail' | 'info' = 'success'): void => {

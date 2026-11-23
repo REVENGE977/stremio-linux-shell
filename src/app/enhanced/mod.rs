@@ -1,3 +1,6 @@
+pub mod shaders;
+pub mod updater;
+
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -65,6 +68,10 @@ fn default_true() -> bool {
     true
 }
 
+fn default_shader_preset() -> String {
+    "off".to_string()
+}
+
 /// Persistent settings stored in `settings.json`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -79,6 +86,10 @@ pub struct Settings {
     pub active_theme: Option<String>,
     #[serde(default = "default_true", alias = "thumbnail_preview")]
     pub thumbnail_preview: bool,
+    #[serde(default = "default_shader_preset", alias = "shader_preset")]
+    pub shader_preset: String,
+    #[serde(default = "default_true", alias = "chapter_markers")]
+    pub chapter_markers: bool,
 }
 
 impl Default for Settings {
@@ -87,6 +98,8 @@ impl Default for Settings {
             enabled_plugins: HashMap::new(),
             active_theme: None,
             thumbnail_preview: true,
+            shader_preset: default_shader_preset(),
+            chapter_markers: true,
         }
     }
 }
@@ -105,7 +118,11 @@ pub struct ServerStatusUiData {
 
 /// Incoming IPC action from the web interface.
 #[derive(Debug, serde::Deserialize)]
-#[serde(tag = "action", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "action",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum EnhancedAction {
     GetData,
     OpenThemesFolder,
@@ -175,6 +192,24 @@ pub enum EnhancedAction {
         value: serde_json::Value,
     },
     BrowseMpvConfigFile,
+    SetShaderPreset {
+        id: String,
+        preset: String,
+    },
+    OpenShadersFolder,
+    GetPlaybackStats {
+        id: String,
+    },
+    GetChapters,
+    SetChapterMarkers {
+        enabled: bool,
+    },
+    SelfUpdateAppImage {
+        id: String,
+        download_url: String,
+        expected_version: String,
+    },
+    RestartApp,
 }
 
 /// Shell/GTK window and MPV preferences exposed to the Stremio Enhanced settings UI.
@@ -263,6 +298,10 @@ pub struct EnhancedUiData {
     pub client_version: String,
     pub skipped_client_version: Option<String>,
     pub thumbnail_preview: bool,
+    pub shader_preset: String,
+    pub shader_presets: Vec<shaders::ShaderPresetUiData>,
+    pub chapter_markers: bool,
+    pub install_info: updater::InstallInfo,
     pub shell_preferences: ShellPreferencesUiData,
 }
 
@@ -272,6 +311,7 @@ pub struct EnhancedManager {
     pub base_dir: PathBuf,
     pub plugins_dir: PathBuf,
     pub themes_dir: PathBuf,
+    pub shaders_dir: PathBuf,
     pub settings_path: PathBuf,
     pub settings: Settings,
     pub plugins: Vec<Plugin>,
@@ -285,6 +325,7 @@ impl EnhancedManager {
         let base_dir = config_dir.join("stremio-enhanced");
         let plugins_dir = base_dir.join("plugins");
         let themes_dir = base_dir.join("themes");
+        let shaders_dir = base_dir.join("shaders");
         let settings_path = base_dir.join("settings.json");
 
         // Ensure directories exist
@@ -294,6 +335,9 @@ impl EnhancedManager {
         if let Err(e) = fs::create_dir_all(&themes_dir) {
             error!("Failed to create themes directory: {e}");
         }
+        if let Err(e) = fs::create_dir_all(&shaders_dir) {
+            error!("Failed to create shaders directory: {e}");
+        }
 
         let settings = Self::load_settings(&settings_path);
 
@@ -301,6 +345,7 @@ impl EnhancedManager {
             base_dir,
             plugins_dir,
             themes_dir,
+            shaders_dir,
             settings_path,
             settings,
             plugins: Vec::new(),
@@ -349,6 +394,23 @@ impl EnhancedManager {
     pub fn set_thumbnail_preview(&mut self, enabled: bool) {
         self.settings.thumbnail_preview = enabled;
         self.save_settings();
+    }
+
+    /// Persist active GLSL shader preset ID.
+    pub fn set_shader_preset(&mut self, preset: &str) {
+        self.settings.shader_preset = preset.to_string();
+        self.save_settings();
+    }
+
+    /// Enable or disable chapter markers on the player seek bar.
+    pub fn set_chapter_markers(&mut self, enabled: bool) {
+        self.settings.chapter_markers = enabled;
+        self.save_settings();
+    }
+
+    /// Open the shaders directory in the default file manager.
+    pub fn open_shaders_folder(&self) {
+        open_folder(&self.shaders_dir);
     }
 
     /// Open the themes directory in the default file manager.
@@ -535,6 +597,10 @@ impl EnhancedManager {
             client_version: env!("CARGO_PKG_VERSION").to_string(),
             skipped_client_version,
             thumbnail_preview: self.settings.thumbnail_preview,
+            shader_preset: self.settings.shader_preset.clone(),
+            shader_presets: shaders::ui_presets(&self.shaders_dir),
+            chapter_markers: self.settings.chapter_markers,
+            install_info: updater::detect_install_info(),
             shell_preferences: read_shell_preferences(),
         }
     }
@@ -707,14 +773,11 @@ impl EnhancedManager {
 
     /// Returns the currently active theme, if any.
     pub fn active_theme(&self) -> Option<&Theme> {
-        self.settings
-            .active_theme
-            .as_ref()
-            .and_then(|active| {
-                self.themes
-                    .iter()
-                    .find(|t| t.file_name.eq_ignore_ascii_case(active))
-            })
+        self.settings.active_theme.as_ref().and_then(|active| {
+            self.themes
+                .iter()
+                .find(|t| t.file_name.eq_ignore_ascii_case(active))
+        })
     }
 }
 
@@ -728,7 +791,9 @@ pub fn open_folder(path: &Path) {
         gtk::gio::AppInfo::launch_default_for_uri(&uri, None::<&gtk::gio::AppLaunchContext>)
     {
         warn!("Failed to open folder via GIO: {e}, attempting xdg-open fallback");
-        let _ = std::process::Command::new("xdg-open").arg(&path_buf).spawn();
+        let _ = std::process::Command::new("xdg-open")
+            .arg(&path_buf)
+            .spawn();
     }
 
     crate::spawn_local!(async move {
@@ -809,7 +874,11 @@ mod tests {
         let install = r#"{"action":"installMod","modType":"plugin","fileName":"test.js","content":"console.log(1);"}"#;
         let action: EnhancedAction = serde_json::from_str(install).unwrap();
         match action {
-            EnhancedAction::InstallMod { mod_type, file_name, content } => {
+            EnhancedAction::InstallMod {
+                mod_type,
+                file_name,
+                content,
+            } => {
                 assert_eq!(mod_type, "plugin");
                 assert_eq!(file_name, "test.js");
                 assert_eq!(content, "console.log(1);");
@@ -820,7 +889,10 @@ mod tests {
         let delete = r#"{"action":"deleteMod","modType":"theme","fileName":"dark.css"}"#;
         let action: EnhancedAction = serde_json::from_str(delete).unwrap();
         match action {
-            EnhancedAction::DeleteMod { mod_type, file_name } => {
+            EnhancedAction::DeleteMod {
+                mod_type,
+                file_name,
+            } => {
                 assert_eq!(mod_type, "theme");
                 assert_eq!(file_name, "dark.css");
             }
@@ -868,21 +940,79 @@ mod tests {
         let browse_mpv = r#"{"action":"browseMpvConfigFile"}"#;
         let action: EnhancedAction = serde_json::from_str(browse_mpv).unwrap();
         assert!(matches!(action, EnhancedAction::BrowseMpvConfigFile));
+
+        let set_shader = r#"{"action":"setShaderPreset","id":"sh_1","preset":"anime4k-a-fast"}"#;
+        let action: EnhancedAction = serde_json::from_str(set_shader).unwrap();
+        match action {
+            EnhancedAction::SetShaderPreset { id, preset } => {
+                assert_eq!(id, "sh_1");
+                assert_eq!(preset, "anime4k-a-fast");
+            }
+            _ => panic!("Wrong action"),
+        }
+
+        let open_shaders = r#"{"action":"openShadersFolder"}"#;
+        assert!(matches!(
+            serde_json::from_str::<EnhancedAction>(open_shaders).unwrap(),
+            EnhancedAction::OpenShadersFolder
+        ));
+
+        let get_stats = r#"{"action":"getPlaybackStats","id":"st_1"}"#;
+        match serde_json::from_str::<EnhancedAction>(get_stats).unwrap() {
+            EnhancedAction::GetPlaybackStats { id } => assert_eq!(id, "st_1"),
+            _ => panic!("Wrong action"),
+        }
+
+        let get_chapters = r#"{"action":"getChapters"}"#;
+        assert!(matches!(
+            serde_json::from_str::<EnhancedAction>(get_chapters).unwrap(),
+            EnhancedAction::GetChapters
+        ));
+
+        let set_chapters = r#"{"action":"setChapterMarkers","enabled":false}"#;
+        match serde_json::from_str::<EnhancedAction>(set_chapters).unwrap() {
+            EnhancedAction::SetChapterMarkers { enabled } => assert!(!enabled),
+            _ => panic!("Wrong action"),
+        }
+
+        let self_update = r#"{"action":"selfUpdateAppImage","id":"upd_1","downloadUrl":"https://github.com/REVENGE977/foo","expectedVersion":"1.2.3"}"#;
+        match serde_json::from_str::<EnhancedAction>(self_update).unwrap() {
+            EnhancedAction::SelfUpdateAppImage {
+                id,
+                download_url,
+                expected_version,
+            } => {
+                assert_eq!(id, "upd_1");
+                assert_eq!(download_url, "https://github.com/REVENGE977/foo");
+                assert_eq!(expected_version, "1.2.3");
+            }
+            _ => panic!("Wrong action"),
+        }
+
+        let restart = r#"{"action":"restartApp"}"#;
+        assert!(matches!(
+            serde_json::from_str::<EnhancedAction>(restart).unwrap(),
+            EnhancedAction::RestartApp
+        ));
     }
 
     #[test]
     fn test_deserialize_settings() {
         // Snake case map
-        let json1 = r#"{"enabled_plugins":{"test.js":true},"active_theme":"dark.css"}"#;
+        let json1 = r#"{"enabled_plugins":{"test.js":true},"active_theme":"dark.css","shader_preset":"fsrcnnx-8","chapter_markers":false}"#;
         let s1: Settings = serde_json::from_str(json1).unwrap();
         assert_eq!(s1.enabled_plugins.get("test.js"), Some(&true));
         assert_eq!(s1.active_theme.as_deref(), Some("dark.css"));
+        assert_eq!(s1.shader_preset, "fsrcnnx-8");
+        assert!(!s1.chapter_markers);
 
         // Camel case map
-        let json2 = r#"{"enabledPlugins":{"test.js":false},"activeTheme":"amoled.css"}"#;
+        let json2 = r#"{"enabledPlugins":{"test.js":false},"activeTheme":"amoled.css","shaderPreset":"artcnn-c4f32","chapterMarkers":true}"#;
         let s2: Settings = serde_json::from_str(json2).unwrap();
         assert_eq!(s2.enabled_plugins.get("test.js"), Some(&false));
         assert_eq!(s2.active_theme.as_deref(), Some("amoled.css"));
+        assert_eq!(s2.shader_preset, "artcnn-c4f32");
+        assert!(s2.chapter_markers);
 
         // Array list of enabled plugins
         let json3 = r#"{"enabledPlugins":["test1.js","test2.js"],"activeTheme":null}"#;
@@ -890,12 +1020,15 @@ mod tests {
         assert_eq!(s3.enabled_plugins.get("test1.js"), Some(&true));
         assert_eq!(s3.enabled_plugins.get("test2.js"), Some(&true));
         assert_eq!(s3.active_theme, None);
+        assert_eq!(s3.shader_preset, "off");
+        assert!(s3.chapter_markers);
 
         // Empty json
         let json4 = r#"{}"#;
         let s4: Settings = serde_json::from_str(json4).unwrap();
         assert!(s4.enabled_plugins.is_empty());
         assert_eq!(s4.active_theme, None);
+        assert_eq!(s4.shader_preset, "off");
+        assert!(s4.chapter_markers);
     }
 }
-

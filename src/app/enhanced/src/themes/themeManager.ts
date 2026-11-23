@@ -14,6 +14,10 @@ export function applyThemeCSS(fileName: string): void {
     let activeStyle = document.getElementById('activeTheme') as HTMLStyleElement | null;
 
     if (fileName === 'Default' || !fileName) {
+        if (headMutationObserver) {
+            headMutationObserver.disconnect();
+            headMutationObserver = null;
+        }
         if (activeStyle) activeStyle.remove();
         try { localStorage.setItem('currentTheme', 'Default'); } catch (_) { }
         return;
@@ -106,14 +110,17 @@ export function applyThemeUI(fileName: string): void {
             const targetTheme = (btn.getAttribute('data-theme') || '').toLowerCase();
             const isThisApplied = (!currentActive && targetTheme === 'default') || (currentActive && targetTheme === currentActive);
 
-            if (isThisApplied) {
-                btn.className = 'uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn';
-                const lbl = btn.querySelector('.label-OnWh2');
-                if (lbl) lbl.textContent = 'Applied';
-            } else {
-                btn.className = 'install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn';
-                const lbl = btn.querySelector('.label-OnWh2');
-                if (lbl) lbl.textContent = 'Apply';
+            const nextClass = isThisApplied
+                ? 'uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn'
+                : 'install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn';
+            const nextLabel = isThisApplied ? 'Applied' : 'Apply';
+
+            if (btn.className !== nextClass) {
+                btn.className = nextClass;
+            }
+            const lbl = btn.querySelector('.label-OnWh2');
+            if (lbl && lbl.textContent !== nextLabel) {
+                lbl.textContent = nextLabel;
             }
         });
     }
@@ -148,14 +155,17 @@ export function renderThemesList(onApplyTheme: (fileName: string) => void): void
         existingBtns.forEach(btn => {
             const targetTheme = (btn.getAttribute('data-theme') || '').toLowerCase();
             const isThisApplied = (!currentActive && targetTheme === 'default') || (currentActive && targetTheme === currentActive);
-            if (isThisApplied) {
-                btn.className = 'uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn';
-                const lbl = btn.querySelector('.label-OnWh2');
-                if (lbl) lbl.textContent = 'Applied';
-            } else {
-                btn.className = 'install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn';
-                const lbl = btn.querySelector('.label-OnWh2');
-                if (lbl) lbl.textContent = 'Apply';
+            const nextClass = isThisApplied
+                ? 'uninstall-button-container-oV4Yo disabled button-container-zVLH6 theme-apply-btn'
+                : 'install-button-container-yfcq5 button-container-zVLH6 theme-apply-btn';
+            const nextLabel = isThisApplied ? 'Applied' : 'Apply';
+
+            if (btn.className !== nextClass) {
+                btn.className = nextClass;
+            }
+            const lbl = btn.querySelector('.label-OnWh2');
+            if (lbl && lbl.textContent !== nextLabel) {
+                lbl.textContent = nextLabel;
             }
         });
         return;
