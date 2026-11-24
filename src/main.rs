@@ -33,6 +33,16 @@ struct Args {
 }
 
 fn main() -> ExitCode {
+    // GTK 4.22 defaults to the Vulkan GSK renderer, which forces per-frame
+    // GL<->Vulkan interop/copies when compositing WebKitGTK and libmpv's OpenGL
+    // GLArea. Prefer the OpenGL renderer unless the user explicitly chose one.
+    // `opengl` resolves to `gl` on GTK 4.18+ and `ngl` on GTK 4.14–4.16.
+    //
+    // SAFETY: runs at the very start of main before any threads are spawned.
+    if env::var_os("GSK_RENDERER").is_none() {
+        unsafe { env::set_var("GSK_RENDERER", "opengl") };
+    }
+
     tracing_subscriber::fmt::init();
 
     let data_dir = dirs::data_dir()

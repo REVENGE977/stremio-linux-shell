@@ -1,6 +1,6 @@
 [package]
 name = "stremio-linux-shell-enhanced"
-version = "1.2.2-enhanced.5.1"
+version = "1.2.2-enhanced.5.2"
 description = "Community-enhanced native Linux desktop client based on Stremio Linux Shell"
 authors = ["REVENGE977", "Stremio"]
 homepage = "https://github.com/REVENGE977/stremio-linux-shell"

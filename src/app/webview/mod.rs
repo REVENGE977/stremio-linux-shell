@@ -86,27 +86,18 @@ impl WebView {
 
     /// Inject a dynamically-loaded theme stylesheet (owned String) into the webview.
     pub fn inject_theme_css(&self, css: &str) {
-        let widget = self.imp();
-
-        let stylesheet = UserStyleSheet::new(
-            css,
-            UserContentInjectedFrames::TopFrame,
-            UserStyleLevel::Author,
-            &[],
-            &[],
-        );
-
-        if let Some(user_content_manager) = widget.webview.user_content_manager() {
-            user_content_manager.add_style_sheet(&stylesheet);
-        }
+        self.set_theme_css(Some(css));
     }
 
-    /// Set or clear the active theme stylesheet dynamically.
+    /// Set or clear the active theme stylesheet dynamically without removing
+    /// the shell's built-in performance stylesheet.
     pub fn set_theme_css(&self, css: Option<&str>) {
         let widget = self.imp();
 
         if let Some(user_content_manager) = widget.webview.user_content_manager() {
-            user_content_manager.remove_all_style_sheets();
+            if let Some(prev) = widget.theme_stylesheet.borrow_mut().take() {
+                user_content_manager.remove_style_sheet(&prev);
+            }
 
             if let Some(css) = css {
                 let stylesheet = UserStyleSheet::new(
@@ -117,6 +108,7 @@ impl WebView {
                     &[],
                 );
                 user_content_manager.add_style_sheet(&stylesheet);
+                *widget.theme_stylesheet.borrow_mut() = Some(stylesheet);
             }
         }
     }

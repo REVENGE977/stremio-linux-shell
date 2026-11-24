@@ -649,10 +649,8 @@ export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS="${WEBKIT_DISABLE_SANDBOX_THIS_I
 # Intel Vulkan video acceleration (matches .cargo/config.toml & Flatpak manifest)
 export ANV_DEBUG="${ANV_DEBUG:-video-decode,video-encode}"
 
-# Use GSK OpenGL renderer on NVIDIA GPUs (matches data/stremio.sh)
-if [ -z "${GSK_RENDERER:-}" ] && [ -e /dev/nvidia0 ]; then
-    export GSK_RENDERER=opengl
-fi
+# Prefer GSK OpenGL renderer to avoid GL<->Vulkan copies with WebKitGTK and libmpv GLArea (matches data/stremio.sh)
+export GSK_RENDERER="${GSK_RENDERER:-opengl}"
 
 # Run from $APPDIR so relocated relative WebKitGTK paths (usr//...) resolve inside the AppImage
 cd "$APPDIR"
