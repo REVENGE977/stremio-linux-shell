@@ -12,7 +12,73 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use tracing::warn;
 
-use crate::app::video::config::{BOOL_PROPERTIES, FLOAT_PROPERTIES, STRING_PROPERTIES};
+use crate::app::video::config::{
+    BOOL_PROPERTIES, FLOAT_PROPERTIES, INT_PROPERTIES, JSON_STRING_PROPERTIES, STRING_PROPERTIES,
+};
+
+#[derive(Debug, PartialEq)]
+enum MpvPropertyValue<'a> {
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    Str(&'a str),
+}
+
+fn is_supported_property(name: &str) -> bool {
+    FLOAT_PROPERTIES.contains(&name)
+        || BOOL_PROPERTIES.contains(&name)
+        || INT_PROPERTIES.contains(&name)
+        || STRING_PROPERTIES.contains(&name)
+}
+
+fn observe_format_for_property(name: &str) -> Option<Format> {
+    match name {
+        name if FLOAT_PROPERTIES.contains(&name) => Some(Format::Double),
+        name if BOOL_PROPERTIES.contains(&name) => Some(Format::Flag),
+        name if STRING_PROPERTIES.contains(&name) => Some(Format::String),
+        _ => None,
+    }
+}
+
+fn parse_observed_string_property(name: &str, value: String) -> Value {
+    if JSON_STRING_PROPERTIES.contains(&name)
+        && let Ok(json_value) = serde_json::from_str::<Value>(&value)
+    {
+        json_value
+    } else {
+        Value::String(value)
+    }
+}
+
+fn resolve_mpv_set_value<'a>(name: &str, value: &'a Value) -> Option<MpvPropertyValue<'a>> {
+    if !is_supported_property(name) {
+        return None;
+    }
+
+    match value {
+        Value::Bool(v) => Some(MpvPropertyValue::Bool(*v)),
+        Value::String(v) => Some(MpvPropertyValue::Str(v.as_str())),
+        Value::Number(n) => {
+            if INT_PROPERTIES.contains(&name) {
+                if let Some(v) = n.as_i64() {
+                    return Some(MpvPropertyValue::Int(v));
+                }
+                if let Some(v) = n.as_f64()
+                    && v.is_finite()
+                    && v.fract() == 0.0
+                    && v >= i64::MIN as f64
+                    && v <= i64::MAX as f64
+                {
+                    return Some(MpvPropertyValue::Int(v as i64));
+                }
+            }
+            n.as_f64()
+                .filter(|v| v.is_finite())
+                .map(MpvPropertyValue::Float)
+        }
+        _ => None,
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -85,8 +151,10 @@ impl Video {
             closure_local!(move |_: Video, name: &str, value: Variant| {
                 match name {
                     name if FLOAT_PROPERTIES.contains(&name) => {
-                        if let Some(value) = value.get::<f64>() {
-                            callback(name, Value::Number(Number::from_f64(value).unwrap()))
+                        if let Some(value) = value.get::<f64>()
+                            && let Some(num) = Number::from_f64(value)
+                        {
+                            callback(name, Value::Number(num))
                         }
                     }
                     name if BOOL_PROPERTIES.contains(&name) => {
@@ -96,11 +164,7 @@ impl Video {
                     }
                     name if STRING_PROPERTIES.contains(&name) => {
                         if let Some(value) = value.get::<String>() {
-                            if let Ok(json_value) = serde_json::from_str::<Value>(&value) {
-                                callback(name, json_value)
-                            } else {
-                                callback(name, Value::String(value))
-                            }
+                            callback(name, parse_observed_string_property(name, value))
                         }
                     }
                     _ => {}
@@ -149,18 +213,11 @@ impl Video {
     pub fn observe_mpv_property(&self, name: String) {
         let widget = self.imp();
 
-        match name.as_str() {
-            name if FLOAT_PROPERTIES.contains(&name) => {
-                widget.observe_property(name, Format::Double);
-            }
-            name if BOOL_PROPERTIES.contains(&name) => {
-                widget.observe_property(name, Format::Flag);
-            }
-            name if STRING_PROPERTIES.contains(&name) => {
-                widget.observe_property(name, Format::String);
-            }
-            _ => warn!("Failed to observe property {name}: Unsupported"),
-        };
+        if let Some(format) = observe_format_for_property(&name) {
+            widget.observe_property(&name, format);
+        } else {
+            warn!("Failed to observe property {name}: Unsupported");
+        }
     }
 
     pub fn set_mpv_property(&self, name: String, value: Value) {
@@ -184,21 +241,13 @@ impl Video {
                     widget.set_property("hwdec", hwdec);
                 }
             }
-            name if FLOAT_PROPERTIES.contains(&name) => {
-                if let Some(value) = value.as_f64() {
-                    widget.set_property(name, value);
-                }
-            }
-            name if BOOL_PROPERTIES.contains(&name) => {
-                if let Some(value) = value.as_bool() {
-                    widget.set_property(name, value);
-                }
-            }
-            name if STRING_PROPERTIES.contains(&name) => {
-                if let Some(value) = value.as_str() {
-                    widget.set_property(name, value);
-                }
-            }
+            name if is_supported_property(name) => match resolve_mpv_set_value(name, &value) {
+                Some(MpvPropertyValue::Bool(v)) => widget.set_property(name, v),
+                Some(MpvPropertyValue::Int(v)) => widget.set_property(name, v),
+                Some(MpvPropertyValue::Float(v)) => widget.set_property(name, v),
+                Some(MpvPropertyValue::Str(v)) => widget.set_property(name, v),
+                None => warn!("Failed to set property {name}: Invalid value {value}"),
+            },
             name => warn!("Failed to set property {name}: Unsupported"),
         };
     }
@@ -221,5 +270,112 @@ impl Video {
 
     pub fn set_playing(&self, playing: bool) {
         self.imp().is_playing.set(playing);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn secondary_subtitle_properties_observe_formats() {
+        assert_eq!(
+            observe_format_for_property("secondary-sub-visibility"),
+            Some(Format::Flag)
+        );
+        assert_eq!(
+            observe_format_for_property("secondary-sub-delay"),
+            Some(Format::Double)
+        );
+        assert_eq!(
+            observe_format_for_property("secondary-sub-pos"),
+            Some(Format::Double)
+        );
+        assert_eq!(
+            observe_format_for_property("secondary-sid"),
+            Some(Format::String)
+        );
+        assert_eq!(
+            observe_format_for_property("secondary-sub-text"),
+            Some(Format::String)
+        );
+        assert_eq!(
+            observe_format_for_property("sub-text"),
+            Some(Format::String)
+        );
+        assert_eq!(observe_format_for_property("unsupported-prop"), None);
+    }
+
+    #[test]
+    fn secondary_subtitle_properties_set_values() {
+        let sid_str = json!("2");
+        assert_eq!(
+            resolve_mpv_set_value("secondary-sid", &sid_str),
+            Some(MpvPropertyValue::Str("2"))
+        );
+
+        let sid_no = json!("no");
+        assert_eq!(
+            resolve_mpv_set_value("secondary-sid", &sid_no),
+            Some(MpvPropertyValue::Str("no"))
+        );
+
+        let sid_int = json!(2);
+        assert_eq!(
+            resolve_mpv_set_value("secondary-sid", &sid_int),
+            Some(MpvPropertyValue::Int(2))
+        );
+
+        let sid_float_whole = json!(2.0);
+        assert_eq!(
+            resolve_mpv_set_value("secondary-sid", &sid_float_whole),
+            Some(MpvPropertyValue::Int(2))
+        );
+
+        let vis = json!(false);
+        assert_eq!(
+            resolve_mpv_set_value("secondary-sub-visibility", &vis),
+            Some(MpvPropertyValue::Bool(false))
+        );
+
+        let delay = json!(-0.5);
+        assert_eq!(
+            resolve_mpv_set_value("secondary-sub-delay", &delay),
+            Some(MpvPropertyValue::Float(-0.5))
+        );
+
+        let pos = json!(12.0);
+        assert_eq!(
+            resolve_mpv_set_value("secondary-sub-pos", &pos),
+            Some(MpvPropertyValue::Float(12.0))
+        );
+
+        let unknown = json!(1);
+        assert_eq!(resolve_mpv_set_value("unsupported-prop", &unknown), None);
+    }
+
+    #[test]
+    fn observed_subtitle_text_is_not_json_parsed() {
+        assert_eq!(
+            parse_observed_string_property("sub-text", "42".to_string()),
+            json!("42")
+        );
+        assert_eq!(
+            parse_observed_string_property("secondary-sub-text", "true".to_string()),
+            json!("true")
+        );
+        assert_eq!(
+            parse_observed_string_property("secondary-sid", "2".to_string()),
+            json!(2)
+        );
+        assert_eq!(
+            parse_observed_string_property("secondary-sid", "no".to_string()),
+            json!("no")
+        );
+        assert_eq!(
+            parse_observed_string_property("track-list", r#"[{"id":1}]"#.to_string()),
+            json!([{"id": 1}])
+        );
     }
 }
