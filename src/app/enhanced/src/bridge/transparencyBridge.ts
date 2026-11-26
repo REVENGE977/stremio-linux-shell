@@ -1,3 +1,5 @@
+import { setPlayerFallbackStyles } from '../utils/dom';
+
 let isTransparent = false;
 let isEnforcing = false;
 const modifiedElements = new Set<HTMLElement>();
@@ -59,6 +61,7 @@ export function enforceTransparency(force?: boolean): void {
         if (html && html.classList.contains('stremio-player-active') !== shouldBeTransparent) {
             html.classList.toggle('stremio-player-active', shouldBeTransparent);
         }
+        setPlayerFallbackStyles(shouldBeTransparent);
 
         if (shouldBeTransparent) {
             if (!html || !body) return;

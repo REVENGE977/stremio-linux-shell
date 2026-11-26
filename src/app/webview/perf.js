@@ -2,29 +2,31 @@
  * WebKitGTK UI responsiveness optimizations for Stremio Web.
  *
  * Why this is needed on Linux (WebKitGTK) while Windows (WebView2/Chromium) is unaffected:
- * 1. Logged-in Stremio accounts with many addons render 40-100+ catalog rows on
- *    Board (600-2,000+ posters) or hundreds of cards in Library. Each poster
- *    creates 8-10 WebKit RenderLayers (negative z-index stacking layers +
- *    opacity < 1). On every hover or click (even on the left sidebar), WebKit's
- *    RenderLayerCompositor walks all live layers through
- *    OverlapMapContainer::overlapsLayers and CoordinatedSceneState::commitPendingLayers
- *    (O(N*M)), stalling hover/click to 200-400ms+ while compositor-threaded
- *    scrolling remains unaffected.
- * 2. Virtualizing off-screen catalog rows (Board/Search) and large poster grids
- *    (Library) via IntersectionObserver — using a 350px pre-render margin inside
- *    the actual scroll container and locking height from
- *    entry.boundingClientRect.height (zero forced synchronous layout) — keeps
- *    WebKit's active RenderLayer tree O(1) (~4-5 rows) regardless of how many
- *    addons are installed.
- * 3. Exact hashed class names are discovered once per StyleSheet (cached in a
- *    WeakSet) so injected CSS uses O(1) class selectors instead of [class*="..."]
- *    substring matching (which burns CPU in WTF::StringImpl::find).
- * 4. Press/click layer-churn transitions (:active scale) and the Spotlight's
- *    continuous 14s masked Ken Burns zoom are disabled, while smooth poster
- *    hover zoom is preserved now that Skia + damage tracking + virtualization
- *    keep active layers small.
- * 5. Synchronous full-viewport document.startViewTransition snapshots are
- *    disabled so menu navigation renders immediately without blocking input.
+ * 1. Stremio Web's global reset sets `* { overflow: hidden; }`. In WebKit, every
+ *    `overflow: hidden` box creates a full RenderLayer + RenderLayerScrollableArea,
+ *    producing 1,000+ RenderLayers even in a single viewport. Overriding the universal
+ *    reset at equal (0,0,0) specificity with `* { overflow: clip; }` preserves all
+ *    explicit `overflow: visible/auto/scroll/hidden` class rules while eliminating
+ *    non-scrollable RenderLayers across the entire DOM.
+ * 2. Logged-in accounts with many addons render 40-100+ catalog rows on Board
+ *    (600-2,000+ posters) or hundreds of cards in Library. Virtualizing off-screen
+ *    rows/Spotlight (Board/Search) and large poster grids (Library) via
+ *    IntersectionObserver keeps the live DOM/layer tree O(1).
+ * 3. Inside each visible poster, negative z-index children (-3/-2/-1) force WebKit's
+ *    RenderLayerCompositor into foreground-layer splits whenever a child is composited,
+ *    and `transition: transform` on `.poster-image-layer-*` promotes/demotes GPU
+ *    GraphicsLayers on every hover. Shifting poster children to non-negative z-indexes,
+ *    containing paint on `.poster-container-*`, and disabling hover/press transitions
+ *    keeps poster zoom (`scale(1.05)`) instant with zero GraphicsLayer thrash.
+ * 4. Isolating `.vertical-nav-bar-container-*` on its own tiny compositing layer and
+ *    containing `.board-content-*` prevents sidebar hovers from repainting the Board.
+ * 5. Replacing the Board Spotlight's 60fps `width` keyframe with a composited `scaleX`
+ *    keyframe and disabling expensive `backdrop-filter: blur(...)` passes eliminates
+ *    per-frame main-thread layout and GPU readback stalls on integrated GPUs.
+ * 6. Exact hashed class names are discovered once per StyleSheet (cached in a WeakSet)
+ *    so injected CSS uses O(1) class selectors instead of `[class*="..."]`.
+ * 7. Synchronous full-viewport `document.startViewTransition` snapshots are disabled
+ *    so menu navigation renders immediately without blocking input.
  */
 (function () {
     'use strict';
@@ -45,7 +47,7 @@
 
     const STYLE_ID = 'stremio-linux-perf-style';
     const OFFSCREEN_CLASS = 'stremio-linux-row-offscreen';
-    const ROOT_MARGIN = '350px 0px 350px 0px';
+    const ROOT_MARGIN = '150px 0px 150px 0px';
 
     const PREFIXES = [
         'meta-row-container-',
@@ -58,20 +60,28 @@
         'play-icon-layer-',
         'play-icon-outer-',
         'play-icon-background-',
+        'progress-bar-layer-',
+        'new-videos-',
+        'watched-icon-layer-',
+        'channel-badge-',
         'menu-label-container-',
         'button-container-',
         'nav-tab-button-container-',
+        'vertical-nav-bar-container-',
+        'board-content-',
         'menu-toggle-',
         'spotlight-',
+        'sentinel-',
         'backdrop-',
         'image-',
     ];
 
-    // Remove click/press scale and secondary icon transitions that thrash GPU
-    // backing layers, while keeping smooth poster-image-layer hover zoom.
+    // Disable hover/press transitions that allocate and tear down WebKit GraphicsLayers
+    // on every mouseenter/mouseleave (while preserving static hover visuals like scale(1.05)).
     const NO_TRANSITION_PREFIXES = [
         'meta-item-container-',
         'poster-container-',
+        'poster-image-layer-',
         'dismiss-icon-layer-',
         'play-icon-layer-',
         'play-icon-outer-',
@@ -87,6 +97,8 @@
         discovered[PREFIXES[i]] = new Set();
     }
 
+    const backdropFilterSelectors = new Set();
+    const spotlightFillSelectors = new Set();
     const scannedSheets = new WeakSet();
     let lastStyleKey = '';
     let rowSelector = '';
@@ -100,20 +112,33 @@
     let viewportObserver = null;
     const observedElements = new WeakSet();
 
-    function collectClassesFromString(text) {
-        if (!text) return;
-        const matches = text.match(/[a-zA-Z][a-zA-Z0-9_-]{4,}/g);
-        if (!matches) return;
-        for (let i = 0; i < matches.length; i++) {
-            const cls = matches[i];
-            for (let j = 0; j < PREFIXES.length; j++) {
-                const prefix = PREFIXES[j];
-                if (cls.startsWith(prefix)) {
-                    discovered[prefix].add(cls);
-                    break;
+    function recordClass(cls) {
+        for (let p = 0; p < PREFIXES.length; p++) {
+            const prefix = PREFIXES[p];
+            if (cls.startsWith(prefix)) {
+                // Keep board-content-<hash> separate from board-content-container-<hash>
+                if (prefix === 'board-content-' && cls.startsWith('board-content-container-')) {
+                    continue;
                 }
+                if (!discovered[prefix].has(cls)) {
+                    discovered[prefix].add(cls);
+                    return true;
+                }
+                return false;
             }
         }
+        return false;
+    }
+
+    function collectClassesFromString(text) {
+        if (!text) return false;
+        const matches = text.match(/[a-zA-Z][a-zA-Z0-9_-]{4,}/g);
+        if (!matches) return false;
+        let found = false;
+        for (let i = 0; i < matches.length; i++) {
+            if (recordClass(matches[i])) found = true;
+        }
+        return found;
     }
 
     function discoverExactClasses() {
@@ -123,6 +148,10 @@
             for (let i = 0; i < sheets.length; i++) {
                 const sheet = sheets[i];
                 if (scannedSheets.has(sheet)) continue;
+                if (sheet.ownerNode && sheet.ownerNode.id === STYLE_ID) {
+                    scannedSheets.add(sheet);
+                    continue;
+                }
                 let rules;
                 try {
                     rules = sheet.cssRules;
@@ -133,21 +162,37 @@
                 if (!rules || rules.length === 0) continue;
                 scannedSheets.add(sheet);
                 for (let j = 0; j < rules.length; j++) {
-                    const sel = rules[j].selectorText;
+                    const rule = rules[j];
+                    const sel = rule.selectorText;
                     if (!sel) continue;
+
+                    const style = rule.style;
+                    if (style) {
+                        const bf = style.backdropFilter || style.webkitBackdropFilter;
+                        if (bf && bf !== 'none' && !sel.includes('[')) {
+                            if (!backdropFilterSelectors.has(sel)) {
+                                backdropFilterSelectors.add(sel);
+                                foundNew = true;
+                            }
+                        }
+                        if (
+                            style.animationName &&
+                            style.animationName !== 'none' &&
+                            sel.includes('.segment-') &&
+                            sel.includes('.fill-')
+                        ) {
+                            if (!spotlightFillSelectors.has(sel)) {
+                                spotlightFillSelectors.add(sel);
+                                foundNew = true;
+                            }
+                        }
+                    }
+
                     const matches = sel.match(/\.[a-zA-Z0-9_-]+/g);
                     if (!matches) continue;
                     for (let k = 0; k < matches.length; k++) {
-                        const cls = matches[k].slice(1);
-                        for (let p = 0; p < PREFIXES.length; p++) {
-                            const prefix = PREFIXES[p];
-                            if (cls.startsWith(prefix)) {
-                                if (!discovered[prefix].has(cls)) {
-                                    discovered[prefix].add(cls);
-                                    foundNew = true;
-                                }
-                                break;
-                            }
+                        if (recordClass(matches[k].slice(1))) {
+                            foundNew = true;
                         }
                     }
                 }
@@ -158,14 +203,20 @@
         if (discovered['meta-row-container-'].size === 0 && discovered['meta-item-container-'].size === 0) {
             const sample = document.querySelectorAll('[class*="meta-row-"], [class*="meta-item-"], [class*="button-container-"]');
             for (let i = 0; i < sample.length && i < 80; i++) {
-                collectClassesFromString(sample[i].getAttribute('class'));
-            }
-            if (discovered['meta-row-container-'].size > 0 || discovered['meta-item-container-'].size > 0) {
-                foundNew = true;
+                if (collectClassesFromString(sample[i].getAttribute('class'))) {
+                    foundNew = true;
+                }
             }
         }
 
         return foundNew;
+    }
+
+    function toSelector(set) {
+        if (!set || set.size === 0) return '';
+        const arr = [];
+        for (const c of set) arr.push('.' + c);
+        return arr.join(',');
     }
 
     function ensureExactPerfCss() {
@@ -174,6 +225,7 @@
         const rowClasses = [
             ...discovered['meta-row-container-'],
             ...discovered['meta-row-placeholder-container-'],
+            ...discovered['spotlight-'],
         ];
         const noTransClasses = [];
         for (let i = 0; i < NO_TRANSITION_PREFIXES.length; i++) {
@@ -181,37 +233,102 @@
                 noTransClasses.push(c);
             }
         }
-        const posterImgClasses = [...discovered['poster-image-']];
-        const metaItemClasses = [...discovered['meta-item-container-']];
+        const posterContainerSel = toSelector(discovered['poster-container-']);
+        const posterImgLayerSel = toSelector(discovered['poster-image-layer-']);
+        const posterImgSel = toSelector(discovered['poster-image-']);
+        const metaItemSel = toSelector(discovered['meta-item-container-']);
+        const menuLabelSel = toSelector(discovered['menu-label-container-']);
+        const vNavSel = toSelector(discovered['vertical-nav-bar-container-']);
+        const boardContentSel = toSelector(discovered['board-content-']);
+        const sentinelClasses = [...discovered['sentinel-']];
         const spotlightClasses = [...discovered['spotlight-']];
         const backdropClasses = [...discovered['backdrop-']];
         const imageClasses = [...discovered['image-']];
 
+        const z1Classes = [
+            ...discovered['dismiss-icon-layer-'],
+            ...discovered['play-icon-layer-'],
+            ...discovered['channel-badge-'],
+        ];
+        const z2Classes = [
+            ...discovered['progress-bar-layer-'],
+            ...discovered['new-videos-'],
+        ];
+        const z3Sel = toSelector(discovered['watched-icon-layer-']);
+
         if (rowClasses.length === 0 && noTransClasses.length === 0) return;
 
         rowSelector = rowClasses.map((c) => '.' + c).join(',');
-        itemSelector = metaItemClasses.map((c) => '.' + c).join(',');
+        itemSelector = metaItemSel;
 
-        const key = `${rowClasses.length}|${noTransClasses.length}|${posterImgClasses.length}|${spotlightClasses.length}`;
-        if (key === lastStyleKey && document.getElementById(STYLE_ID)) return;
+        const key = `${rowClasses.length}|${noTransClasses.length}|${discovered['poster-image-'].size}|${spotlightClasses.length}|${backdropFilterSelectors.size}|${spotlightFillSelectors.size}|${discovered['vertical-nav-bar-container-'].size}|${discovered['board-content-'].size}`;
+        const existingStyle = document.getElementById(STYLE_ID);
+        if (key === lastStyleKey && existingStyle) return;
         lastStyleKey = key;
 
         const rules = [];
+
+        // Override Stremio's `* { overflow: hidden; }` reset at identical (0,0,0) specificity
+        // so non-scrollable elements clip without allocating WebKit RenderLayers.
+        rules.push('* { overflow: clip; }');
+
         if (rowClasses.length > 0) {
-            rules.push(`${rowSelector} { contain: layout style; }`);
+            const nonSpotlightRows = [
+                ...discovered['meta-row-container-'],
+                ...discovered['meta-row-placeholder-container-'],
+            ];
+            if (nonSpotlightRows.length > 0) {
+                rules.push(`${nonSpotlightRows.map((c) => '.' + c).join(',')} { contain: layout style; }`);
+            }
         }
-        if (metaItemClasses.length > 0) {
-            rules.push(`${itemSelector} { contain: style; }`);
+        if (metaItemSel) {
+            rules.push(`${metaItemSel} { contain: style; }`);
         }
+        if (posterContainerSel) {
+            rules.push(`${posterContainerSel} { contain: layout style paint; }`);
+        }
+        // Eliminate negative z-index children inside poster-container to avoid WebKit
+        // foreground-layer splits while preserving exact visual paint stacking order.
+        if (posterImgLayerSel) {
+            rules.push(`${posterImgLayerSel} { z-index: 0 !important; }`);
+        }
+        if (z1Classes.length > 0) {
+            rules.push(`${z1Classes.map((c) => '.' + c).join(',')} { z-index: 1 !important; }`);
+        }
+        if (z2Classes.length > 0) {
+            rules.push(`${z2Classes.map((c) => '.' + c).join(',')} { z-index: 2 !important; }`);
+        }
+        if (z3Sel) {
+            rules.push(`${z3Sel} { z-index: 3 !important; }`);
+        }
+        // Replace `right: 1rem; transform: translateX(1rem)` on the 3-dot menu trigger
+        // with equivalent layout offset so it doesn't allocate a RenderLayer per poster.
+        if (menuLabelSel) {
+            rules.push(`${menuLabelSel} { right: 0 !important; transform: none !important; }`);
+        }
+        // Isolate the left sidebar on its own tiny GPU layer and contain the Board scroll
+        // area so hovering sidebar tabs never invalidates or repaints Board posters.
+        if (vNavSel) {
+            rules.push(`${vNavSel} { contain: layout style paint; transform: translateZ(0); }`);
+        }
+        if (boardContentSel) {
+            rules.push(`${boardContentSel} { contain: layout style paint; }`);
+        }
+
         rules.push(`.${OFFSCREEN_CLASS} { box-sizing: border-box !important; }`);
-        rules.push(`.${OFFSCREEN_CLASS} > * { display: none !important; }`);
+        if (sentinelClasses.length > 0) {
+            const notSentinel = sentinelClasses.map((c) => `:not(.${c})`).join('');
+            rules.push(`.${OFFSCREEN_CLASS} > *${notSentinel} { display: none !important; }`);
+        } else {
+            rules.push(`.${OFFSCREEN_CLASS} > * { display: none !important; }`);
+        }
 
         if (noTransClasses.length > 0) {
             rules.push(`${noTransClasses.map((c) => '.' + c).join(',')} { transition: none !important; }`);
         }
         // Avoid creating an extra WebKit RenderLayer per poster image for opacity: 0.9
-        if (posterImgClasses.length > 0) {
-            rules.push(`${posterImgClasses.map((c) => '.' + c).join(',')} { opacity: 1 !important; }`);
+        if (posterImgSel) {
+            rules.push(`${posterImgSel} { opacity: 1 !important; }`);
         }
         // Stop continuous 14s masked Ken Burns zoom on Board Spotlight hero image
         if (spotlightClasses.length > 0 && backdropClasses.length > 0 && imageClasses.length > 0) {
@@ -227,12 +344,28 @@
                 rules.push(`${spSels.join(',')} { transform: none !important; transition: none !important; }`);
             }
         }
+        // Replace the Spotlight pager's 60fps main-thread `width` animation with a
+        // compositor-driven `scaleX` keyframe (identical look & 8s animationend timing).
+        if (spotlightFillSelectors.size > 0) {
+            rules.push('@keyframes stremio-linux-fill-scale { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }');
+            rules.push(`${[...spotlightFillSelectors].join(',')} { width: 100% !important; transform-origin: left center !important; animation-name: stremio-linux-fill-scale !important; }`);
+        }
+        // Disable expensive backdrop-filter blur passes that trigger GPU readbacks in Skia.
+        if (backdropFilterSelectors.size > 0) {
+            rules.push(`${[...backdropFilterSelectors].join(',')} { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }`);
+        }
 
-        let style = document.getElementById(STYLE_ID);
+        let style = existingStyle;
         if (!style) {
             style = document.createElement('style');
             style.id = STYLE_ID;
-            (document.head || document.documentElement).appendChild(style);
+            const head = document.head || document.documentElement;
+            const activeTheme = document.getElementById('activeTheme');
+            if (activeTheme && activeTheme.parentNode === head) {
+                head.insertBefore(style, activeTheme);
+            } else {
+                head.appendChild(style);
+            }
         }
         style.textContent = rules.join('\n');
     }

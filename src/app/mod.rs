@@ -55,6 +55,14 @@ impl Application {
         self.imp().set_server(server);
     }
 
+    pub fn reload_webview(&self, bypass_cache: bool) {
+        self.imp().reload_webview(bypass_cache);
+    }
+
+    pub fn toggle_devtools(&self) {
+        self.imp().toggle_devtools();
+    }
+
     pub fn run(&self, args: Vec<String>) -> ExitCode {
         let mut program = std::env::args().take(1).collect_vec();
         program.extend(args);
@@ -86,12 +94,40 @@ impl Application {
             })
             .build();
 
-        self.add_action_entries([quit_action, show_preferences_action, show_about_action]);
+        let reload_action = ActionEntry::builder("reload")
+            .activate(|app: &Self, _, _| {
+                app.reload_webview(false);
+            })
+            .build();
+
+        let reload_bypass_action = ActionEntry::builder("reload-bypass-cache")
+            .activate(|app: &Self, _, _| {
+                app.reload_webview(true);
+            })
+            .build();
+
+        let toggle_devtools_action = ActionEntry::builder("toggle-devtools")
+            .activate(|app: &Self, _, _| {
+                app.toggle_devtools();
+            })
+            .build();
+
+        self.add_action_entries([
+            quit_action,
+            show_preferences_action,
+            show_about_action,
+            reload_action,
+            reload_bypass_action,
+            toggle_devtools_action,
+        ]);
     }
 
     fn setup_accels(&self) {
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("app.show-preferences", &["<Control>comma"]);
+        self.set_accels_for_action("app.reload", &["<Control>r"]);
+        self.set_accels_for_action("app.reload-bypass-cache", &["<Control><Shift>r"]);
+        self.set_accels_for_action("app.toggle-devtools", &["F12"]);
     }
 
     fn setup_css(&self) {

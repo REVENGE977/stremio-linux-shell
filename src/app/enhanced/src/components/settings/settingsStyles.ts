@@ -11,7 +11,7 @@ export const SETTINGS_STYLE_ID = 'enhanced-settings-style';
 export const SETTINGS_STYLES = `
 .enhanced-page-container { display: none; }
 .enhanced-open .enhanced-page-container { display: block; }
-.enhanced-open [class*="pane-"] > :not(.enhanced-page-container) { display: none !important; }
+.enhanced-open .enhanced-settings-pane > :not(.enhanced-page-container) { display: none !important; }
 
 #enhanced[data-show="themes"] > .enhanced-category:not([data-category="themes"]),
 #enhanced[data-show="plugins"] > .enhanced-category:not([data-category="plugins"]),

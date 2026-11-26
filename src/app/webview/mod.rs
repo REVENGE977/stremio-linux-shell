@@ -113,6 +113,50 @@ impl WebView {
         }
     }
 
+    /// Set or replace the initial Enhanced data script injected at document start.
+    pub fn set_initial_data_script(&self, script: &str) {
+        let widget = self.imp();
+
+        if let Some(user_content_manager) = widget.webview.user_content_manager() {
+            if let Some(prev) = widget.initial_data_script.borrow_mut().take() {
+                user_content_manager.remove_script(&prev);
+            }
+
+            let user_script = UserScript::new(
+                script,
+                UserContentInjectedFrames::TopFrame,
+                UserScriptInjectionTime::Start,
+                &[],
+                &[],
+            );
+            user_content_manager.add_script(&user_script);
+            *widget.initial_data_script.borrow_mut() = Some(user_script);
+        }
+    }
+
+    pub fn reload(&self, bypass_cache: bool) {
+        let widget = self.imp();
+        if bypass_cache {
+            widget.webview.reload_bypass_cache();
+        } else {
+            widget.webview.reload();
+        }
+    }
+
+    fn ensure_inspector_wired(&self, inspector: &webkit::WebInspector) {
+        let widget = self.imp();
+        if widget.inspector_wired.replace(true) {
+            return;
+        }
+        inspector.connect_closed(clone!(
+            #[weak(rename_to = webview)]
+            self,
+            move |_| {
+                webview.imp().inspector_open.set(false);
+            }
+        ));
+    }
+
     pub fn dev_mode(&self, state: bool) {
         let widget = self.imp();
 
@@ -121,10 +165,31 @@ impl WebView {
         }
 
         if let Some(inspector) = widget.webview.inspector() {
+            self.ensure_inspector_wired(&inspector);
+            widget.inspector_open.set(state);
             if state {
                 inspector.show();
             } else {
                 inspector.close();
+            }
+        }
+    }
+
+    pub fn toggle_devtools(&self) {
+        let widget = self.imp();
+
+        if let Some(settings) = widget.webview.settings() {
+            settings.set_enable_developer_extras(true);
+        }
+
+        if let Some(inspector) = widget.webview.inspector() {
+            self.ensure_inspector_wired(&inspector);
+            if widget.inspector_open.get() {
+                widget.inspector_open.set(false);
+                inspector.close();
+            } else {
+                widget.inspector_open.set(true);
+                inspector.show();
             }
         }
     }

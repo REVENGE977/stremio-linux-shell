@@ -1,6 +1,6 @@
 import { PermanentCore } from '../core/permanentCore';
 import { enforceTransparency } from './transparencyBridge';
-import { postEnhancedMessage } from '../utils/dom';
+import { postEnhancedMessage, setPipFallbackStyles } from '../utils/dom';
 
 let bridgeHost: HTMLDivElement | null = null;
 let bridgeVideo: HTMLVideoElement | null = null;
@@ -76,8 +76,10 @@ function setPipState(enabled: boolean, notifyRust = true): void {
 
     if (pipActive) {
         document.documentElement.classList.add('stremio-pip-mode');
+        setPipFallbackStyles(true);
     } else {
         document.documentElement.classList.remove('stremio-pip-mode');
+        setPipFallbackStyles(false);
         document.documentElement.style.cursor = '';
         delete document.documentElement.dataset.pipCursor;
     }

@@ -22,6 +22,9 @@ pub struct WebView {
     pub webview: WebKitWebView,
     pub transparent: Cell<bool>,
     pub theme_stylesheet: RefCell<Option<UserStyleSheet>>,
+    pub initial_data_script: RefCell<Option<UserScript>>,
+    pub inspector_open: Cell<bool>,
+    pub inspector_wired: Cell<bool>,
 }
 
 #[glib::object_subclass]

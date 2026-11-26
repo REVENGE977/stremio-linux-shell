@@ -144,6 +144,8 @@ function applyRouteState(): boolean {
     const selected = selectedClass();
 
     content.classList.toggle('enhanced-open', !!match);
+    const pane = document.querySelector(SELECTORS.SETTINGS_PANE);
+    if (pane) pane.classList.add('enhanced-settings-pane');
     const page = document.getElementById('enhanced');
     if (page) page.setAttribute('data-show', current);
 
@@ -293,6 +295,7 @@ function buildSettingsPage(): Promise<void> {
             const stremioContainer = document.querySelector(SELECTORS.SETTINGS_PAGE_CONTAINER);
             const stremioPage = document.querySelector(SELECTORS.SETTINGS_PAGE);
             if (!pane || !stremioPage) return;
+            pane.classList.add('enhanced-settings-pane');
 
             const stremioHead = stremioPage.firstElementChild;
             const sampleGroup = document.querySelector(SELECTORS.SETTINGS_GROUP);
@@ -830,9 +833,11 @@ let buildStartedAt = 0;
 export function checkSettings(): void {
     if (!location.href.includes('#/settings')) {
         isBuilding = false;
+        document.getElementById(SETTINGS_STYLE_ID)?.remove();
         return;
     }
 
+    injectSettingsStyles();
     updateRoute();
 
     if (document.getElementById('enhanced') && document.querySelector('[data-enhanced-nav]')) return;

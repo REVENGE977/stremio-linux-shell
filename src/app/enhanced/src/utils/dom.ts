@@ -52,12 +52,35 @@ export function postEnhancedMessage(action: string, payload: Record<string, any>
     }
 }
 
-export function injectFallbackStyles(): void {
-    if (document.getElementById('stremio-enhanced-injected-styles')) return;
+const PLAYER_FALLBACK_STYLE_ID = 'stremio-enhanced-player-styles';
+const PIP_FALLBACK_STYLE_ID = 'stremio-enhanced-pip-styles';
+
+function mountScopedStyle(id: string, css: string, active: boolean): void {
+    const existing = document.getElementById(id);
+    if (!active) {
+        if (existing) existing.remove();
+        return;
+    }
+    if (existing) return;
     const style = document.createElement('style');
-    style.id = 'stremio-enhanced-injected-styles';
-    style.textContent = `
-        /* Native Player Transparency Bridge */
+    style.id = id;
+    style.textContent = css;
+    const target = document.head || document.documentElement || document.body;
+    if (target) {
+        target.appendChild(style);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!document.getElementById(id)) {
+                (document.head || document.documentElement || document.body)?.appendChild(style);
+            }
+        }, { once: true });
+    }
+}
+
+export function setPlayerFallbackStyles(active: boolean): void {
+    mountScopedStyle(
+        PLAYER_FALLBACK_STYLE_ID,
+        `
         html.stremio-player-active,
         html.stremio-player-active body,
         html.stremio-player-active #app,
@@ -67,7 +90,52 @@ export function injectFallbackStyles(): void {
             background: transparent !important;
             background-color: transparent !important;
         }
+        `,
+        active
+    );
+}
 
+export function setPipFallbackStyles(active: boolean): void {
+    mountScopedStyle(
+        PIP_FALLBACK_STYLE_ID,
+        `
+        html.stremio-pip-mode [class*="player-container"] [class*="control-bar-container"] {
+            zoom: 0.72;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        html.stremio-pip-mode [class*="player-container"] [class*="nav-bar-container"] {
+            zoom: 0.72;
+        }
+        html.stremio-pip-mode .pip-plugin-button {
+            color: var(--accent-color, var(--primary-accent-color, #7b5bf5)) !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {
+            cursor: nwse-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"] * {
+            cursor: nesw-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"] * {
+            cursor: ew-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"] * {
+            cursor: ns-resize !important;
+        }
+        `,
+        active
+    );
+}
+
+export function injectFallbackStyles(): void {
+    if (document.getElementById('stremio-enhanced-injected-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'stremio-enhanced-injected-styles';
+    style.textContent = `
         .theme-apply-btn, .plugin-toggle, #toggleallpluginsBtn, #openthemesfolderBtn, #openpluginsfolderBtn, #openserverfolderBtn, #checkserverupdatesBtn, .modActionBtn, .marketplace-repo-btn {
             transition: all 0.2s ease-in-out;
         }
@@ -123,34 +191,6 @@ export function injectFallbackStyles(): void {
         .theme-apply-btn.uninstall-button-container-oV4Yo.disabled {
             opacity: 0.85;
             cursor: default;
-        }
-        /* Picture-in-Picture Compact Mode */
-        html.stremio-pip-mode [class*="player-container"] [class*="control-bar-container"] {
-            zoom: 0.72;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        html.stremio-pip-mode [class*="player-container"] [class*="nav-bar-container"] {
-            zoom: 0.72;
-        }
-        html.stremio-pip-mode .pip-plugin-button {
-            color: var(--accent-color, var(--primary-accent-color, #7b5bf5)) !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
-        html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {
-            cursor: nwse-resize !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="nesw-resize"],
-        html.stremio-pip-mode[data-pip-cursor="nesw-resize"] * {
-            cursor: nesw-resize !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="ew-resize"],
-        html.stremio-pip-mode[data-pip-cursor="ew-resize"] * {
-            cursor: ew-resize !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="ns-resize"],
-        html.stremio-pip-mode[data-pip-cursor="ns-resize"] * {
-            cursor: ns-resize !important;
         }
     `;
     const target = document.head || document.documentElement || document.body;

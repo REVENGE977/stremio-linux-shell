@@ -606,6 +606,31 @@ impl Application {
     pub fn set_server(&self, server: Rc<RefCell<crate::server::Server>>) {
         *self.server.borrow_mut() = Some(server);
     }
+
+    pub fn reload_webview(&self, bypass_cache: bool) {
+        let Some(ref webview) = *self.webview.borrow() else {
+            return;
+        };
+
+        if let Some(ref enhanced_rc) = *self.enhanced.borrow() {
+            let mut mgr = enhanced_rc.borrow_mut();
+            mgr.reload();
+            let running = is_server_running(&self.server.borrow());
+            let initial_data = serde_json::to_string(&mgr.ui_data(running)).unwrap_or_default();
+            let init_script = format!("window.__INITIAL_ENHANCED_DATA__ = {initial_data};\n");
+            webview.set_initial_data_script(&init_script);
+            let theme_css = mgr.active_theme().map(|t| t.content.clone());
+            webview.set_theme_css(theme_css.as_deref());
+        }
+
+        webview.reload(bypass_cache);
+    }
+
+    pub fn toggle_devtools(&self) {
+        if let Some(ref webview) = *self.webview.borrow() {
+            webview.toggle_devtools();
+        }
+    }
 }
 
 #[glib::object_subclass]
@@ -671,7 +696,7 @@ impl ApplicationImpl for Application {
         let initial_data =
             serde_json::to_string(&enhanced.borrow().ui_data(server_running)).unwrap_or_default();
         let init_script = format!("window.__INITIAL_ENHANCED_DATA__ = {initial_data};\n");
-        webview.inject_script(&init_script);
+        webview.set_initial_data_script(&init_script);
 
         webview.inject_script(crate::app::enhanced::ENHANCED_SCRIPT);
 
@@ -689,6 +714,44 @@ impl ApplicationImpl for Application {
         window.set_property("decorations", self.decorations.get());
         window.set_underlay(&video);
         window.set_overlay(&webview);
+
+        let key_controller = gtk::EventControllerKey::new();
+        key_controller.set_propagation_phase(gtk::PropagationPhase::Capture);
+        key_controller.connect_key_pressed(clone!(
+            #[weak]
+            app,
+            #[upgrade_or]
+            glib::Propagation::Proceed,
+            move |_, key, _, state| {
+                let mods = state
+                    & (gtk::gdk::ModifierType::CONTROL_MASK
+                        | gtk::gdk::ModifierType::SHIFT_MASK
+                        | gtk::gdk::ModifierType::ALT_MASK
+                        | gtk::gdk::ModifierType::SUPER_MASK);
+
+                if key == gtk::gdk::Key::F12 && mods.is_empty() {
+                    app.toggle_devtools();
+                    return glib::Propagation::Stop;
+                }
+
+                if matches!(key, gtk::gdk::Key::r | gtk::gdk::Key::R) {
+                    if mods == gtk::gdk::ModifierType::CONTROL_MASK {
+                        app.reload_webview(false);
+                        return glib::Propagation::Stop;
+                    }
+                    if mods
+                        == (gtk::gdk::ModifierType::CONTROL_MASK
+                            | gtk::gdk::ModifierType::SHIFT_MASK)
+                    {
+                        app.reload_webview(true);
+                        return glib::Propagation::Stop;
+                    }
+                }
+
+                glib::Propagation::Proceed
+            }
+        ));
+        window.add_controller(key_controller);
 
         let (thumb_script_tx, thumb_script_rx) = flume::unbounded::<String>();
         let initial_thumb_enabled = enhanced.borrow().settings.thumbnail_preview;

@@ -216,12 +216,33 @@
       console.warn("[Enhanced] Failed to post enhanced IPC message:", e);
     }
   }
-  function injectFallbackStyles() {
-    if (document.getElementById("stremio-enhanced-injected-styles")) return;
+  var PLAYER_FALLBACK_STYLE_ID = "stremio-enhanced-player-styles";
+  var PIP_FALLBACK_STYLE_ID = "stremio-enhanced-pip-styles";
+  function mountScopedStyle(id, css, active) {
+    const existing = document.getElementById(id);
+    if (!active) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) return;
     const style = document.createElement("style");
-    style.id = "stremio-enhanced-injected-styles";
-    style.textContent = `
-        /* Native Player Transparency Bridge */
+    style.id = id;
+    style.textContent = css;
+    const target = document.head || document.documentElement || document.body;
+    if (target) {
+      target.appendChild(style);
+    } else {
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!document.getElementById(id)) {
+          (document.head || document.documentElement || document.body)?.appendChild(style);
+        }
+      }, { once: true });
+    }
+  }
+  function setPlayerFallbackStyles(active) {
+    mountScopedStyle(
+      PLAYER_FALLBACK_STYLE_ID,
+      `
         html.stremio-player-active,
         html.stremio-player-active body,
         html.stremio-player-active #app,
@@ -231,7 +252,50 @@
             background: transparent !important;
             background-color: transparent !important;
         }
-
+        `,
+      active
+    );
+  }
+  function setPipFallbackStyles(active) {
+    mountScopedStyle(
+      PIP_FALLBACK_STYLE_ID,
+      `
+        html.stremio-pip-mode [class*="player-container"] [class*="control-bar-container"] {
+            zoom: 0.72;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        html.stremio-pip-mode [class*="player-container"] [class*="nav-bar-container"] {
+            zoom: 0.72;
+        }
+        html.stremio-pip-mode .pip-plugin-button {
+            color: var(--accent-color, var(--primary-accent-color, #7b5bf5)) !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {
+            cursor: nwse-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"],
+        html.stremio-pip-mode[data-pip-cursor="nesw-resize"] * {
+            cursor: nesw-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ew-resize"] * {
+            cursor: ew-resize !important;
+        }
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"],
+        html.stremio-pip-mode[data-pip-cursor="ns-resize"] * {
+            cursor: ns-resize !important;
+        }
+        `,
+      active
+    );
+  }
+  function injectFallbackStyles() {
+    if (document.getElementById("stremio-enhanced-injected-styles")) return;
+    const style = document.createElement("style");
+    style.id = "stremio-enhanced-injected-styles";
+    style.textContent = `
         .theme-apply-btn, .plugin-toggle, #toggleallpluginsBtn, #openthemesfolderBtn, #openpluginsfolderBtn, #openserverfolderBtn, #checkserverupdatesBtn, .modActionBtn, .marketplace-repo-btn {
             transition: all 0.2s ease-in-out;
         }
@@ -287,34 +351,6 @@
         .theme-apply-btn.uninstall-button-container-oV4Yo.disabled {
             opacity: 0.85;
             cursor: default;
-        }
-        /* Picture-in-Picture Compact Mode */
-        html.stremio-pip-mode [class*="player-container"] [class*="control-bar-container"] {
-            zoom: 0.72;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        html.stremio-pip-mode [class*="player-container"] [class*="nav-bar-container"] {
-            zoom: 0.72;
-        }
-        html.stremio-pip-mode .pip-plugin-button {
-            color: var(--accent-color, var(--primary-accent-color, #7b5bf5)) !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="nwse-resize"],
-        html.stremio-pip-mode[data-pip-cursor="nwse-resize"] * {
-            cursor: nwse-resize !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="nesw-resize"],
-        html.stremio-pip-mode[data-pip-cursor="nesw-resize"] * {
-            cursor: nesw-resize !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="ew-resize"],
-        html.stremio-pip-mode[data-pip-cursor="ew-resize"] * {
-            cursor: ew-resize !important;
-        }
-        html.stremio-pip-mode[data-pip-cursor="ns-resize"],
-        html.stremio-pip-mode[data-pip-cursor="ns-resize"] * {
-            cursor: ns-resize !important;
         }
     `;
     const target = document.head || document.documentElement || document.body;
@@ -3235,6 +3271,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       if (html && html.classList.contains("stremio-player-active") !== shouldBeTransparent) {
         html.classList.toggle("stremio-player-active", shouldBeTransparent);
       }
+      setPlayerFallbackStyles(shouldBeTransparent);
       if (shouldBeTransparent) {
         if (!html || !body) return;
         isTransparent = true;
@@ -3361,8 +3398,10 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     pipActive = next;
     if (pipActive) {
       document.documentElement.classList.add("stremio-pip-mode");
+      setPipFallbackStyles(true);
     } else {
       document.documentElement.classList.remove("stremio-pip-mode");
+      setPipFallbackStyles(false);
       document.documentElement.style.cursor = "";
       delete document.documentElement.dataset.pipCursor;
     }
@@ -4072,7 +4111,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   var SETTINGS_STYLES = `
 .enhanced-page-container { display: none; }
 .enhanced-open .enhanced-page-container { display: block; }
-.enhanced-open [class*="pane-"] > :not(.enhanced-page-container) { display: none !important; }
+.enhanced-open .enhanced-settings-pane > :not(.enhanced-page-container) { display: none !important; }
 
 #enhanced[data-show="themes"] > .enhanced-category:not([data-category="themes"]),
 #enhanced[data-show="plugins"] > .enhanced-category:not([data-category="plugins"]),
@@ -5283,6 +5322,8 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     const current = match ? match[1] || "themes" : "";
     const selected = selectedClass();
     content.classList.toggle("enhanced-open", !!match);
+    const pane = document.querySelector(SELECTORS.SETTINGS_PANE);
+    if (pane) pane.classList.add("enhanced-settings-pane");
     const page = document.getElementById("enhanced");
     if (page) page.setAttribute("data-show", current);
     for (const link of Array.from(document.querySelectorAll("[data-enhanced-item]"))) {
@@ -5399,6 +5440,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       const stremioContainer = document.querySelector(SELECTORS.SETTINGS_PAGE_CONTAINER);
       const stremioPage = document.querySelector(SELECTORS.SETTINGS_PAGE);
       if (!pane || !stremioPage) return;
+      pane.classList.add("enhanced-settings-pane");
       const stremioHead = stremioPage.firstElementChild;
       const sampleGroup = document.querySelector(SELECTORS.SETTINGS_GROUP);
       const container = document.createElement("div");
@@ -5836,8 +5878,10 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   function checkSettings() {
     if (!location.href.includes("#/settings")) {
       isBuilding = false;
+      document.getElementById(SETTINGS_STYLE_ID)?.remove();
       return;
     }
+    injectSettingsStyles();
     updateRoute();
     if (document.getElementById("enhanced") && document.querySelector("[data-enhanced-nav]")) return;
     if (isBuilding && Date.now() - buildStartedAt < 1e4) return;
