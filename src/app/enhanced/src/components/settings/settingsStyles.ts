@@ -193,4 +193,61 @@ export const SETTINGS_STYLES = `
     font-size: 0.88rem;
     line-height: 1.5;
 }
+#mods-list,
+#enhanced-plugins-list,
+#enhanced-themes-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    align-items: stretch;
+}
+#mods-list > :not(.marketplace-item-card),
+#enhanced-plugins-list > :not(.addon-container-lC5KN),
+#enhanced-themes-list > :not(.addon-container-lC5KN) {
+    grid-column: 1 / -1;
+}
+@media (max-width: 720px) {
+    #mods-list,
+    #enhanced-plugins-list,
+    #enhanced-themes-list {
+        grid-template-columns: 1fr;
+    }
+}
+.enhanced-toolbar-row {
+    flex-wrap: wrap;
+}
+.enhanced-layout-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+.enhanced-icon-button {
+    width: 2.35rem;
+    height: 2.35rem;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+}
+.enhanced-icon-button.active {
+    background: var(--accent-color, var(--primary-accent-color, #7b5bf5));
+    border-color: transparent;
+}
+#enhanced[data-list-columns="1"] #mods-list,
+#enhanced[data-list-columns="1"] #enhanced-plugins-list,
+#enhanced[data-list-columns="1"] #enhanced-themes-list {
+    grid-template-columns: 1fr;
+}
+.enhanced-page-container.enhanced-wide-layout,
+.enhanced-page-container.enhanced-wide-layout > #enhanced,
+.enhanced-page-container.enhanced-wide-layout > #enhanced > .enhanced-category {
+    max-width: none !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    box-sizing: border-box;
+}
 `;

@@ -1,6 +1,6 @@
 import { SETTINGS_STYLES, SETTINGS_STYLE_ID } from './settingsStyles';
 import { escapeHtml, waitForElement, postEnhancedMessage } from '../../utils/dom';
-import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON, UPDATE_ICON, PLAYER_ICON, PREFERENCES_ICON } from '../../utils/icons';
+import { THEME_ICON, PLUGIN_ICON, MARKETPLACE_ICON, SERVER_ICON, UPDATE_ICON, PLAYER_ICON, PREFERENCES_ICON, TWO_COLUMNS_ICON, ONE_COLUMN_ICON, WIDE_LIST_ICON, NARROW_LIST_ICON } from '../../utils/icons';
 import { renderThemesList } from '../../themes/themeManager';
 import { renderPluginsList, toggleAllPlugins } from '../../plugins/pluginManager';
 import { renderMarketplaceInline } from '../../marketplace/marketplaceManager';
@@ -45,6 +45,107 @@ const SELECTORS = {
 
 const ENHANCED_ROUTE = '#/settings/enhanced';
 const DEFAULT_SELECTED_CLASS = 'selected-S7SeK';
+
+const LIST_COLUMNS_STORAGE_KEY = 'enhanced_list_columns';
+const LIST_WIDTH_STORAGE_KEY = 'enhanced_list_width';
+const LIST_LAYOUT_CATEGORIES = new Set(['themes', 'plugins', 'marketplace']);
+
+let listColumns: '1' | '2' = (() => {
+    try {
+        return localStorage.getItem(LIST_COLUMNS_STORAGE_KEY) === '1' ? '1' : '2';
+    } catch (_) {
+        return '2';
+    }
+})();
+
+let listWidth: 'narrow' | 'wide' = (() => {
+    try {
+        return localStorage.getItem(LIST_WIDTH_STORAGE_KEY) === 'wide' ? 'wide' : 'narrow';
+    } catch (_) {
+        return 'narrow';
+    }
+})();
+
+function syncListLayoutUI(activeCategory?: string): void {
+    const page = document.getElementById('enhanced');
+    if (page) {
+        page.setAttribute('data-list-columns', listColumns);
+    }
+
+    const current = activeCategory ?? page?.getAttribute('data-show') ?? '';
+    const container = document.querySelector('.enhanced-page-container');
+    if (container) {
+        container.classList.toggle(
+            'enhanced-wide-layout',
+            listWidth === 'wide' && LIST_LAYOUT_CATEGORIES.has(current)
+        );
+    }
+
+    for (const btn of Array.from(document.querySelectorAll<HTMLElement>('.enhanced-columns-toggle-btn'))) {
+        btn.innerHTML = listColumns === '2' ? TWO_COLUMNS_ICON : ONE_COLUMN_ICON;
+        const label = listColumns === '2' ? 'Switch to 1 column' : 'Switch to 2 columns';
+        btn.setAttribute('title', label);
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('aria-pressed', listColumns === '1' ? 'true' : 'false');
+        btn.classList.toggle('active', listColumns === '1');
+    }
+
+    for (const btn of Array.from(document.querySelectorAll<HTMLElement>('.enhanced-width-toggle-btn'))) {
+        btn.innerHTML = listWidth === 'wide' ? NARROW_LIST_ICON : WIDE_LIST_ICON;
+        const label = listWidth === 'wide' ? 'Switch to narrow list' : 'Switch to wide list';
+        btn.setAttribute('title', label);
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('aria-pressed', listWidth === 'wide' ? 'true' : 'false');
+        btn.classList.toggle('active', listWidth === 'wide');
+    }
+}
+
+function createLayoutControls(sectionKey: string): HTMLElement {
+    const controls = document.createElement('div');
+    controls.className = 'enhanced-layout-controls';
+
+    const columnsBtn = createOptionButton(`enhanced-${sectionKey}-columns-btn`, 'Switch to 1 column');
+    columnsBtn.classList.add('enhanced-columns-toggle-btn', 'enhanced-icon-button');
+    columnsBtn.textContent = '';
+    columnsBtn.setAttribute('role', 'button');
+    const toggleColumns = () => {
+        listColumns = listColumns === '2' ? '1' : '2';
+        try {
+            localStorage.setItem(LIST_COLUMNS_STORAGE_KEY, listColumns);
+        } catch (_) {}
+        syncListLayoutUI();
+    };
+    columnsBtn.addEventListener('click', toggleColumns);
+    columnsBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleColumns();
+        }
+    });
+
+    const widthBtn = createOptionButton(`enhanced-${sectionKey}-width-btn`, 'Switch to wide list');
+    widthBtn.classList.add('enhanced-width-toggle-btn', 'enhanced-icon-button');
+    widthBtn.textContent = '';
+    widthBtn.setAttribute('role', 'button');
+    const toggleWidth = () => {
+        listWidth = listWidth === 'narrow' ? 'wide' : 'narrow';
+        try {
+            localStorage.setItem(LIST_WIDTH_STORAGE_KEY, listWidth);
+        } catch (_) {}
+        syncListLayoutUI();
+    };
+    widthBtn.addEventListener('click', toggleWidth);
+    widthBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleWidth();
+        }
+    });
+
+    controls.appendChild(columnsBtn);
+    controls.appendChild(widthBtn);
+    return controls;
+}
 
 let currentShellPreferences: ShellPreferencesUiData = {
     rememberWindowState: true,
@@ -148,6 +249,7 @@ function applyRouteState(): boolean {
     if (pane) pane.classList.add('enhanced-settings-pane');
     const page = document.getElementById('enhanced');
     if (page) page.setAttribute('data-show', current);
+    syncListLayoutUI(current);
 
     for (const link of Array.from(document.querySelectorAll('[data-enhanced-item]'))) {
         link.classList.toggle(selected, link.getAttribute('data-enhanced-item') === current);
@@ -321,7 +423,10 @@ function buildSettingsPage(): Promise<void> {
             openThemesBtn.onclick = () => {
                 (window as any).StremioEnhancedAPI.openThemesFolder();
             };
-            themesCategory.appendChild(createOptionRow([openThemesBtn]));
+            const themesRow = createOptionRow([openThemesBtn]);
+            themesRow.classList.add('enhanced-toolbar-row');
+            themesRow.appendChild(createLayoutControls('themes'));
+            themesCategory.appendChild(themesRow);
             const themesList = document.createElement('div');
             themesList.id = 'enhanced-themes-list';
             themesCategory.appendChild(themesList);
@@ -337,7 +442,10 @@ function buildSettingsPage(): Promise<void> {
             toggleAllPluginsBtn.onclick = () => {
                 toggleAllPlugins();
             };
-            pluginsCategory.appendChild(createOptionRow([openPluginsBtn, toggleAllPluginsBtn]));
+            const pluginsRow = createOptionRow([openPluginsBtn, toggleAllPluginsBtn]);
+            pluginsRow.classList.add('enhanced-toolbar-row');
+            pluginsRow.appendChild(createLayoutControls('plugins'));
+            pluginsCategory.appendChild(pluginsRow);
             const pluginsList = document.createElement('div');
             pluginsList.id = 'enhanced-plugins-list';
             pluginsCategory.appendChild(pluginsList);
@@ -345,6 +453,17 @@ function buildSettingsPage(): Promise<void> {
 
             // Community Marketplace Category (rendered directly inside settings)
             const marketplaceCategory = createCategory('enhanced-marketplace-category', 'marketplace', 'Community Marketplace', sampleGroup);
+            const marketplaceRow = document.createElement('div');
+            marketplaceRow.className = 'enhanced-option enhanced-toolbar-row';
+            const marketplaceLayoutLabel = document.createElement('div');
+            marketplaceLayoutLabel.className = 'enhanced-option-heading';
+            const marketplaceLayoutTitle = document.createElement('div');
+            marketplaceLayoutTitle.className = 'enhanced-option-label';
+            marketplaceLayoutTitle.textContent = 'View Layout';
+            marketplaceLayoutLabel.appendChild(marketplaceLayoutTitle);
+            marketplaceRow.appendChild(marketplaceLayoutLabel);
+            marketplaceRow.appendChild(createLayoutControls('marketplace'));
+            marketplaceCategory.appendChild(marketplaceRow);
             const marketplaceContent = document.createElement('div');
             marketplaceContent.id = 'enhanced-marketplace-content';
             marketplaceCategory.appendChild(marketplaceContent);
@@ -798,6 +917,7 @@ function buildSettingsPage(): Promise<void> {
 
             container.appendChild(page);
             pane.appendChild(container);
+            syncListLayoutUI();
 
             renderServerInfo(getCurrentServerStatus());
             getServerStatus().then(renderServerInfo);

@@ -99,6 +99,7 @@
 
     const backdropFilterSelectors = new Set();
     const spotlightFillSelectors = new Set();
+    const posterHoverRules = new Set();
     const scannedSheets = new WeakSet();
     let lastStyleKey = '';
     let rowSelector = '';
@@ -186,6 +187,23 @@
                                 foundNew = true;
                             }
                         }
+                        if (sel.includes('.meta-item-container-') && sel.includes('.hovered')) {
+                            const parts = sel.split(',');
+                            const hoverParts = [];
+                            for (let p = 0; p < parts.length; p++) {
+                                const part = parts[p].trim();
+                                if (part.includes('.hovered')) {
+                                    hoverParts.push(part.replace(/\.hovered\b/g, ':hover'));
+                                }
+                            }
+                            if (hoverParts.length > 0 && style.cssText) {
+                                const hoverRule = `${hoverParts.join(', ')} { ${style.cssText} }`;
+                                if (!posterHoverRules.has(hoverRule)) {
+                                    posterHoverRules.add(hoverRule);
+                                    foundNew = true;
+                                }
+                            }
+                        }
                     }
 
                     const matches = sel.match(/\.[a-zA-Z0-9_-]+/g);
@@ -261,7 +279,7 @@
         rowSelector = rowClasses.map((c) => '.' + c).join(',');
         itemSelector = metaItemSel;
 
-        const key = `${rowClasses.length}|${noTransClasses.length}|${discovered['poster-image-'].size}|${spotlightClasses.length}|${backdropFilterSelectors.size}|${spotlightFillSelectors.size}|${discovered['vertical-nav-bar-container-'].size}|${discovered['board-content-'].size}`;
+        const key = `${rowClasses.length}|${noTransClasses.length}|${discovered['poster-image-'].size}|${spotlightClasses.length}|${backdropFilterSelectors.size}|${spotlightFillSelectors.size}|${posterHoverRules.size}|${discovered['vertical-nav-bar-container-'].size}|${discovered['board-content-'].size}`;
         const existingStyle = document.getElementById(STYLE_ID);
         if (key === lastStyleKey && existingStyle) return;
         lastStyleKey = key;
@@ -321,6 +339,14 @@
             rules.push(`.${OFFSCREEN_CLASS} > *${notSentinel} { display: none !important; }`);
         } else {
             rules.push(`.${OFFSCREEN_CLASS} > * { display: none !important; }`);
+        }
+
+        // Mirror MetaItem `.hovered` rules onto native CSS `:hover` so poster hovering
+        // runs entirely in WebKit C++ without React `useHover` setState re-renders.
+        if (posterHoverRules.size > 0) {
+            for (const ruleStr of posterHoverRules) {
+                rules.push(ruleStr);
+            }
         }
 
         if (noTransClasses.length > 0) {
@@ -449,13 +475,13 @@
         );
     }
 
-    function isLibraryRoute() {
+    function isGridRoute() {
         const h = window.location.hash || '';
-        return h.startsWith('#/library');
+        return h.startsWith('#/library') || h.startsWith('#/discover');
     }
 
     function isVirtualizedRoute() {
-        return isRowRoute() || isLibraryRoute();
+        return isRowRoute() || isGridRoute();
     }
 
     function scanTargets() {
@@ -475,7 +501,7 @@
                 }
                 getObserverForRoot(cachedRoot).observe(row);
             }
-        } else if (isLibraryRoute() && itemSelector) {
+        } else if (isGridRoute() && itemSelector) {
             const items = document.querySelectorAll(itemSelector);
             if (items.length <= 40) return;
             let cachedRoot;
@@ -540,6 +566,21 @@
     window.addEventListener('popstate', onRouteOrLoad);
     window.addEventListener('DOMContentLoaded', onRouteOrLoad);
     window.addEventListener('load', onRouteOrLoad);
+
+    // Short-circuit React's `@react-aria/interactions` `useHover` (which only toggles `.hovered`
+    // on MetaItem via `pointerover`/`pointerout` -> `setState` -> full component re-render).
+    // Native CSS `:hover` rules above handle all poster hover visuals with zero JS/React overhead.
+    function blockPosterReactHover(e) {
+        if (e.buttons !== 0 || e.pointerType === 'touch') return;
+        if (!itemSelector || posterHoverRules.size === 0) return;
+        const t = e.target;
+        const el = t && t.nodeType === 1 ? t : t && t.parentElement;
+        if (el && el.closest && el.closest(itemSelector)) {
+            e.stopPropagation();
+        }
+    }
+    document.addEventListener('pointerover', blockPosterReactHover, true);
+    document.addEventListener('pointerout', blockPosterReactHover, true);
 
     // Ensure keyboard/programmatic focus inside an offscreen row/card reveals it immediately
     document.addEventListener('focusin', (e) => {

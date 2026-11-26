@@ -25,3 +25,24 @@ export const PLAYER_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; heigh
 export const PREFERENCES_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
     <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"></path>
 </svg>`;
+
+export const TWO_COLUMNS_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;">
+    <rect x="3" y="4" width="8" height="7" rx="1.5"></rect>
+    <rect x="13" y="4" width="8" height="7" rx="1.5"></rect>
+    <rect x="3" y="13" width="8" height="7" rx="1.5"></rect>
+    <rect x="13" y="13" width="8" height="7" rx="1.5"></rect>
+</svg>`;
+
+export const ONE_COLUMN_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;">
+    <rect x="3" y="4" width="18" height="4.5" rx="1.25"></rect>
+    <rect x="3" y="9.75" width="18" height="4.5" rx="1.25"></rect>
+    <rect x="3" y="15.5" width="18" height="4.5" rx="1.25"></rect>
+</svg>`;
+
+export const WIDE_LIST_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+    <path d="M3 5v14M21 5v14M7 12h10M10 9l-3 3 3 3M14 9l3 3-3 3"></path>
+</svg>`;
+
+export const NARROW_LIST_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+    <path d="M10 5v14M14 5v14M2 12h5M5 9l3 3-3 3M22 12h-5M19 9l-3 3 3 3"></path>
+</svg>`;

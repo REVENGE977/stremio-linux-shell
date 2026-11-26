@@ -521,7 +521,7 @@
   }
 
   // src/components/theme-item/theme-item.html
-  var theme_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 theme-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete theme" class="button-container-zVLH6 theme-delete-btn" style="display: {{ deleteDisplay }}; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="{{ buttonClass }} button-container-zVLH6 theme-apply-btn" data-theme="{{ fileName }}" id="theme-btn-{{ fileName }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.5rem 1.25rem; border-radius: 0.35rem; font-weight: 700;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ label }}</div>\n            </div>\n        </div>\n    </div>\n</div>\n';
+  var theme_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="width: 100%; height: 100%; box-sizing: border-box; margin: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem; padding: 1.15rem 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem; word-break: break-word;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4; word-break: break-word;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: 100%; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.07); box-sizing: border-box;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.65rem;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 theme-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete theme" class="button-container-zVLH6 theme-delete-btn" style="display: {{ deleteDisplay }}; cursor: pointer; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="{{ buttonClass }} button-container-zVLH6 theme-apply-btn" data-theme="{{ fileName }}" id="theme-btn-{{ fileName }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.5rem 1.25rem; border-radius: 0.35rem; font-weight: 700;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ label }}</div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
   // src/utils/templateCache.ts
   var TemplateCache = class {
@@ -951,7 +951,7 @@ This will permanently remove the theme file from your themes folder.`,
   }
 
   // src/components/marketplace-tab/marketplace-tab.html
-  var marketplace_tab_default = '<div class="marketplace-inline-view" style="width: 100%; box-sizing: border-box;">\n    <div style="margin-bottom: 1rem;">\n        <label title="Search themes/plugins" style="display: flex; align-items: center; background: var(--surface-background-color, rgba(255, 255, 255, 0.06)); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--border-radius, 0.75rem); padding: 0.65rem 1rem; width: 100%; box-sizing: border-box;">\n            <input id="marketplace-search-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh" type="text" placeholder="Search themes and plugins..." value="" style="flex: 1; background: transparent; border: none; outline: none; color: var(--foreground-color-primary, #fff); font-size: 1rem;">\n            <svg viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem; fill: rgba(255, 255, 255, 0.6); margin-left: 0.5rem; flex-shrink: 0;">\n                <path d="M456.882 415.7999999999997l-93.791-89.45c22.605-28.67 34.784-63.57 34.686-99.44 0-91.54-78.142-166.07-174.125-166.07s-174.125 74.53-174.125 166.17c0 91.54 78.142 166.07 174.125 166.07 37.586 0 74.161-11.61 104.256-33.08l93.79 89.45c3.535 3.04 7.91 5.05 12.604 5.79 4.696 0.74 9.515 0.18 13.887-1.61 4.374-1.79 8.117-4.74 10.788-8.49 2.671-3.76 4.157-8.17 4.284-12.7 0.108-6.11-2.165-12.04-6.379-16.64m-357.62-188.79c-0.01-29.43 11.453-57.8 32.162-79.61 20.709-21.82 49.183-35.49 79.884-38.39 30.7-2.9 61.433 5.2 86.221 22.72 24.787 17.52 41.858 43.2 47.891 72.05 6.034 28.86 0.598 58.83-15.249 84.07s-40.972 43.96-70.489 52.53c-29.518 8.55-61.317 6.33-89.213-6.24s-49.895-34.57-61.718-61.75c-6.258-14.38-9.483-29.81-9.488-45.38" style="fill: currentcolor;"></path>\n            </svg>\n        </label>\n    </div>\n\n    <div tabindex="0" title="Submit your themes and plugins here" style="margin-bottom: 1.25rem; text-align: center;">\n        <a href="https://github.com/REVENGE977/stremio-enhanced-registry" target="_blank" rel="noreferrer" class="enhanced-link" style="display: block; text-decoration: none;">\n            <span class="enhanced-link-label">Submit your themes and plugins here</span>\n        </a>\n    </div>\n\n    <div id="mods-list" style="display: flex; flex-direction: column; gap: 1rem; width: 100%; box-sizing: border-box;">\n        <div id="marketplace-loading" style="padding: 2.5rem; text-align: center; color: rgba(255, 255, 255, 0.7); font-size: 1.05rem;">\n            Loading community plugins &amp; themes...\n        </div>\n    </div>\n</div>\n';
+  var marketplace_tab_default = '<div class="marketplace-inline-view" style="width: 100%; box-sizing: border-box;">\n    <div style="margin-bottom: 1rem;">\n        <label title="Search themes/plugins" style="display: flex; align-items: center; background: var(--surface-background-color, rgba(255, 255, 255, 0.06)); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--border-radius, 0.75rem); padding: 0.65rem 1rem; width: 100%; box-sizing: border-box;">\n            <input id="marketplace-search-input" size="1" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" tabindex="0" class="search-input-bAgAh" type="text" placeholder="Search themes and plugins..." value="" style="flex: 1; background: transparent; border: none; outline: none; color: var(--foreground-color-primary, #fff); font-size: 1rem;">\n            <svg viewBox="0 0 512 512" style="width: 1.2rem; height: 1.2rem; fill: rgba(255, 255, 255, 0.6); margin-left: 0.5rem; flex-shrink: 0;">\n                <path d="M456.882 415.7999999999997l-93.791-89.45c22.605-28.67 34.784-63.57 34.686-99.44 0-91.54-78.142-166.07-174.125-166.07s-174.125 74.53-174.125 166.17c0 91.54 78.142 166.07 174.125 166.07 37.586 0 74.161-11.61 104.256-33.08l93.79 89.45c3.535 3.04 7.91 5.05 12.604 5.79 4.696 0.74 9.515 0.18 13.887-1.61 4.374-1.79 8.117-4.74 10.788-8.49 2.671-3.76 4.157-8.17 4.284-12.7 0.108-6.11-2.165-12.04-6.379-16.64m-357.62-188.79c-0.01-29.43 11.453-57.8 32.162-79.61 20.709-21.82 49.183-35.49 79.884-38.39 30.7-2.9 61.433 5.2 86.221 22.72 24.787 17.52 41.858 43.2 47.891 72.05 6.034 28.86 0.598 58.83-15.249 84.07s-40.972 43.96-70.489 52.53c-29.518 8.55-61.317 6.33-89.213-6.24s-49.895-34.57-61.718-61.75c-6.258-14.38-9.483-29.81-9.488-45.38" style="fill: currentcolor;"></path>\n            </svg>\n        </label>\n    </div>\n\n    <div tabindex="0" title="Submit your themes and plugins here" style="margin-bottom: 1.25rem; text-align: center;">\n        <a href="https://github.com/REVENGE977/stremio-enhanced-registry" target="_blank" rel="noreferrer" class="enhanced-link" style="display: block; text-decoration: none;">\n            <span class="enhanced-link-label">Submit your themes and plugins here</span>\n        </a>\n    </div>\n\n    <div id="mods-list">\n        <div id="marketplace-loading" style="padding: 2.5rem; text-align: center; color: rgba(255, 255, 255, 0.7); font-size: 1.05rem;">\n            Loading community plugins &amp; themes...\n        </div>\n    </div>\n</div>\n';
 
   // src/components/marketplace-tab/marketplaceTab.ts
   function getMarketplaceTabHtml() {
@@ -959,7 +959,7 @@ This will permanently remove the theme file from your themes folder.`,
   }
 
   // src/components/marketplace-item/marketplace-item.html
-  var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; box-sizing: border-box; margin: 0 0 1rem 0; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-logo-box" style="width: 4.5rem; height: 4.5rem; flex-shrink: 0; margin-right: 1.25rem; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n        {{ logoBlock }}\n    </div>\n\n    <div class="marketplace-info-container" style="flex: 1; min-width: 0; padding-right: 1.5rem; box-sizing: border-box;">\n        <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n            <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n            <span class="marketplace-version" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;{{ versionStyle }}">{{ versionLabel }}</span>\n            <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n        </div>\n        <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n            <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n            <div><b>Author:</b> {{ author }}</div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: auto; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; margin-left: 1rem;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
+  var marketplace_item_default = '<div name="{{ name }}-box" tabindex="0" class="marketplace-item-card animation-fade-in" style="width: 100%; height: 100%; box-sizing: border-box; margin: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem; padding: 1.15rem 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s, background-color 0.2s;">\n    <div class="marketplace-card-body" style="display: flex; align-items: flex-start; gap: 1rem; min-width: 0;">\n        <div class="marketplace-logo-box" style="width: 4rem; height: 4rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); border-radius: 0.4rem; overflow: hidden; padding: 0.25rem; box-sizing: border-box;">\n            {{ logoBlock }}\n        </div>\n\n        <div class="marketplace-info-container" style="flex: 1; min-width: 0; box-sizing: border-box;">\n            <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;">\n                <span class="marketplace-title" title="{{ name }}" style="font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.35; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important;">{{ name }}</span>\n                <span class="marketplace-version" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; white-space: nowrap;{{ versionStyle }}">{{ versionLabel }}</span>\n                <span style="font-size: 0.725rem; text-transform: uppercase; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 0.25rem; background: rgba(115, 91, 242, 0.25); color: #b4a2f8; border: 1px solid rgba(115, 91, 242, 0.4); white-space: nowrap;">{{ type }}</span>\n            </div>\n            <div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.75); line-height: 1.45; word-break: break-word;">\n                <div style="margin-bottom: 0.25rem;"><b>Description:</b> {{ description }}</div>\n                <div><b>Author:</b> {{ author }}</div>\n            </div>\n        </div>\n    </div>\n    <div class="marketplace-buttons-container" style="width: 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 0.65rem; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.07); box-sizing: border-box;">\n        <div class="action-buttons-container-xMVmz">\n            <div tabindex="-1" title="{{ actionbtnTitle }}" class="{{ actionbtnClass }} modActionBtn" data-link="{{ download }}" data-type="{{ type }}" style="cursor: pointer; user-select: none; min-width: 6.5rem; text-align: center; padding: 0.55rem 1.25rem; border-radius: 0.35rem; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">\n                <div class="label-OnWh2" style="color: white; font-weight: bold;">{{ actionbtnTitle }}</div>\n            </div>\n        </div>\n        {{ repoBlock }}\n    </div>\n</div>\n';
 
   // src/components/marketplace-item/marketplaceItem.ts
   function createMarketplaceCard(mod, type, isInstalled, onAction, resolvedVersion) {
@@ -2283,7 +2283,7 @@ Are you sure you want to update? It's recommended to read the source code of the
   }
 
   // src/components/plugin-item/plugin-item.html
-  var plugin_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; padding-right: 1.5rem;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: auto; flex-shrink: 0;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 plugin-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; margin-right: 1.2rem; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="-1" id="{{ fileName }}-settings" title="Plugin settings" class="nav-tab-button-tW6qT nav-tab-button-container-dYhs0 button-container-zVLH6 plugin-settings-btn" style="display: {{ settingsDisplay }}; cursor: pointer; margin-right: 0.75rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); transition: background-color 0.2s;">\n                <svg class="icon-TzPrK" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;" viewBox="0 0 512 512">\n                    <path d="M464 250c0-2.7-1-5-3-7l-6-3-26-4-3-2-2-3-1-9v-4l2-2 23-13 5-5v-8l-4-11c-.7-2-2.3-3.7-5-5-2-1.3-4.3-1.7-7-.7l-25 5-4-1-2-2-5-8c-.6-1.1-.8-2.4-.6-3.7.2-1.3.7-2.4 1.6-3.3l17-19 2-7c.7-2.7 0-5-2-7l-7-9c-1.6-2.1-4-3.5-6.6-3.9-2.6-.4-5.3.3-7.4 1.9l-22 13c-.9.9-2.2 1.4-3.5 1.4s-2.6-.5-3.5-1.4l-7-7-2-2v-4l9-24c1.1-2.3 1.3-4.9.6-7.3-.8-2.4-2.4-4.4-4.6-5.7l-10-6c-2-2-4.3-2.3-7-1-2.7.7-5 2-7 4l-16 20-2 2h-4l-9-4-3-2-1-3v-26c.7-2.7 0-5-2-7-1.3-2.7-3.3-4-6-4l-12-2c-2-.7-4.3-.4-7 1l-4 6-9 25-2 3h-13c-1.3.7-2.3.4-3-1l-2-2-9-25c0-2-1.3-4-4-6l-7-1-12 2c-2.7 0-4.7 1.3-6 4-2 2-2.7 4.3-2 7v26l-1 3-3 2-9 4c-2.7.7-4.7 0-6-2l-17-20c-.7-2-2.7-3.3-6-4-2-.7-4.3-.3-7 1l-10 6-5 5v8l10 24v3c0 2-.7 3-2 3l-7 6c-.4.5-.9 1-1.5 1.3-.6.3-1.2.6-1.8.7-.7.1-1.3.1-2-.1-.6-.2-1.2-.5-1.7-.8l-22-14-7-1-7 3-7 9c-1.8 1.9-2.9 4.4-2.9 7s1 5.1 2.9 7l18 20 1 3-1 3-5 9-2 2h-4l-25-4c-2.4-.7-4.9-.4-7.2.7s-3.9 3.1-4.8 5.3l-4 11v7c1.3 3.3 3 5.3 5 6l23 13 2 2v5l-2 8-1 3-3 2-26 4c-2.5.2-4.8 1.4-6.4 3.3-1.7 1.8-2.6 4.3-2.6 6.7v12c0 2.5.9 4.9 2.6 6.7s3.9 3.1 6.4 3.3l26 4 3 2 1 3 2 9v4l-2 2-23 13-5 5v8l4 11c.7 2 2.3 3.7 5 5 2 1.3 4.3 1.7 7 .7l25-5 4 1 2 2 5 8c.7 1.1 1.1 2.3 1.1 3.6 0 1.3-.4 2.5-1.1 3.5l-17 20c-1.7 1.7-2.7 3.9-2.9 6.3-.2 2.4.5 4.8 1.9 6.7l7 9c1.6 2.1 4 3.5 6.6 3.9 2.6.4 5.3-.4 7.4-2l22-13c1.1-.8 2.4-1.1 3.7-.9 1.3.2 2.5.9 3.3 1.9l7 6 2 3v3l-9 24c-1.1 2.3-1.3 4.9-.5 7.3.7 2.4 2.4 4.4 4.5 5.7l10 6c1.1.7 2.4 1.2 3.7 1.5 1.3.2 2.7.2 4-.1 1.3-.3 2.6-.8 3.6-1.6 1.1-.8 2-1.7 2.7-2.8l16-20 5-2 10 4 3 2 1 3v26c-.7 2.7 0 5 2 7 1.3 2.7 3.3 4 6 4l12 2c2.3.2 4.7-.4 6.6-1.7 2-1.3 3.5-3.1 4.4-5.3l9-25 2-2c1.3-1.3 2.3-1.7 3-1.3h10l3 1 2 2 9 25c.7 2 2 3.7 4 5 1.9 1.3 4.3 1.9 6.7 1.7l12-2c2.7-.7 4.7-2 6-4.7.7-2.7.7-5.3.7-7.3v-26l1-3 3-2 9-3c3.3-.7 5.3-.3 6 1.3l17 20c1.4 2 3.5 3.4 5.9 4 2.4.6 4.9.2 7.1-1l10-6 5-5v-8l-10-24v-3l2-3 7-6 4-2 3 1 22 13c2.7 1.3 5 1 7-1l7-9c1-1.3 1.7-2.7 2-4.3.3-1.6.2-3.3-.4-4.8l-17-20-2-3 1-4 5-9 3-2 3-1 25 5c1.2.5 2.6.7 3.9.7 1.3 0 2.6-.4 3.8-1 1.2-.6 2.3-1.4 3.2-2.3.9-1 1.6-2.1 2.1-3.4l3-11v-8l-5-5-23-13-3-2v-5l2-8 1-3 3-2 26-4c2.5-.2 4.8-1.4 6.5-3.3 1.6-1.8 2.5-4.3 2.5-6.7v-12zm-282 94c-1.3 2-3.3 3.7-6 5-2 1.4-4.3 2.3-6.8 2.6-2.4.3-4.9 0-7.2-.8l-6-4c-22.7-24.9-35.3-57.3-35.3-91s12.6-66.1 35.3-91l7-4 7-1c2.5.3 4.9 1.2 7 2.6 2.1 1.4 3.8 3.3 4.9 5.4l46 80c1.4 2.4 2.1 5.2 2.1 8s-.7 5.6-2.1 8l-46 80zm74 47c-10 0-19.3-1-28-3-3.7-.7-7-2.7-9.4-5.6-2.4-2.9-3.7-6.6-3.6-10.3l2-7 46-80 6-6 8-2h92c2.5-.1 5 .4 7.2 1.5s4.2 2.6 5.8 4.6l3 7 1 7c-17 55-68 94-128 94zm7-164l-45-80-2-7c-1.1-3.6 0-7.2 2.2-10.1 2.2-2.9 5.3-5 8.8-5.9 32.7-6.8 66.7-1.2 95.5 15.6 28.8 16.8 50.4 43.7 60.5 75.5l1 7c-.7 3.7-2.7 7-5.6 9.4-2.9 2.4-6.6 3.7-10.4 3.7h-92c-2.7.7-5.3 0-8-2l-6-6.2z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete plugin" class="button-container-zVLH6 plugin-delete-btn" style="display: flex; cursor: pointer; margin-right: 0.9rem; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="toggle-container-lZfHP button-container-zVLH6 plugin-toggle {{ checkedClass }}" data-plugin="{{ fileName }}" style="outline: none; cursor: pointer;">\n                <div class="toggle-toOWM"></div>\n            </div>\n        </div>\n    </div>\n</div>\n';
+  var plugin_item_default = '<div name="{{ fileName }}-box" tabindex="0" class="addon-whmdO animation-fade-in addon-container-lC5KN button-container-zVLH6" style="width: 100%; height: 100%; box-sizing: border-box; margin: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem; padding: 1.15rem 1.25rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: border-color 0.2s;">\n    <div class="info-container-AdMB6" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">\n        <div class="name-container-qIAg8" title="{{ name }}" style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem; word-break: break-word;">{{ name }}</div>\n        <div class="version-container-zdPyN" title="{{ version }}" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 0.4rem;">{{ version }}</div>\n        <div class="description-container-v7Jhe" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4; word-break: break-word;">\n            {{ descriptionBlock }}\n            {{ authorBlock }}\n        </div>\n    </div>\n    <div class="buttons-container-g0xXr" style="width: 100%; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.07); box-sizing: border-box;">\n        <div class="action-buttons-container-xMVmz" style="display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.65rem;">\n            <div tabindex="-1" class="install-button-container-yfcq5 button-container-zVLH6 plugin-update-btn" style="background-color: #f5bf42; color: #16152b; display: none; cursor: pointer; user-select: none; padding: 0.5rem 1.1rem; border-radius: 0.35rem; font-weight: 700;" id="{{ fileName }}-update" title="Update available">\n                <div class="label-OnWh2" style="color: #16152b; font-weight: bold;">Update</div>\n            </div>\n\n            <div tabindex="-1" id="{{ fileName }}-settings" title="Plugin settings" class="nav-tab-button-tW6qT nav-tab-button-container-dYhs0 button-container-zVLH6 plugin-settings-btn" style="display: {{ settingsDisplay }}; cursor: pointer; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); transition: background-color 0.2s;">\n                <svg class="icon-TzPrK" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;" viewBox="0 0 512 512">\n                    <path d="M464 250c0-2.7-1-5-3-7l-6-3-26-4-3-2-2-3-1-9v-4l2-2 23-13 5-5v-8l-4-11c-.7-2-2.3-3.7-5-5-2-1.3-4.3-1.7-7-.7l-25 5-4-1-2-2-5-8c-.6-1.1-.8-2.4-.6-3.7.2-1.3.7-2.4 1.6-3.3l17-19 2-7c.7-2.7 0-5-2-7l-7-9c-1.6-2.1-4-3.5-6.6-3.9-2.6-.4-5.3.3-7.4 1.9l-22 13c-.9.9-2.2 1.4-3.5 1.4s-2.6-.5-3.5-1.4l-7-7-2-2v-4l9-24c1.1-2.3 1.3-4.9.6-7.3-.8-2.4-2.4-4.4-4.6-5.7l-10-6c-2-2-4.3-2.3-7-1-2.7.7-5 2-7 4l-16 20-2 2h-4l-9-4-3-2-1-3v-26c.7-2.7 0-5-2-7-1.3-2.7-3.3-4-6-4l-12-2c-2-.7-4.3-.4-7 1l-4 6-9 25-2 3h-13c-1.3.7-2.3.4-3-1l-2-2-9-25c0-2-1.3-4-4-6l-7-1-12 2c-2.7 0-4.7 1.3-6 4-2 2-2.7 4.3-2 7v26l-1 3-3 2-9 4c-2.7.7-4.7 0-6-2l-17-20c-.7-2-2.7-3.3-6-4-2-.7-4.3-.3-7 1l-10 6-5 5v8l10 24v3c0 2-.7 3-2 3l-7 6c-.4.5-.9 1-1.5 1.3-.6.3-1.2.6-1.8.7-.7.1-1.3.1-2-.1-.6-.2-1.2-.5-1.7-.8l-22-14-7-1-7 3-7 9c-1.8 1.9-2.9 4.4-2.9 7s1 5.1 2.9 7l18 20 1 3-1 3-5 9-2 2h-4l-25-4c-2.4-.7-4.9-.4-7.2.7s-3.9 3.1-4.8 5.3l-4 11v7c1.3 3.3 3 5.3 5 6l23 13 2 2v5l-2 8-1 3-3 2-26 4c-2.5.2-4.8 1.4-6.4 3.3-1.7 1.8-2.6 4.3-2.6 6.7v12c0 2.5.9 4.9 2.6 6.7s3.9 3.1 6.4 3.3l26 4 3 2 1 3 2 9v4l-2 2-23 13-5 5v8l4 11c.7 2 2.3 3.7 5 5 2 1.3 4.3 1.7 7 .7l25-5 4 1 2 2 5 8c.7 1.1 1.1 2.3 1.1 3.6 0 1.3-.4 2.5-1.1 3.5l-17 20c-1.7 1.7-2.7 3.9-2.9 6.3-.2 2.4.5 4.8 1.9 6.7l7 9c1.6 2.1 4 3.5 6.6 3.9 2.6.4 5.3-.4 7.4-2l22-13c1.1-.8 2.4-1.1 3.7-.9 1.3.2 2.5.9 3.3 1.9l7 6 2 3v3l-9 24c-1.1 2.3-1.3 4.9-.5 7.3.7 2.4 2.4 4.4 4.5 5.7l10 6c1.1.7 2.4 1.2 3.7 1.5 1.3.2 2.7.2 4-.1 1.3-.3 2.6-.8 3.6-1.6 1.1-.8 2-1.7 2.7-2.8l16-20 5-2 10 4 3 2 1 3v26c-.7 2.7 0 5 2 7 1.3 2.7 3.3 4 6 4l12 2c2.3.2 4.7-.4 6.6-1.7 2-1.3 3.5-3.1 4.4-5.3l9-25 2-2c1.3-1.3 2.3-1.7 3-1.3h10l3 1 2 2 9 25c.7 2 2 3.7 4 5 1.9 1.3 4.3 1.9 6.7 1.7l12-2c2.7-.7 4.7-2 6-4.7.7-2.7.7-5.3.7-7.3v-26l1-3 3-2 9-3c3.3-.7 5.3-.3 6 1.3l17 20c1.4 2 3.5 3.4 5.9 4 2.4.6 4.9.2 7.1-1l10-6 5-5v-8l-10-24v-3l2-3 7-6 4-2 3 1 22 13c2.7 1.3 5 1 7-1l7-9c1-1.3 1.7-2.7 2-4.3.3-1.6.2-3.3-.4-4.8l-17-20-2-3 1-4 5-9 3-2 3-1 25 5c1.2.5 2.6.7 3.9.7 1.3 0 2.6-.4 3.8-1 1.2-.6 2.3-1.4 3.2-2.3.9-1 1.6-2.1 2.1-3.4l3-11v-8l-5-5-23-13-3-2v-5l2-8 1-3 3-2 26-4c2.5-.2 4.8-1.4 6.5-3.3 1.6-1.8 2.5-4.3 2.5-6.7v-12zm-282 94c-1.3 2-3.3 3.7-6 5-2 1.4-4.3 2.3-6.8 2.6-2.4.3-4.9 0-7.2-.8l-6-4c-22.7-24.9-35.3-57.3-35.3-91s12.6-66.1 35.3-91l7-4 7-1c2.5.3 4.9 1.2 7 2.6 2.1 1.4 3.8 3.3 4.9 5.4l46 80c1.4 2.4 2.1 5.2 2.1 8s-.7 5.6-2.1 8l-46 80zm74 47c-10 0-19.3-1-28-3-3.7-.7-7-2.7-9.4-5.6-2.4-2.9-3.7-6.6-3.6-10.3l2-7 46-80 6-6 8-2h92c2.5-.1 5 .4 7.2 1.5s4.2 2.6 5.8 4.6l3 7 1 7c-17 55-68 94-128 94zm7-164l-45-80-2-7c-1.1-3.6 0-7.2 2.2-10.1 2.2-2.9 5.3-5 8.8-5.9 32.7-6.8 66.7-1.2 95.5 15.6 28.8 16.8 50.4 43.7 60.5 75.5l1 7c-.7 3.7-2.7 7-5.6 9.4-2.9 2.4-6.6 3.7-10.4 3.7h-92c-2.7.7-5.3 0-8-2l-6-6.2z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="0" id="{{ fileName }}-delete" title="Delete plugin" class="button-container-zVLH6 plugin-delete-btn" style="display: flex; cursor: pointer; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.75); transition: background-color 0.2s, color 0.2s;">\n                <svg style="width: 1.05rem; height: 1.05rem; fill: currentcolor;" viewBox="0 0 24 24">\n                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>\n                </svg>\n            </div>\n\n            <div tabindex="-1" class="toggle-container-lZfHP button-container-zVLH6 plugin-toggle {{ checkedClass }}" data-plugin="{{ fileName }}" style="outline: none; cursor: pointer;">\n                <div class="toggle-toOWM"></div>\n            </div>\n        </div>\n    </div>\n</div>\n';
 
   // src/components/plugin-item/pluginItem.ts
   function createPluginCard(fileName, meta, isEnabled, onToggle) {
@@ -4293,6 +4293,63 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     font-size: 0.88rem;
     line-height: 1.5;
 }
+#mods-list,
+#enhanced-plugins-list,
+#enhanced-themes-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    align-items: stretch;
+}
+#mods-list > :not(.marketplace-item-card),
+#enhanced-plugins-list > :not(.addon-container-lC5KN),
+#enhanced-themes-list > :not(.addon-container-lC5KN) {
+    grid-column: 1 / -1;
+}
+@media (max-width: 720px) {
+    #mods-list,
+    #enhanced-plugins-list,
+    #enhanced-themes-list {
+        grid-template-columns: 1fr;
+    }
+}
+.enhanced-toolbar-row {
+    flex-wrap: wrap;
+}
+.enhanced-layout-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+.enhanced-icon-button {
+    width: 2.35rem;
+    height: 2.35rem;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+}
+.enhanced-icon-button.active {
+    background: var(--accent-color, var(--primary-accent-color, #7b5bf5));
+    border-color: transparent;
+}
+#enhanced[data-list-columns="1"] #mods-list,
+#enhanced[data-list-columns="1"] #enhanced-plugins-list,
+#enhanced[data-list-columns="1"] #enhanced-themes-list {
+    grid-template-columns: 1fr;
+}
+.enhanced-page-container.enhanced-wide-layout,
+.enhanced-page-container.enhanced-wide-layout > #enhanced,
+.enhanced-page-container.enhanced-wide-layout > #enhanced > .enhanced-category {
+    max-width: none !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    box-sizing: border-box;
+}
 `;
 
   // src/utils/icons.ts
@@ -4316,6 +4373,23 @@ Please place server.js in the folder or start Stremio Service. Would you like to
 </svg>`;
   var PREFERENCES_ICON = `<svg class="icon-TzPrK" style="width: 1.25rem; height: 1.25rem; fill: currentcolor;" viewBox="0 0 24 24">
     <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"></path>
+</svg>`;
+  var TWO_COLUMNS_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;">
+    <rect x="3" y="4" width="8" height="7" rx="1.5"></rect>
+    <rect x="13" y="4" width="8" height="7" rx="1.5"></rect>
+    <rect x="3" y="13" width="8" height="7" rx="1.5"></rect>
+    <rect x="13" y="13" width="8" height="7" rx="1.5"></rect>
+</svg>`;
+  var ONE_COLUMN_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: currentcolor;">
+    <rect x="3" y="4" width="18" height="4.5" rx="1.25"></rect>
+    <rect x="3" y="9.75" width="18" height="4.5" rx="1.25"></rect>
+    <rect x="3" y="15.5" width="18" height="4.5" rx="1.25"></rect>
+</svg>`;
+  var WIDE_LIST_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+    <path d="M3 5v14M21 5v14M7 12h10M10 9l-3 3 3 3M14 9l3 3-3 3"></path>
+</svg>`;
+  var NARROW_LIST_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+    <path d="M10 5v14M14 5v14M2 12h5M5 9l3 3-3 3M22 12h-5M19 9l-3 3 3 3"></path>
 </svg>`;
 
   // src/player/chapterMarkers.ts
@@ -5248,6 +5322,98 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   };
   var ENHANCED_ROUTE = "#/settings/enhanced";
   var DEFAULT_SELECTED_CLASS = "selected-S7SeK";
+  var LIST_COLUMNS_STORAGE_KEY = "enhanced_list_columns";
+  var LIST_WIDTH_STORAGE_KEY = "enhanced_list_width";
+  var LIST_LAYOUT_CATEGORIES = /* @__PURE__ */ new Set(["themes", "plugins", "marketplace"]);
+  var listColumns = (() => {
+    try {
+      return localStorage.getItem(LIST_COLUMNS_STORAGE_KEY) === "1" ? "1" : "2";
+    } catch (_) {
+      return "2";
+    }
+  })();
+  var listWidth = (() => {
+    try {
+      return localStorage.getItem(LIST_WIDTH_STORAGE_KEY) === "wide" ? "wide" : "narrow";
+    } catch (_) {
+      return "narrow";
+    }
+  })();
+  function syncListLayoutUI(activeCategory) {
+    const page = document.getElementById("enhanced");
+    if (page) {
+      page.setAttribute("data-list-columns", listColumns);
+    }
+    const current = activeCategory ?? page?.getAttribute("data-show") ?? "";
+    const container = document.querySelector(".enhanced-page-container");
+    if (container) {
+      container.classList.toggle(
+        "enhanced-wide-layout",
+        listWidth === "wide" && LIST_LAYOUT_CATEGORIES.has(current)
+      );
+    }
+    for (const btn of Array.from(document.querySelectorAll(".enhanced-columns-toggle-btn"))) {
+      btn.innerHTML = listColumns === "2" ? TWO_COLUMNS_ICON : ONE_COLUMN_ICON;
+      const label = listColumns === "2" ? "Switch to 1 column" : "Switch to 2 columns";
+      btn.setAttribute("title", label);
+      btn.setAttribute("aria-label", label);
+      btn.setAttribute("aria-pressed", listColumns === "1" ? "true" : "false");
+      btn.classList.toggle("active", listColumns === "1");
+    }
+    for (const btn of Array.from(document.querySelectorAll(".enhanced-width-toggle-btn"))) {
+      btn.innerHTML = listWidth === "wide" ? NARROW_LIST_ICON : WIDE_LIST_ICON;
+      const label = listWidth === "wide" ? "Switch to narrow list" : "Switch to wide list";
+      btn.setAttribute("title", label);
+      btn.setAttribute("aria-label", label);
+      btn.setAttribute("aria-pressed", listWidth === "wide" ? "true" : "false");
+      btn.classList.toggle("active", listWidth === "wide");
+    }
+  }
+  function createLayoutControls(sectionKey) {
+    const controls = document.createElement("div");
+    controls.className = "enhanced-layout-controls";
+    const columnsBtn = createOptionButton(`enhanced-${sectionKey}-columns-btn`, "Switch to 1 column");
+    columnsBtn.classList.add("enhanced-columns-toggle-btn", "enhanced-icon-button");
+    columnsBtn.textContent = "";
+    columnsBtn.setAttribute("role", "button");
+    const toggleColumns = () => {
+      listColumns = listColumns === "2" ? "1" : "2";
+      try {
+        localStorage.setItem(LIST_COLUMNS_STORAGE_KEY, listColumns);
+      } catch (_) {
+      }
+      syncListLayoutUI();
+    };
+    columnsBtn.addEventListener("click", toggleColumns);
+    columnsBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleColumns();
+      }
+    });
+    const widthBtn = createOptionButton(`enhanced-${sectionKey}-width-btn`, "Switch to wide list");
+    widthBtn.classList.add("enhanced-width-toggle-btn", "enhanced-icon-button");
+    widthBtn.textContent = "";
+    widthBtn.setAttribute("role", "button");
+    const toggleWidth = () => {
+      listWidth = listWidth === "narrow" ? "wide" : "narrow";
+      try {
+        localStorage.setItem(LIST_WIDTH_STORAGE_KEY, listWidth);
+      } catch (_) {
+      }
+      syncListLayoutUI();
+    };
+    widthBtn.addEventListener("click", toggleWidth);
+    widthBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleWidth();
+      }
+    });
+    controls.appendChild(columnsBtn);
+    controls.appendChild(widthBtn);
+    return controls;
+  }
   var currentShellPreferences = {
     rememberWindowState: true,
     noWindowDecorations: false,
@@ -5326,6 +5492,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     if (pane) pane.classList.add("enhanced-settings-pane");
     const page = document.getElementById("enhanced");
     if (page) page.setAttribute("data-show", current);
+    syncListLayoutUI(current);
     for (const link of Array.from(document.querySelectorAll("[data-enhanced-item]"))) {
       link.classList.toggle(selected, link.getAttribute("data-enhanced-item") === current);
     }
@@ -5460,7 +5627,10 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       openThemesBtn.onclick = () => {
         window.StremioEnhancedAPI.openThemesFolder();
       };
-      themesCategory.appendChild(createOptionRow([openThemesBtn]));
+      const themesRow = createOptionRow([openThemesBtn]);
+      themesRow.classList.add("enhanced-toolbar-row");
+      themesRow.appendChild(createLayoutControls("themes"));
+      themesCategory.appendChild(themesRow);
       const themesList = document.createElement("div");
       themesList.id = "enhanced-themes-list";
       themesCategory.appendChild(themesList);
@@ -5474,12 +5644,26 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       toggleAllPluginsBtn.onclick = () => {
         toggleAllPlugins();
       };
-      pluginsCategory.appendChild(createOptionRow([openPluginsBtn, toggleAllPluginsBtn]));
+      const pluginsRow = createOptionRow([openPluginsBtn, toggleAllPluginsBtn]);
+      pluginsRow.classList.add("enhanced-toolbar-row");
+      pluginsRow.appendChild(createLayoutControls("plugins"));
+      pluginsCategory.appendChild(pluginsRow);
       const pluginsList = document.createElement("div");
       pluginsList.id = "enhanced-plugins-list";
       pluginsCategory.appendChild(pluginsList);
       page.appendChild(pluginsCategory);
       const marketplaceCategory = createCategory("enhanced-marketplace-category", "marketplace", "Community Marketplace", sampleGroup);
+      const marketplaceRow = document.createElement("div");
+      marketplaceRow.className = "enhanced-option enhanced-toolbar-row";
+      const marketplaceLayoutLabel = document.createElement("div");
+      marketplaceLayoutLabel.className = "enhanced-option-heading";
+      const marketplaceLayoutTitle = document.createElement("div");
+      marketplaceLayoutTitle.className = "enhanced-option-label";
+      marketplaceLayoutTitle.textContent = "View Layout";
+      marketplaceLayoutLabel.appendChild(marketplaceLayoutTitle);
+      marketplaceRow.appendChild(marketplaceLayoutLabel);
+      marketplaceRow.appendChild(createLayoutControls("marketplace"));
+      marketplaceCategory.appendChild(marketplaceRow);
       const marketplaceContent = document.createElement("div");
       marketplaceContent.id = "enhanced-marketplace-content";
       marketplaceCategory.appendChild(marketplaceContent);
@@ -5852,6 +6036,7 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       page.appendChild(updatesCategory);
       container.appendChild(page);
       pane.appendChild(container);
+      syncListLayoutUI();
       renderServerInfo(getCurrentServerStatus());
       getServerStatus().then(renderServerInfo);
       renderClientVersionInfo();
