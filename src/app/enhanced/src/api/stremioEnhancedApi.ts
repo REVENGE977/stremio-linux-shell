@@ -5,6 +5,9 @@ import { loadPlugin, unloadPlugin, showReloadWarning } from '../plugins/pluginMa
 import { modalManager } from '../components/modals/modalManager';
 import { openStreamingServerFolder, checkServerJsUpdateAndSetup, getServerStatus, startStreamingServer, reloadToLocalStreamingServer } from '../server/serverManager';
 import { checkClientUpdate, getCurrentClientVersion } from '../updates/updateManager';
+import { setupMpvApi, mpvApi } from './mpvApi';
+import { setupPlayerBus, playerBus } from './playerBus';
+import { shellApi } from './shellApi';
 
 let currentEnhancedData: EnhancedData = { plugins: [], themes: [], activeTheme: null };
 
@@ -38,6 +41,9 @@ export function syncLocalStorage(): void {
 }
 
 export function setupEnhancedApi(): void {
+    setupMpvApi();
+    setupPlayerBus();
+
     (window as any).__pluginSchemas = (window as any).__pluginSchemas || {};
     (window as any).__pluginSettingListeners = (window as any).__pluginSettingListeners || {};
 
@@ -207,7 +213,10 @@ export function setupEnhancedApi(): void {
             },
             toast: function (id: string, title: string, message: string, status?: 'success' | 'fail' | 'info') {
                 modalManager.showToast(id, title, message, status);
-            }
+            },
+            mpv: mpvApi,
+            shell: shellApi,
+            player: playerBus
         };
     };
 
@@ -356,6 +365,9 @@ export function setupEnhancedApi(): void {
         },
         toast: (id: string, title: string, message: string, status?: 'success' | 'fail' | 'info') => {
             modalManager.showToast(id, title, message, status);
-        }
+        },
+        mpv: mpvApi,
+        shell: shellApi,
+        player: playerBus
     };
 }

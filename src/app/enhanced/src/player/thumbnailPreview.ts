@@ -1,14 +1,7 @@
 import { PermanentCore } from '../core/permanentCore';
 import { postEnhancedMessage } from '../utils/dom';
-import { EnhancedData } from '../types';
+import { EnhancedData, ThumbnailPayload } from '../types';
 import { getChapterAtTime, getChapters, isChapterMarkersEnabled } from './chapterMarkers';
-
-interface ThumbnailPayload {
-    time: number;
-    dataUrl: string;
-    width: number;
-    height: number;
-}
 
 interface CachedThumbnail {
     dataUrl: string;
@@ -41,6 +34,49 @@ let lastRequestSentAt = 0;
 let trailingTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingTrailingRequest: { time: number; maxWidth: number } | null = null;
 let lastDisplayFrameSize: { width: number; height: number } | null = null;
+
+interface PendingThumbnailRequest {
+    time: number;
+    resolve: (payload: ThumbnailPayload | null) => void;
+    timer: ReturnType<typeof setTimeout>;
+}
+
+const pendingThumbnailRequests: PendingThumbnailRequest[] = [];
+
+export function requestThumbnail(time: number, maxWidth?: number, timeoutMs = 5000): Promise<ThumbnailPayload | null> {
+    if (!Number.isFinite(time) || time < 0) {
+        return Promise.resolve(null);
+    }
+
+    const duration = getDurationSeconds();
+    const streamKey = ensureStreamCacheScope();
+    const widthKey = maxWidth ?? NORMAL_PREVIEW_WIDTH;
+    const qTime = quantizeTime(time, duration);
+    const cacheKey = makeCacheKey(streamKey, qTime, widthKey);
+    const cached = thumbCache.get(cacheKey);
+    if (cached) {
+        return Promise.resolve({
+            time,
+            dataUrl: cached.dataUrl,
+            width: cached.width,
+            height: cached.height
+        });
+    }
+
+    return new Promise<ThumbnailPayload | null>(resolve => {
+        const entry: PendingThumbnailRequest = {
+            time,
+            resolve,
+            timer: setTimeout(() => {
+                const idx = pendingThumbnailRequests.indexOf(entry);
+                if (idx !== -1) pendingThumbnailRequests.splice(idx, 1);
+                resolve(null);
+            }, timeoutMs)
+        };
+        pendingThumbnailRequests.push(entry);
+        postEnhancedMessage('requestThumbnail', maxWidth !== undefined ? { time, maxWidth } : { time });
+    });
+}
 
 export function isThumbnailPreviewEnabled(): boolean {
     return previewEnabled;
@@ -397,6 +433,15 @@ export function setupThumbnailPreview(): void {
             const maxTolerance = Math.max(2.5, duration * 0.015);
             if (delta <= maxTolerance || !imgEl?.getAttribute('src')) {
                 applyThumbToDom(entry);
+            }
+        }
+
+        for (let i = pendingThumbnailRequests.length - 1; i >= 0; i--) {
+            const req = pendingThumbnailRequests[i];
+            if (Math.abs(payload.time - req.time) <= 0.5) {
+                pendingThumbnailRequests.splice(i, 1);
+                clearTimeout(req.timer);
+                req.resolve(payload);
             }
         }
     };

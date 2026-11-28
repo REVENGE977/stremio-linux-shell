@@ -94,6 +94,10 @@ function setPipState(enabled: boolean, notifyRust = true): void {
     syncPlaybackTimer();
 }
 
+export function setPictureInPicture(enabled: boolean): void {
+    setPipState(Boolean(enabled), true);
+}
+
 function syncPlaybackTimer(): void {
     const shouldRun = (isPlayerHash() && !pausedVal && !endedVal) || pipActive;
     if (shouldRun && !playbackTimer) {

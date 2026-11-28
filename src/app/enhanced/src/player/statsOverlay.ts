@@ -263,24 +263,28 @@ function renderHud(stats: PlaybackStats): void {
     `;
 }
 
-async function pollOnce(): Promise<void> {
-    if (!statsVisible || !isPlayerRoute()) {
-        toggleStatsOverlay(false);
-        return;
-    }
-
+export function requestPlaybackStats(timeoutMs = 1500): Promise<PlaybackStats | null> {
     const id = 'st_' + Math.random().toString(36).substring(2, 9);
-    const stats = await new Promise<PlaybackStats | null>(resolve => {
+    return new Promise<PlaybackStats | null>(resolve => {
         const timer = setTimeout(() => {
             pendingStatsRequests.delete(id);
             resolve(null);
-        }, 1200);
+        }, timeoutMs);
         pendingStatsRequests.set(id, s => {
             clearTimeout(timer);
             resolve(s);
         });
         postEnhancedMessage('getPlaybackStats', { id });
     });
+}
+
+async function pollOnce(): Promise<void> {
+    if (!statsVisible || !isPlayerRoute()) {
+        toggleStatsOverlay(false);
+        return;
+    }
+
+    const stats = await requestPlaybackStats(1200);
 
     if (!stats || !statsVisible) return;
     lastStats = stats;

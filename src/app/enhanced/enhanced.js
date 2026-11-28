@@ -2344,8 +2344,8 @@ Are you sure you want to update? It's recommended to read the source code of the
               localStorage.setItem(storageKey, String(val));
             }
           }
-          const listeners = window.__pluginSettingListeners?.[fileName] || window.__pluginSettingListeners?.[pluginBaseName] || [];
-          listeners.forEach((cb) => {
+          const listeners2 = window.__pluginSettingListeners?.[fileName] || window.__pluginSettingListeners?.[pluginBaseName] || [];
+          listeners2.forEach((cb) => {
             try {
               cb(newValues);
             } catch (err) {
@@ -2900,326 +2900,647 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     }
   }
 
-  // src/api/stremioEnhancedApi.ts
-  var currentEnhancedData5 = { plugins: [], themes: [], activeTheme: null };
-  function updateApiData(data) {
-    currentEnhancedData5 = data;
-  }
-  function syncLocalStorage() {
+  // src/api/mpvApi.ts
+  var propListeners = /* @__PURE__ */ new Map();
+  var observedInSession = /* @__PURE__ */ new Set();
+  var extraObservedProps = /* @__PURE__ */ new Set();
+  var rawListeners = /* @__PURE__ */ new Set();
+  var initialized = false;
+  var needsReobserve = false;
+  function postMpvIpc(args) {
     try {
-      const installedPlugins = (currentEnhancedData5.plugins || []).map((p) => p.fileName);
-      localStorage.setItem("installedPlugins", JSON.stringify(installedPlugins));
-      const enabledPluginsList = [];
-      (currentEnhancedData5.plugins || []).forEach((p) => {
-        if (p.enabled) {
-          enabledPluginsList.push(p.fileName);
-          const baseName = p.fileName.replace(/\.plugin\.js$/, "").replace(/\.js$/, "");
-          if (baseName && !enabledPluginsList.includes(baseName)) {
-            enabledPluginsList.push(baseName);
-          }
-        }
-      });
-      localStorage.setItem("enabledPlugins", JSON.stringify(enabledPluginsList));
-      if (currentEnhancedData5.activeTheme) {
-        localStorage.setItem("currentTheme", currentEnhancedData5.activeTheme);
-      } else {
-        localStorage.setItem("currentTheme", "Default");
+      const json = JSON.stringify({ type: 6, args });
+      if (window.ipc?.postMessage) {
+        window.ipc.postMessage(json);
+      } else if (window.chrome?.webview?.postMessage) {
+        window.chrome.webview.postMessage(json);
       }
-    } catch (_) {
+    } catch (err) {
+      console.warn("[Enhanced] Failed to post mpv IPC message:", err);
     }
   }
-  function setupEnhancedApi() {
-    window.__pluginSchemas = window.__pluginSchemas || {};
-    window.__pluginSettingListeners = window.__pluginSettingListeners || {};
-    function getPluginBaseName(name) {
-      return name ? name.replace(/\.plugin\.js$/, "").replace(/\.js$/, "") : "global";
+  function ensureObservedProp(prop) {
+    if (typeof prop !== "string" || !prop) return;
+    extraObservedProps.add(prop);
+    if (!observedInSession.has(prop)) {
+      observedInSession.add(prop);
+      postMpvIpc(["mpv-observe-prop", prop]);
     }
-    let pendingMacrotaskCallbacks = [];
-    let macrotaskScheduled = false;
-    let lastMacrotaskFlushAt = 0;
-    let consecutiveMacrotaskTicks = 0;
-    function yieldToMacrotask(value) {
-      return new Promise((resolve) => {
-        pendingMacrotaskCallbacks.push(() => resolve(value));
-        if (macrotaskScheduled) return;
-        macrotaskScheduled = true;
-        const now = Date.now();
-        if (now - lastMacrotaskFlushAt < 25) {
-          consecutiveMacrotaskTicks++;
-        } else {
-          consecutiveMacrotaskTicks = 0;
-        }
-        const delayMs = consecutiveMacrotaskTicks >= 20 ? 16 : consecutiveMacrotaskTicks >= 5 ? 4 : 0;
-        setTimeout(() => {
-          const callbacks = pendingMacrotaskCallbacks;
-          pendingMacrotaskCallbacks = [];
-          macrotaskScheduled = false;
-          lastMacrotaskFlushAt = Date.now();
-          for (const cb of callbacks) {
-            cb();
-          }
-        }, delayMs);
-      });
-    }
-    function readSettingSync(pluginName, key) {
-      const baseName = getPluginBaseName(pluginName);
-      const storageKey = `plugin_setting:${baseName}:${key}`;
-      const val = localStorage.getItem(storageKey);
-      if (val === null || val === void 0) {
-        const schema = window.__pluginSchemas[baseName] || window.__pluginSchemas[pluginName];
-        if (schema && Array.isArray(schema)) {
-          const opt = schema.find((s) => s.key === key);
-          if (opt && opt.defaultValue !== void 0) return opt.defaultValue;
-        }
-        return null;
+  }
+  function reobserveActiveProps() {
+    const toObserve = /* @__PURE__ */ new Set([
+      ...propListeners.keys(),
+      ...extraObservedProps
+    ]);
+    for (const prop of toObserve) {
+      if (!observedInSession.has(prop)) {
+        observedInSession.add(prop);
+        postMpvIpc(["mpv-observe-prop", prop]);
       }
+    }
+  }
+  function addRawMpvListener(fn) {
+    rawListeners.add(fn);
+    return () => {
+      rawListeners.delete(fn);
+    };
+  }
+  function setupMpvApi() {
+    if (initialized) return;
+    initialized = true;
+    const ipc = window.ipc;
+    if (!ipc || typeof ipc.addEventListener !== "function") return;
+    ipc.addEventListener("message", (event) => {
       try {
-        return JSON.parse(val);
+        let msg = event?.data;
+        if (typeof msg === "string") {
+          msg = JSON.parse(msg);
+        }
+        if (!msg || !Array.isArray(msg.args)) return;
+        const [action, payload] = msg.args;
+        if (action === "mpv-prop-change" && payload && typeof payload.name === "string") {
+          if (needsReobserve) {
+            needsReobserve = false;
+            reobserveActiveProps();
+          }
+          const listeners2 = propListeners.get(payload.name);
+          if (listeners2 && listeners2.size > 0) {
+            for (const cb of Array.from(listeners2)) {
+              try {
+                cb(payload.data, payload.name);
+              } catch (err) {
+                console.error(`[Enhanced] Error in mpv.observe('${payload.name}') callback:`, err);
+              }
+            }
+          }
+          for (const fn of Array.from(rawListeners)) {
+            try {
+              fn("mpv-prop-change", payload);
+            } catch (err) {
+              console.error("[Enhanced] Error in raw mpv listener:", err);
+            }
+          }
+        } else if (action === "mpv-event-ended") {
+          observedInSession.clear();
+          needsReobserve = true;
+          for (const fn of Array.from(rawListeners)) {
+            try {
+              fn("mpv-event-ended", payload || {});
+            } catch (err) {
+              console.error("[Enhanced] Error in raw mpv listener:", err);
+            }
+          }
+        }
       } catch (_) {
-        return val;
       }
-    }
-    function internalGetSetting(pluginName, key) {
-      return yieldToMacrotask(readSettingSync(pluginName, key));
-    }
-    function internalGetSettings(pluginName) {
-      const baseName = getPluginBaseName(pluginName);
-      const schema = window.__pluginSchemas[baseName] || window.__pluginSchemas[pluginName] || [];
-      const result = {};
-      for (const item of schema) {
-        result[item.key] = readSettingSync(baseName, item.key);
+    });
+  }
+  var mpvApi = {
+    set(prop, value) {
+      if (typeof prop !== "string" || !prop) return;
+      postMpvIpc(["mpv-set-prop", [prop, value]]);
+    },
+    command(name, ...args) {
+      if (typeof name !== "string" || !name) return;
+      postMpvIpc(["mpv-command", [name, ...args]]);
+    },
+    observe(prop, cb) {
+      if (typeof prop !== "string" || !prop || typeof cb !== "function") {
+        return () => {
+        };
       }
-      return yieldToMacrotask(result);
-    }
-    async function internalSaveSetting(pluginName, key, value) {
-      const baseName = getPluginBaseName(pluginName);
-      const storageKey = `plugin_setting:${baseName}:${key}`;
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(value));
-      } catch (e) {
-        localStorage.setItem(storageKey, String(value));
+      let set = propListeners.get(prop);
+      if (!set) {
+        set = /* @__PURE__ */ new Set();
+        propListeners.set(prop, set);
       }
-      await yieldToMacrotask(void 0);
-      const notifyPayload = { [key]: value };
-      const listeners = window.__pluginSettingListeners[baseName] || window.__pluginSettingListeners[pluginName] || [];
-      listeners.forEach((cb) => {
-        try {
-          cb(notifyPayload);
-        } catch (err) {
-          console.error("[Enhanced] Error in onSettingsSaved:", err);
-        }
-      });
-      return true;
-    }
-    function internalRegisterSettings(pluginName, schema) {
-      if (!Array.isArray(schema)) {
-        console.error("[Enhanced] Invalid settings schema provided for:", pluginName);
-        return Promise.reject(new Error("Invalid settings schema. Expected array."));
+      set.add(cb);
+      if (!observedInSession.has(prop)) {
+        observedInSession.add(prop);
+        postMpvIpc(["mpv-observe-prop", prop]);
       }
-      const baseName = getPluginBaseName(pluginName);
-      window.__pluginSchemas[baseName] = schema;
-      window.__pluginSchemas[pluginName] = schema;
-      console.log(`[Enhanced] Registered settings schema for ${baseName}:`, schema);
-      const optBtn = document.getElementById(`${baseName}.plugin.js-settings`) || document.getElementById(`${baseName}-settings`) || document.getElementById(`${pluginName}-settings`);
-      if (optBtn) optBtn.style.display = "flex";
-      return yieldToMacrotask(true);
-    }
-    window.__createScopedPluginAPI = function(pluginBaseName) {
-      return {
-        logger: {
-          info: function(message) {
-            console.log(`[${pluginBaseName}]`, message);
-          },
-          warn: function(message) {
-            console.warn(`[${pluginBaseName}]`, message);
-          },
-          error: function(message) {
-            console.error(`[${pluginBaseName}]`, message);
-          }
-        },
-        getSetting: async function(key) {
-          return internalGetSetting(pluginBaseName, key);
-        },
-        getSettings: async function() {
-          return internalGetSettings(pluginBaseName);
-        },
-        saveSetting: async function(key, value) {
-          return internalSaveSetting(pluginBaseName, key, value);
-        },
-        registerSettings: async function(schema) {
-          return internalRegisterSettings(pluginBaseName, schema);
-        },
-        getRegisteredSettings: function() {
-          return window.__pluginSchemas[pluginBaseName] || null;
-        },
-        clearRegisteredSettings: function() {
-          delete window.__pluginSchemas[pluginBaseName];
-          return true;
-        },
-        onSettingsSaved: function(callback) {
-          if (!window.__pluginSettingListeners[pluginBaseName]) {
-            window.__pluginSettingListeners[pluginBaseName] = [];
-          }
-          window.__pluginSettingListeners[pluginBaseName].push(callback);
-        },
-        showAlert: function(alertType, title, message, buttons) {
-          return modalManager.showAlert(alertType, title, message, buttons);
-        },
-        showPrompt: function(promptIdOrTitle, titleOrMsg, messageOrDefault, defaultValue) {
-          if (defaultValue !== void 0) {
-            return modalManager.showPrompt(promptIdOrTitle, titleOrMsg || "", messageOrDefault || "", defaultValue);
-          } else if (messageOrDefault !== void 0) {
-            return modalManager.showPrompt(pluginBaseName, promptIdOrTitle, titleOrMsg || "", messageOrDefault);
-          }
-          return modalManager.showPrompt(pluginBaseName, promptIdOrTitle, titleOrMsg || "", "");
-        },
-        showToast: function(id, title, message, status) {
-          modalManager.showToast(id, title, message, status);
-        },
-        toast: function(id, title, message, status) {
-          modalManager.showToast(id, title, message, status);
+      return () => {
+        const current = propListeners.get(prop);
+        if (!current) return;
+        current.delete(cb);
+        if (current.size === 0) {
+          propListeners.delete(prop);
         }
       };
-    };
-    window.StremioEnhancedAPI = {
-      openThemesFolder: function() {
-        postEnhancedMessage("openThemesFolder");
-      },
-      openPluginsFolder: function() {
-        postEnhancedMessage("openPluginsFolder");
-      },
-      openStreamingServerFolder: function() {
-        openStreamingServerFolder();
-      },
-      checkServerUpdates: function() {
-        return checkServerJsUpdateAndSetup(true);
-      },
-      checkClientUpdates: function() {
-        return checkClientUpdate(true);
-      },
-      getClientVersion: function() {
-        return getCurrentClientVersion();
-      },
-      getServerStatus: function() {
-        return getServerStatus();
-      },
-      startStreamingServer: function() {
-        return startStreamingServer();
-      },
-      reloadToLocalStreamingServer: function() {
-        reloadToLocalStreamingServer();
-      },
-      applyTheme: function(fileName) {
-        applyThemeUI(fileName);
-        postEnhancedMessage("applyTheme", { fileName });
-      },
-      togglePlugin: function(fileName, enabled) {
-        const plugin = (currentEnhancedData5.plugins || []).find((p) => p.fileName === fileName);
-        if (plugin) {
-          plugin.enabled = enabled;
-        }
-        if (enabled) {
-          loadPlugin(fileName);
-        } else {
-          unloadPlugin(fileName);
-          showReloadWarning();
-        }
-        let enabledPlugins = [];
-        try {
-          const raw = localStorage.getItem("enabledPlugins");
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) enabledPlugins = parsed;
+    }
+  };
+
+  // src/api/playerBus.ts
+  var listeners = /* @__PURE__ */ new Map();
+  var initialized2 = false;
+  var paused = false;
+  var hasPauseState = false;
+  var time = 0;
+  var duration = 0;
+  var seeking = false;
+  var wasSeeking = false;
+  var ended = false;
+  var path = "";
+  var tracks = [];
+  var sid = null;
+  var aid = null;
+  var vid = null;
+  var secondarySid = null;
+  function emit(event, payload) {
+    const set = listeners.get(event);
+    if (!set || set.size === 0) return;
+    for (const cb of Array.from(set)) {
+      try {
+        cb(payload);
+      } catch (err) {
+        console.error(`[Enhanced] Error in player.on('${event}') listener:`, err);
+      }
+    }
+  }
+  function ensurePropsForEvent(event) {
+    switch (event) {
+      case "play":
+      case "pause":
+        ensureObservedProp("pause");
+        break;
+      case "seeked":
+        ensureObservedProp("seeking");
+        ensureObservedProp("time-pos");
+        break;
+      case "timeupdate":
+        ensureObservedProp("time-pos");
+        ensureObservedProp("duration");
+        break;
+      case "trackchange":
+        ensureObservedProp("track-list");
+        ensureObservedProp("sid");
+        ensureObservedProp("aid");
+        ensureObservedProp("vid");
+        ensureObservedProp("secondary-sid");
+        break;
+      case "ended":
+        break;
+    }
+  }
+  function parseTrackList(data) {
+    if (Array.isArray(data)) return data;
+    if (typeof data === "string") {
+      try {
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed) ? parsed : null;
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+  function setupPlayerBus() {
+    if (initialized2) return;
+    initialized2 = true;
+    addRawMpvListener((action, payload) => {
+      if (action === "mpv-prop-change" && payload) {
+        const { name, data } = payload;
+        if (name === "path") {
+          if (data) {
+            path = String(data);
+            ended = false;
+            wasSeeking = false;
+            hasPauseState = false;
           }
-        } catch (_) {
+        } else if (name === "duration") {
+          const newDuration = Number(data);
+          if (Number.isFinite(newDuration) && newDuration > 0) {
+            duration = newDuration;
+          }
+        } else if (name === "time-pos") {
+          const newTime = Number(data);
+          if (Number.isFinite(newTime) && Math.abs(newTime - time) > 0.01) {
+            time = newTime;
+            emit("timeupdate", { time, duration });
+          }
+        } else if (name === "pause") {
+          const newPaused = Boolean(data);
+          if (!hasPauseState || paused !== newPaused) {
+            paused = newPaused;
+            hasPauseState = true;
+            if (newPaused) {
+              emit("pause", { time, duration, paused: true });
+            } else {
+              emit("play", { time, duration, paused: false });
+            }
+          }
+        } else if (name === "seeking") {
+          const newSeeking = Boolean(data);
+          if (newSeeking) {
+            wasSeeking = true;
+          } else if (wasSeeking) {
+            wasSeeking = false;
+            emit("seeked", { time, duration });
+          }
+          seeking = newSeeking;
+        } else if (name === "track-list") {
+          const parsed = parseTrackList(data);
+          if (parsed) {
+            tracks = parsed;
+            emit("trackchange", {
+              property: "track-list",
+              value: tracks,
+              tracks: [...tracks],
+              sid,
+              aid,
+              vid,
+              secondarySid
+            });
+          }
+        } else if (name === "sid" || name === "aid" || name === "vid" || name === "secondary-sid") {
+          const next = data ?? null;
+          const prev = name === "sid" ? sid : name === "aid" ? aid : name === "vid" ? vid : secondarySid;
+          if (prev !== next) {
+            if (name === "sid") sid = next;
+            else if (name === "aid") aid = next;
+            else if (name === "vid") vid = next;
+            else secondarySid = next;
+            emit("trackchange", {
+              property: name,
+              value: next,
+              tracks: [...tracks],
+              sid,
+              aid,
+              vid,
+              secondarySid
+            });
+          }
         }
-        const baseName = fileName.replace(/\.plugin\.js$/, "").replace(/\.js$/, "");
-        if (enabled) {
-          if (!enabledPlugins.includes(fileName)) enabledPlugins.push(fileName);
-          if (baseName && !enabledPlugins.includes(baseName)) enabledPlugins.push(baseName);
-        } else {
-          enabledPlugins = enabledPlugins.filter((name) => name !== fileName && name !== baseName);
+      } else if (action === "mpv-event-ended") {
+        ended = true;
+        wasSeeking = false;
+        hasPauseState = false;
+        seeking = false;
+        emit("ended", {
+          reason: String(payload?.reason || "unknown"),
+          error: payload?.error ?? null
+        });
+      }
+    });
+  }
+  var playerBus = {
+    on(event, cb) {
+      if (typeof event !== "string" || typeof cb !== "function") {
+        return () => {
+        };
+      }
+      let set = listeners.get(event);
+      if (!set) {
+        set = /* @__PURE__ */ new Set();
+        listeners.set(event, set);
+      }
+      set.add(cb);
+      ensurePropsForEvent(event);
+      return () => {
+        playerBus.off(event, cb);
+      };
+    },
+    once(event, cb) {
+      if (typeof event !== "string" || typeof cb !== "function") {
+        return () => {
+        };
+      }
+      let unsub = () => {
+      };
+      const wrapper = (payload) => {
+        unsub();
+        cb(payload);
+      };
+      unsub = playerBus.on(event, wrapper);
+      return unsub;
+    },
+    off(event, cb) {
+      const set = listeners.get(event);
+      if (!set) return;
+      set.delete(cb);
+      if (set.size === 0) {
+        listeners.delete(event);
+      }
+    },
+    getState() {
+      return {
+        paused,
+        time,
+        duration,
+        seeking,
+        ended,
+        path,
+        tracks: [...tracks],
+        sid,
+        aid,
+        vid,
+        secondarySid
+      };
+    }
+  };
+
+  // src/player/shaderControls.ts
+  var currentShaderPreset = "off";
+  var shaderPresets = [];
+  var applyingPresetId = null;
+  var initialized3 = false;
+  var popoverEl = null;
+  var osdEl = null;
+  var osdTimer = null;
+  var pendingShaderRequests = /* @__PURE__ */ new Map();
+  function isPlayerRoute() {
+    const hash = window.location.hash || "";
+    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
+    return document.querySelector('[class*="player-container"]') !== null;
+  }
+  function isEditableTarget(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+  }
+  function getActiveShaderPresetName() {
+    const found = shaderPresets.find((p) => p.id === currentShaderPreset);
+    return found ? found.name : currentShaderPreset === "off" ? "Off (Default)" : currentShaderPreset;
+  }
+  function updateShaderControlsData(data) {
+    if (typeof data.shaderPreset === "string" && data.shaderPreset) {
+      currentShaderPreset = data.shaderPreset;
+    }
+    if (Array.isArray(data.shaderPresets)) {
+      shaderPresets = data.shaderPresets;
+    }
+    syncShaderSettingsUI();
+    renderShaderPopover();
+  }
+  function showPlayerOsd(text) {
+    const container = document.querySelector('[class*="player-container"]') || document.body;
+    if (!container) return;
+    if (!osdEl) {
+      osdEl = document.createElement("div");
+      osdEl.id = "stremio-enhanced-shader-osd";
+      Object.assign(osdEl.style, {
+        position: "fixed",
+        top: "20px",
+        right: "24px",
+        zIndex: "2147483200",
+        padding: "8px 14px",
+        borderRadius: "10px",
+        backgroundColor: "rgba(14, 13, 22, 0.88)",
+        border: "1px solid rgba(255, 255, 255, 0.16)",
+        color: "#fff",
+        fontSize: "0.88rem",
+        fontWeight: "600",
+        boxShadow: "0 8px 28px rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(12px)",
+        pointerEvents: "none",
+        opacity: "0",
+        transition: "opacity 0.18s ease"
+      });
+    }
+    if (osdEl.parentElement !== container) {
+      container.appendChild(osdEl);
+    }
+    osdEl.textContent = text;
+    osdEl.style.opacity = "1";
+    if (osdTimer) clearTimeout(osdTimer);
+    osdTimer = setTimeout(() => {
+      if (osdEl) osdEl.style.opacity = "0";
+    }, 2400);
+  }
+  async function applyShaderPreset(presetId) {
+    if (applyingPresetId) return false;
+    applyingPresetId = presetId;
+    syncShaderSettingsUI();
+    renderShaderPopover();
+    const preset = shaderPresets.find((p) => p.id === presetId);
+    if (preset && preset.id !== "off" && !preset.installed) {
+      modalManager.showToast(
+        "shader-downloading",
+        "Downloading Shaders",
+        `Installing ${preset.name} GLSL shader(s)...`,
+        "info"
+      );
+      if (isPlayerRoute()) {
+        showPlayerOsd(`Downloading ${preset.name}...`);
+      }
+    }
+    const result = await new Promise((resolve) => {
+      const id = "sh_" + Math.random().toString(36).substring(2, 9);
+      const timer = setTimeout(() => {
+        if (pendingShaderRequests.has(id)) {
+          pendingShaderRequests.delete(id);
+          resolve({ success: false, preset: presetId, error: "Timed out while applying shader preset." });
         }
-        localStorage.setItem("enabledPlugins", JSON.stringify(enabledPlugins));
-        syncLocalStorage();
-        postEnhancedMessage("togglePlugin", { fileName, enabled });
-      },
-      refresh: function() {
-        postEnhancedMessage("getData");
-      },
-      // Logger methods (supports both StremioEnhancedAPI.info(msg) and StremioEnhancedAPI.info(pluginName, msg))
-      logger: {
-        info: (pluginNameOrMsg, maybeMsg) => {
-          if (maybeMsg !== void 0) console.log(`[${pluginNameOrMsg}]`, maybeMsg);
-          else console.log("[Plugin]", pluginNameOrMsg);
-        },
-        warn: (pluginNameOrMsg, maybeMsg) => {
-          if (maybeMsg !== void 0) console.warn(`[${pluginNameOrMsg}]`, maybeMsg);
-          else console.warn("[Plugin]", pluginNameOrMsg);
-        },
-        error: (pluginNameOrMsg, maybeMsg) => {
-          if (maybeMsg !== void 0) console.error(`[${pluginNameOrMsg}]`, maybeMsg);
-          else console.error("[Plugin]", pluginNameOrMsg);
-        }
-      },
-      info: (pluginName, message) => console.log(`[${pluginName}]`, message),
-      warn: (pluginName, message) => console.warn(`[${pluginName}]`, message),
-      error: (pluginName, message) => console.error(`[${pluginName}]`, message),
-      // Settings API methods
-      getSetting: async (pluginOrKey, maybeKey) => {
-        if (maybeKey !== void 0) {
-          return internalGetSetting(pluginOrKey, maybeKey);
-        }
-        return internalGetSetting("global", pluginOrKey);
-      },
-      getSettings: async (pluginName) => {
-        return internalGetSettings(pluginName);
-      },
-      saveSetting: async (pluginOrKey, keyOrVal, maybeVal) => {
-        if (maybeVal !== void 0) {
-          return internalSaveSetting(pluginOrKey, keyOrVal, maybeVal);
-        }
-        return internalSaveSetting("global", pluginOrKey, keyOrVal);
-      },
-      registerSettings: async (pluginOrSchema, maybeSchema) => {
-        if (maybeSchema !== void 0) {
-          return internalRegisterSettings(pluginOrSchema, maybeSchema);
-        }
-        return internalRegisterSettings("global", pluginOrSchema);
-      },
-      getRegisteredSettings: (pluginFileName) => {
-        const baseName = getPluginBaseName(pluginFileName);
-        return window.__pluginSchemas[baseName] || window.__pluginSchemas[pluginFileName] || null;
-      },
-      clearRegisteredSettings: (pluginFileName) => {
-        const baseName = getPluginBaseName(pluginFileName);
-        delete window.__pluginSchemas[baseName];
-        delete window.__pluginSchemas[pluginFileName];
-        return true;
-      },
-      onSettingsSaved: (pluginOrCallback, maybeCallback) => {
-        const plugin = typeof pluginOrCallback === "string" ? pluginOrCallback : "global";
-        const baseName = getPluginBaseName(plugin);
-        const cb = typeof pluginOrCallback === "function" ? pluginOrCallback : maybeCallback;
-        if (!window.__pluginSettingListeners[baseName]) {
-          window.__pluginSettingListeners[baseName] = [];
-        }
-        window.__pluginSettingListeners[baseName].push(cb);
-      },
-      // Alert, Prompt, and Toast Modal APIs
-      showAlert: async (alertType, title, message, buttons) => {
-        return modalManager.showAlert(alertType, title, message, buttons);
-      },
-      showPrompt: async (promptId, title, message, defaultValue) => {
-        return modalManager.showPrompt(promptId, title, message, defaultValue);
-      },
-      showToast: (id, title, message, status) => {
-        modalManager.showToast(id, title, message, status);
-      },
-      toast: (id, title, message, status) => {
-        modalManager.showToast(id, title, message, status);
+      }, 12e4);
+      pendingShaderRequests.set(id, (res) => {
+        clearTimeout(timer);
+        resolve(res);
+      });
+      postEnhancedMessage("setShaderPreset", { id, preset: presetId });
+    });
+    applyingPresetId = null;
+    if (result.success) {
+      currentShaderPreset = result.preset;
+      const name = getActiveShaderPresetName();
+      if (isPlayerRoute()) {
+        showPlayerOsd(`Shader: ${name}`);
+      } else {
+        modalManager.showToast("shader-applied", "Shader Applied", `Active upscaling preset: ${name}`, "success");
+      }
+    } else {
+      modalManager.showToast(
+        "shader-error",
+        "Shader Error",
+        result.error || "Failed to download or apply shader preset.",
+        "fail"
+      );
+    }
+    syncShaderSettingsUI();
+    renderShaderPopover();
+    return result.success;
+  }
+  function syncShaderSettingsUI() {
+    const container = document.getElementById("enhanced-shaders-grid");
+    if (!container) return;
+    if (shaderPresets.length === 0) {
+      container.innerHTML = `<div class="enhanced-option-description">Loading shader presets...</div>`;
+      return;
+    }
+    const categoryOrder = ["Default", "Sharpening (1:1)", "Anime4K", "FSRCNNX", "ArtCNN"];
+    const grouped = /* @__PURE__ */ new Map();
+    for (const cat of categoryOrder) grouped.set(cat, []);
+    for (const preset of shaderPresets) {
+      if (!grouped.has(preset.category)) grouped.set(preset.category, []);
+      grouped.get(preset.category).push(preset);
+    }
+    let html = "";
+    for (const [category, list] of grouped.entries()) {
+      if (list.length === 0) continue;
+      html += `<div class="enhanced-shader-group-title">${escapeHtml(category)}</div>`;
+      html += `<div class="enhanced-shader-grid">`;
+      for (const preset of list) {
+        const isActive = preset.id === currentShaderPreset;
+        const isLoading = preset.id === applyingPresetId;
+        const badgeText = isLoading ? "Installing..." : preset.id === "off" ? "Bypass" : preset.installed ? "Ready" : "Download";
+        const badgeClass = isLoading ? "loading" : preset.installed || preset.id === "off" ? "ready" : "download";
+        html += `
+                <button type="button"
+                    class="enhanced-shader-card${isActive ? " active" : ""}${isLoading ? " loading" : ""}"
+                    data-shader-preset="${escapeHtml(preset.id)}"
+                    ${applyingPresetId ? "disabled" : ""}>
+                    <div class="enhanced-shader-card-top">
+                        <span class="enhanced-shader-card-name">${escapeHtml(preset.name)}</span>
+                        <span class="enhanced-shader-badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+                    </div>
+                    <div class="enhanced-shader-card-desc">${escapeHtml(preset.description)}</div>
+                </button>
+            `;
+      }
+      html += `</div>`;
+    }
+    container.innerHTML = html;
+    container.querySelectorAll("[data-shader-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-shader-preset");
+        if (id) applyShaderPreset(id);
+      });
+    });
+  }
+  function renderShaderPopover() {
+    if (!popoverEl || popoverEl.style.display === "none") return;
+    const categoryOrder = ["Default", "Sharpening (1:1)", "Anime4K", "FSRCNNX", "ArtCNN"];
+    const grouped = /* @__PURE__ */ new Map();
+    for (const cat of categoryOrder) grouped.set(cat, []);
+    for (const p of shaderPresets) {
+      if (!grouped.has(p.category)) grouped.set(p.category, []);
+      grouped.get(p.category).push(p);
+    }
+    let itemsHtml = "";
+    for (const [cat, list] of grouped.entries()) {
+      if (list.length === 0) continue;
+      itemsHtml += `<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin:10px 4px 4px;">${escapeHtml(cat)}</div>`;
+      for (const preset of list) {
+        const active = preset.id === currentShaderPreset;
+        const loading = preset.id === applyingPresetId;
+        const tag = loading ? "Installing..." : preset.id === "off" ? "Bypass" : preset.installed ? "Ready" : "Download";
+        itemsHtml += `
+                <button type="button" data-popover-shader="${escapeHtml(preset.id)}" ${applyingPresetId ? "disabled" : ""}
+                    style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;margin-bottom:4px;border-radius:8px;border:1px solid ${active ? "var(--accent-color, #7b5bf5)" : "rgba(255,255,255,0.08)"};background:${active ? "rgba(123,91,245,0.25)" : "rgba(255,255,255,0.04)"};color:#fff;cursor:${applyingPresetId ? "wait" : "pointer"};text-align:left;font-size:0.86rem;">
+                    <span style="font-weight:${active ? "700" : "500"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(preset.name)}</span>
+                    <span style="font-size:0.72rem;padding:2px 7px;border-radius:999px;background:${active ? "rgba(123,91,245,0.45)" : "rgba(255,255,255,0.1)"};color:rgba(255,255,255,0.88);flex-shrink:0;">${escapeHtml(tag)}</span>
+                </button>
+            `;
+      }
+    }
+    const bodyEl = popoverEl.querySelector("#stremio-enhanced-shader-popover-body");
+    if (bodyEl) {
+      bodyEl.innerHTML = itemsHtml;
+      bodyEl.querySelectorAll("[data-popover-shader]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute("data-popover-shader");
+          if (id) applyShaderPreset(id);
+        });
+      });
+    }
+  }
+  function closeShaderPopover() {
+    if (popoverEl) {
+      popoverEl.style.display = "none";
+    }
+  }
+  function toggleShaderPopover(force) {
+    const show = force !== void 0 ? force : !(popoverEl && popoverEl.style.display !== "none");
+    if (!show) {
+      closeShaderPopover();
+      return;
+    }
+    if (!popoverEl) {
+      popoverEl = document.createElement("div");
+      popoverEl.id = "stremio-enhanced-shader-popover";
+      Object.assign(popoverEl.style, {
+        position: "fixed",
+        top: "64px",
+        right: "20px",
+        width: "330px",
+        maxHeight: "72vh",
+        display: "none",
+        flexDirection: "column",
+        zIndex: "2147483150",
+        backgroundColor: "rgba(13, 12, 22, 0.94)",
+        border: "1px solid rgba(255, 255, 255, 0.16)",
+        borderRadius: "12px",
+        boxShadow: "0 16px 40px rgba(0, 0, 0, 0.72)",
+        backdropFilter: "blur(16px)",
+        color: "#fff",
+        overflow: "hidden",
+        userSelect: "none"
+      });
+      popoverEl.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.1);">
+                <div>
+                    <div style="font-weight:700;font-size:0.95rem;">Upscaling &amp; GLSL Shaders</div>
+                    <div style="font-size:0.74rem;color:rgba(255,255,255,0.55);margin-top:2px;">Shortcut: Ctrl+Shift+U</div>
+                </div>
+                <button type="button" id="stremio-enhanced-shader-popover-close"
+                    style="background:rgba(255,255,255,0.08);border:none;color:#fff;width:26px;height:26px;border-radius:999px;cursor:pointer;font-size:1rem;line-height:1;">&times;</button>
+            </div>
+            <div id="stremio-enhanced-shader-popover-body" style="padding:8px 12px 12px;overflow-y:auto;"></div>
+        `;
+      popoverEl.querySelector("#stremio-enhanced-shader-popover-close")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closeShaderPopover();
+      });
+    }
+    const parent = document.querySelector('[class*="player-container"]') || document.body;
+    if (parent && popoverEl.parentElement !== parent) {
+      parent.appendChild(popoverEl);
+    }
+    popoverEl.style.display = "flex";
+    renderShaderPopover();
+  }
+  function setupShaderControls() {
+    if (initialized3) return;
+    initialized3 = true;
+    window.__receiveShaderPresetResult = function(id, success, preset, error) {
+      const resolver = pendingShaderRequests.get(id);
+      if (resolver) {
+        pendingShaderRequests.delete(id);
+        resolver({ success, preset, error });
       }
     };
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (!isPlayerRoute() || isEditableTarget(e.target)) return;
+        if (e.key === "Escape" && popoverEl && popoverEl.style.display !== "none") {
+          e.preventDefault();
+          e.stopPropagation();
+          closeShaderPopover();
+          return;
+        }
+        if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === "u") {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleShaderPopover();
+        }
+      },
+      true
+    );
+    document.addEventListener("pointerdown", (e) => {
+      if (!popoverEl || popoverEl.style.display === "none") return;
+      const target = e.target;
+      if (target && !popoverEl.contains(target)) {
+        closeShaderPopover();
+      }
+    });
+    const onRoute = () => {
+      if (!isPlayerRoute()) {
+        closeShaderPopover();
+      }
+    };
+    window.addEventListener("hashchange", onRoute);
+    window.addEventListener("popstate", onRoute);
   }
 
   // src/bridge/transparencyBridge.ts
@@ -3412,6 +3733,9 @@ Please place server.js in the folder or start Stremio Service. Would you like to
       bridgeVideo.dispatchEvent(new Event(pipActive ? "enterpictureinpicture" : "leavepictureinpicture", { bubbles: true }));
     }
     syncPlaybackTimer();
+  }
+  function setPictureInPicture(enabled) {
+    setPipState(Boolean(enabled), true);
   }
   function syncPlaybackTimer() {
     const shouldRun = isPlayerHash2() && !pausedVal && !endedVal || pipActive;
@@ -4069,6 +4393,1365 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     return bridgeVideo;
   }
 
+  // src/player/statsOverlay.ts
+  var POLL_INTERVAL_MS = 500;
+  var MAX_SPEED_SAMPLES = 30;
+  var statsVisible = false;
+  var initialized4 = false;
+  var pollTimer = null;
+  var hudEl = null;
+  var lastStats = null;
+  var lastServerStats = null;
+  var speedHistory = [];
+  var pendingStatsRequests = /* @__PURE__ */ new Map();
+  function isPlayerRoute2() {
+    const hash = window.location.hash || "";
+    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
+    return document.querySelector('[class*="player-container"]') !== null;
+  }
+  function isEditableTarget2(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+  }
+  function formatBitrate(bps) {
+    if (!bps || !Number.isFinite(bps) || bps <= 0) return "N/A";
+    if (bps >= 1e6) return `${(bps / 1e6).toFixed(2)} Mbps`;
+    return `${Math.round(bps / 1e3)} kbps`;
+  }
+  function formatRate(bytesPerSec) {
+    if (!bytesPerSec || !Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return "0 B/s";
+    if (bytesPerSec >= 1048576) return `${(bytesPerSec / 1048576).toFixed(2)} MiB/s`;
+    if (bytesPerSec >= 1024) return `${(bytesPerSec / 1024).toFixed(0)} KiB/s`;
+    return `${Math.round(bytesPerSec)} B/s`;
+  }
+  function formatFps(fps) {
+    if (!fps || !Number.isFinite(fps) || fps <= 0) return "\u2014";
+    return fps.toFixed(2);
+  }
+  function getResolutionBadge(w, h) {
+    if (!w || !h) return "VIDEO";
+    if (h >= 2100 || w >= 3800) return "4K UHD";
+    if (h >= 1400 || w >= 2500) return "1440p";
+    if (h >= 1050 || w >= 1900) return "1080p";
+    if (h >= 700 || w >= 1200) return "720p";
+    return `${w}x${h}`;
+  }
+  function isHdrStream(stats) {
+    const gamma = (stats.colorGamma || "").toLowerCase();
+    const primaries = (stats.colorPrimaries || "").toLowerCase();
+    return gamma === "pq" || gamma === "hlg" || gamma.includes("2084") || primaries.includes("2020");
+  }
+  function buildSparklineSvg(samples) {
+    const width = 260;
+    const height = 28;
+    if (samples.length < 2) {
+      return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;opacity:0.35;"><line x1="0" y1="${height - 4}" x2="${width}" y2="${height - 4}" stroke="rgba(255,255,255,0.25)" stroke-width="1"/></svg>`;
+    }
+    const maxVal = Math.max(1024, ...samples);
+    const points = samples.map((val, idx) => {
+      const x = idx / (MAX_SPEED_SAMPLES - 1) * width;
+      const y = height - 3 - Math.max(0, val) / maxVal * (height - 6);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    return `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;">
+            <polyline fill="none" stroke="#8b74ff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" points="${points.join(" ")}" />
+        </svg>
+    `;
+  }
+  function computeVideoScaleFactor(stats) {
+    const srcW = stats.dwidth || stats.width;
+    const srcH = stats.dheight || stats.height;
+    const outW = stats.outputWidth;
+    const outH = stats.outputHeight;
+    if (!srcW || !srcH || !outW || !outH || srcW <= 0 || srcH <= 0 || outW <= 0 || outH <= 0) {
+      return null;
+    }
+    return Math.min(outW / srcW, outH / srcH);
+  }
+  function getShaderActivityStatus(stats, scale) {
+    const shaders = stats.activeShaders || [];
+    if (shaders.length === 0) return null;
+    let alwaysOnCount = 0;
+    let upscalerCount = 0;
+    let firingUpscalers = 0;
+    let minUpscalerThreshold = Infinity;
+    for (const file of shaders) {
+      const lower = file.toLowerCase();
+      if (lower.includes("fsrcnnx") || lower.includes("artcnn")) {
+        upscalerCount++;
+        minUpscalerThreshold = Math.min(minUpscalerThreshold, 1.3);
+        if (scale !== null && scale > 1.3) firingUpscalers++;
+      } else if (lower.includes("anime4k_upscale")) {
+        upscalerCount++;
+        minUpscalerThreshold = Math.min(minUpscalerThreshold, 1.2);
+        if (scale !== null && scale > 1.2) firingUpscalers++;
+      } else if (lower.includes("autodownscale")) {
+      } else {
+        alwaysOnCount++;
+      }
+    }
+    const scaleStr = scale !== null ? `${scale.toFixed(2)}x` : "?";
+    if (upscalerCount > 0 && scale !== null) {
+      if (firingUpscalers > 0) {
+        return {
+          badgeText: `Firing (${scaleStr})`,
+          badgeBg: "rgba(34,197,94,0.22)",
+          badgeColor: "#86efac",
+          detail: `Upscaler active at ${scaleStr} scale`
+        };
+      }
+      if (alwaysOnCount > 0) {
+        return {
+          badgeText: `1:1 Active (${scaleStr})`,
+          badgeBg: "rgba(56,189,248,0.22)",
+          badgeColor: "#7dd3fc",
+          detail: `1:1 restore/sharpen pass active; upscaler needs >${minUpscalerThreshold.toFixed(1)}x scale`
+        };
+      }
+      return {
+        badgeText: `Bypassed (${scaleStr} <= ${minUpscalerThreshold.toFixed(1)}x)`,
+        badgeBg: "rgba(245,158,11,0.24)",
+        badgeColor: "#fcd34d",
+        detail: `Upscaler skipped until output exceeds ${minUpscalerThreshold.toFixed(1)}x source size`
+      };
+    }
+    return {
+      badgeText: alwaysOnCount > 0 ? `Active (${scaleStr})` : "Loaded",
+      badgeBg: "rgba(34,197,94,0.22)",
+      badgeColor: "#86efac",
+      detail: "Running at native resolution"
+    };
+  }
+  function formatPlainDiagnostics(stats) {
+    const res = stats.width && stats.height ? `${stats.width}x${stats.height}` : "Unknown";
+    const outRes = stats.outputWidth && stats.outputHeight ? `${stats.outputWidth}x${stats.outputHeight}` : stats.dwidth && stats.dheight ? `${stats.dwidth}x${stats.dheight}` : res;
+    const scale = computeVideoScaleFactor(stats);
+    const scaleLabel = scale !== null ? ` (${scale.toFixed(2)}x)` : "";
+    const hdr = isHdrStream(stats) ? "HDR" : "SDR";
+    const shaders = stats.activeShaders && stats.activeShaders.length > 0 ? stats.activeShaders.join(", ") : "None";
+    const shaderStatus = getShaderActivityStatus(stats, scale);
+    return [
+      `Title: ${stats.mediaTitle || "N/A"}`,
+      `Video: ${stats.videoCodec || "N/A"} | ${res} -> ${outRes}${scaleLabel} | ${formatFps(stats.estimatedVfFps || stats.containerFps)} fps | ${formatBitrate(stats.videoBitrate)}`,
+      `Color/HDR: ${hdr} (${stats.colorPrimaries || "?"} / ${stats.colorGamma || "?"} / ${stats.pixelFormat || "?"})`,
+      `HWDEC: ${stats.hwdecCurrent || "software"} | Display FPS: ${formatFps(stats.displayFps)}`,
+      `Audio: ${stats.audioCodec || "N/A"} | ${stats.audioChannels || "?"} | ${stats.audioSampleRate ? `${(stats.audioSampleRate / 1e3).toFixed(1)} kHz` : "?"} | ${formatBitrate(stats.audioBitrate)}`,
+      `Sync/Drops: A/V ${stats.avsync !== null && stats.avsync !== void 0 ? `${(stats.avsync * 1e3).toFixed(1)} ms` : "N/A"} | Dropped ${stats.droppedFrames ?? 0} (dec ${stats.decoderDroppedFrames ?? 0})`,
+      `Buffer: ${stats.cacheDuration !== null && stats.cacheDuration !== void 0 ? `${stats.cacheDuration.toFixed(1)}s` : "N/A"} | Speed ${formatRate(stats.cacheSpeed)}`,
+      `Shaders (${getActiveShaderPresetName()}${shaderStatus ? ` - ${shaderStatus.badgeText}` : ""}): ${shaders}`
+    ].join("\n");
+  }
+  function renderHud(stats) {
+    if (!hudEl || !statsVisible) return;
+    const hdr = isHdrStream(stats);
+    const resBadge = getResolutionBadge(stats.width, stats.height);
+    const resText = stats.width && stats.height ? `${stats.width}x${stats.height}` : "\u2014";
+    const outText = stats.outputWidth && stats.outputHeight ? `${stats.outputWidth}x${stats.outputHeight}` : stats.dwidth && stats.dheight ? `${stats.dwidth}x${stats.dheight}` : resText;
+    const scale = computeVideoScaleFactor(stats);
+    const scaleText = scale !== null ? ` (${scale.toFixed(2)}x)` : "";
+    const hwdec = stats.hwdecCurrent || "sw (none)";
+    const shaderLabel = stats.activeShaders && stats.activeShaders.length > 0 ? `${getActiveShaderPresetName()} (${stats.activeShaders.length})` : "Off";
+    const shaderStatus = getShaderActivityStatus(stats, scale);
+    const shaderBadgeHtml = shaderStatus ? `<span style="margin-left:6px;padding:1px 6px;border-radius:999px;font-size:0.68rem;font-weight:700;background:${shaderStatus.badgeBg};color:${shaderStatus.badgeColor};white-space:nowrap;" title="${escapeHtml(shaderStatus.detail)}">${escapeHtml(shaderStatus.badgeText)}</span>` : "";
+    const cacheSec = stats.cacheDuration !== null && stats.cacheDuration !== void 0 ? `${stats.cacheDuration.toFixed(1)} s` : "\u2014";
+    const cacheRate = formatRate(lastServerStats?.downloadSpeed ?? stats.cacheSpeed);
+    const peersInfo = lastServerStats && typeof lastServerStats.peers === "number" ? ` \u2022 ${lastServerStats.peers} peers` : "";
+    const avsync = stats.avsync !== null && stats.avsync !== void 0 ? `${(stats.avsync * 1e3).toFixed(1)} ms` : "\u2014";
+    const bodyEl = hudEl.querySelector("#stremio-enhanced-stats-body");
+    if (!bodyEl) return;
+    bodyEl.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:rgba(123,91,245,0.28);border:1px solid rgba(139,116,255,0.45);color:#d8cfff;">${escapeHtml(resBadge)}</span>
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:${hdr ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.09)"};color:${hdr ? "#fcd34d" : "#d4d4d8"};">${hdr ? "HDR" : "SDR"}</span>
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:rgba(255,255,255,0.09);color:#e4e4e7;">${escapeHtml((stats.videoCodec || "unknown").toUpperCase())}</span>
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:${stats.hwdecCurrent ? "rgba(34,197,94,0.22)" : "rgba(255,255,255,0.09)"};color:${stats.hwdecCurrent ? "#86efac" : "#d4d4d8"};">HWDEC: ${escapeHtml(hwdec)}</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:88px 1fr;gap:4px 10px;font-size:0.79rem;line-height:1.45;font-variant-numeric:tabular-nums;">
+            <div style="color:rgba(255,255,255,0.52);">Video</div>
+            <div>${escapeHtml(resText)} &rarr; ${escapeHtml(outText)}${escapeHtml(scaleText)} &bull; ${formatFps(stats.estimatedVfFps || stats.containerFps)}/${formatFps(stats.displayFps)} fps &bull; ${escapeHtml(formatBitrate(stats.videoBitrate))}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Color</div>
+            <div>${escapeHtml(stats.colorPrimaries || "\u2014")} / ${escapeHtml(stats.colorGamma || "\u2014")} / ${escapeHtml(stats.pixelFormat || "\u2014")}${stats.sigPeak ? ` (${stats.sigPeak.toFixed(1)}x)` : ""}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Audio</div>
+            <div>${escapeHtml(stats.audioCodec || "\u2014")} &bull; ${escapeHtml(stats.audioChannels || "\u2014")}${stats.audioSampleRate ? ` &bull; ${(stats.audioSampleRate / 1e3).toFixed(1)} kHz` : ""} &bull; ${escapeHtml(formatBitrate(stats.audioBitrate))}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Drops / Sync</div>
+            <div>VO: ${stats.droppedFrames ?? 0} &bull; Dec: ${stats.decoderDroppedFrames ?? 0} &bull; Mistimed: ${stats.mistimedFrames ?? 0} &bull; A/V: ${escapeHtml(avsync)}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Shaders</div>
+            <div style="display:flex;align-items:center;min-width:0;" title="${escapeHtml((stats.activeShaders || []).join(", ") + (shaderStatus ? ` \u2014 ${shaderStatus.detail}` : ""))}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(shaderLabel)}</span>${shaderBadgeHtml}</div>
+
+            <div style="color:rgba(255,255,255,0.52);">Cache</div>
+            <div>${escapeHtml(cacheSec)} &bull; ${escapeHtml(cacheRate)}${escapeHtml(peersInfo)}${stats.pausedForCache ? ' <span style="color:#fbbf24;">(Buffering)</span>' : ""}</div>
+        </div>
+
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span style="font-size:0.7rem;color:rgba(255,255,255,0.48);">Cache I/O</span>
+            ${buildSparklineSvg(speedHistory)}
+        </div>
+    `;
+  }
+  function requestPlaybackStats(timeoutMs = 1500) {
+    const id = "st_" + Math.random().toString(36).substring(2, 9);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        pendingStatsRequests.delete(id);
+        resolve(null);
+      }, timeoutMs);
+      pendingStatsRequests.set(id, (s) => {
+        clearTimeout(timer);
+        resolve(s);
+      });
+      postEnhancedMessage("getPlaybackStats", { id });
+    });
+  }
+  async function pollOnce() {
+    if (!statsVisible || !isPlayerRoute2()) {
+      toggleStatsOverlay(false);
+      return;
+    }
+    const stats = await requestPlaybackStats(1200);
+    if (!stats || !statsVisible) return;
+    lastStats = stats;
+    const path2 = stats.path || "";
+    const match = path2.match(/^(https?:\/\/127\.0\.0\.1:11470\/[^/]+\/\d+)/);
+    if (match) {
+      try {
+        const ctrl = new AbortController();
+        const abortId = setTimeout(() => ctrl.abort(), 700);
+        const res = await fetch(`${match[1]}/stats.json`, { signal: ctrl.signal });
+        clearTimeout(abortId);
+        if (res.ok) {
+          lastServerStats = await res.json();
+        }
+      } catch (_) {
+        lastServerStats = null;
+      }
+    } else {
+      lastServerStats = null;
+    }
+    const rateVal = Number(lastServerStats?.downloadSpeed ?? stats.cacheSpeed ?? 0);
+    if (Number.isFinite(rateVal) && rateVal >= 0) {
+      speedHistory.push(rateVal);
+      if (speedHistory.length > MAX_SPEED_SAMPLES) {
+        speedHistory.shift();
+      }
+    }
+    renderHud(stats);
+  }
+  function ensureHudElement() {
+    if (!hudEl) {
+      hudEl = document.createElement("div");
+      hudEl.id = "stremio-enhanced-stats-hud";
+      Object.assign(hudEl.style, {
+        position: "fixed",
+        top: "64px",
+        left: "20px",
+        width: "360px",
+        maxWidth: "calc(100vw - 40px)",
+        zIndex: "2147483100",
+        backgroundColor: "rgba(11, 11, 18, 0.86)",
+        border: "1px solid rgba(255, 255, 255, 0.14)",
+        borderRadius: "12px",
+        boxShadow: "0 14px 36px rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(14px)",
+        color: "#f4f4f5",
+        padding: "12px 14px",
+        fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
+        display: "none",
+        userSelect: "text"
+      });
+      hudEl.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.09);">
+                <div style="font-weight:700;font-size:0.9rem;letter-spacing:0.01em;">Stats for Nerds <span style="font-weight:400;font-size:0.74rem;color:rgba(255,255,255,0.5);">[I]</span></div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <button type="button" id="stremio-stats-shaders-btn"
+                        style="background:rgba(123,91,245,0.28);border:1px solid rgba(139,116,255,0.45);color:#e9e4ff;border-radius:6px;padding:3px 8px;font-size:0.74rem;font-weight:600;cursor:pointer;">Shaders</button>
+                    <button type="button" id="stremio-stats-copy-btn"
+                        style="background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:6px;padding:3px 8px;font-size:0.74rem;font-weight:600;cursor:pointer;">Copy</button>
+                    <button type="button" id="stremio-stats-close-btn"
+                        style="background:rgba(255,255,255,0.09);border:none;color:#fff;width:22px;height:22px;border-radius:999px;cursor:pointer;font-size:0.95rem;line-height:1;">&times;</button>
+                </div>
+            </div>
+            <div id="stremio-enhanced-stats-body" style="font-size:0.8rem;color:rgba(255,255,255,0.8);">Collecting playback telemetry...</div>
+        `;
+      hudEl.querySelector("#stremio-stats-shaders-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleShaderPopover();
+      });
+      hudEl.querySelector("#stremio-stats-copy-btn")?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!lastStats) return;
+        try {
+          await navigator.clipboard.writeText(formatPlainDiagnostics(lastStats));
+          modalManager.showToast("stats-copied", "Copied", "Playback telemetry copied to clipboard.", "success");
+        } catch (_) {
+        }
+      });
+      hudEl.querySelector("#stremio-stats-close-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleStatsOverlay(false);
+      });
+    }
+    const parent = document.querySelector('[class*="player-container"]') || document.body;
+    if (parent && hudEl.parentElement !== parent) {
+      parent.appendChild(hudEl);
+    }
+  }
+  function toggleStatsOverlay(force) {
+    const next = force !== void 0 ? force : !statsVisible;
+    if (next && !isPlayerRoute2()) return;
+    statsVisible = next;
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    if (!statsVisible) {
+      speedHistory.length = 0;
+      if (hudEl) hudEl.style.display = "none";
+      return;
+    }
+    ensureHudElement();
+    if (hudEl) hudEl.style.display = "block";
+    pollOnce();
+    pollTimer = setInterval(pollOnce, POLL_INTERVAL_MS);
+  }
+  function setupStatsOverlay() {
+    if (initialized4) return;
+    initialized4 = true;
+    window.__receivePlaybackStats = function(id, stats) {
+      const resolver = pendingStatsRequests.get(id);
+      if (resolver) {
+        pendingStatsRequests.delete(id);
+        resolver(stats);
+      }
+    };
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (!isPlayerRoute2() || isEditableTarget2(e.target)) return;
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "i") {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleStatsOverlay();
+        }
+      },
+      true
+    );
+    const onRoute = () => {
+      if (!isPlayerRoute2() && statsVisible) {
+        toggleStatsOverlay(false);
+      }
+    };
+    window.addEventListener("hashchange", onRoute);
+    window.addEventListener("popstate", onRoute);
+  }
+
+  // src/player/chapterMarkers.ts
+  var chapters = [];
+  var chapterMarkersEnabled = true;
+  var initialized5 = false;
+  var observer2 = null;
+  var renderScheduled = false;
+  function isPlayerRoute3() {
+    const hash = window.location.hash || "";
+    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
+    return Boolean(document.documentElement?.classList.contains("stremio-player-active"));
+  }
+  function syncChapterObserver() {
+    const shouldObserve = isPlayerRoute3() && chapterMarkersEnabled && chapters.length > 0;
+    if (shouldObserve) {
+      if (observer2 || !document.body) return;
+      const target = document.getElementById("app") || document.body;
+      observer2 = new MutationObserver(() => {
+        if (isPlayerRoute3() && chapterMarkersEnabled && chapters.length > 0) {
+          scheduleRenderChapterTicks();
+        } else {
+          syncChapterObserver();
+        }
+      });
+      observer2.observe(target, { childList: true, subtree: true });
+    } else if (observer2) {
+      observer2.disconnect();
+      observer2 = null;
+    }
+  }
+  function isEditableTarget3(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+  }
+  function getDurationSeconds() {
+    const coreDur = Number(PermanentCore.getState?.("player")?.duration || 0) / 1e3;
+    if (Number.isFinite(coreDur) && coreDur > 0) return coreDur;
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    const bridgeDur = Number(bridge?.duration || 0);
+    return Number.isFinite(bridgeDur) && bridgeDur > 0 ? bridgeDur : 0;
+  }
+  function getCurrentTimeSeconds() {
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    const bridgeTime = Number(bridge?.currentTime || 0);
+    if (Number.isFinite(bridgeTime) && bridgeTime >= 0) return bridgeTime;
+    const coreTime = Number(PermanentCore.getState?.("player")?.time || 0) / 1e3;
+    return Number.isFinite(coreTime) && coreTime >= 0 ? coreTime : 0;
+  }
+  function isChapterMarkersEnabled() {
+    return chapterMarkersEnabled;
+  }
+  function getChapters() {
+    return chapters;
+  }
+  function getChapterAtTime(timeSec) {
+    if (!chapterMarkersEnabled || chapters.length === 0 || !Number.isFinite(timeSec)) {
+      return null;
+    }
+    let active = null;
+    for (const ch of chapters) {
+      if (ch.time <= timeSec + 0.25) {
+        active = ch;
+      } else {
+        break;
+      }
+    }
+    return active;
+  }
+  function updateChapterMarkersData(data) {
+    if (typeof data.chapterMarkers === "boolean") {
+      chapterMarkersEnabled = data.chapterMarkers;
+      syncChapterMarkersToggle();
+      syncChapterObserver();
+      scheduleRenderChapterTicks();
+    }
+  }
+  function syncChapterMarkersToggle() {
+    const toggle = document.getElementById("chaptermarkersToggle");
+    if (!toggle) return;
+    toggle.classList.toggle("checked", chapterMarkersEnabled);
+    toggle.setAttribute("aria-checked", chapterMarkersEnabled ? "true" : "false");
+  }
+  function scheduleRenderChapterTicks() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      renderChapterTicks();
+    });
+  }
+  function renderChapterTicks() {
+    const existingOverlay = document.getElementById("stremio-enhanced-chapter-overlay");
+    if (!chapterMarkersEnabled || chapters.length === 0 || !isPlayerRoute3()) {
+      existingOverlay?.remove();
+      return;
+    }
+    const slider = document.querySelector(
+      '[class*="seek-bar-container-"] [class*="slider-container-"]'
+    );
+    if (!slider) return;
+    const seekContainer = slider.closest('[class*="seek-bar-container-"]');
+    if (slider.classList.contains("disabled") || seekContainer?.querySelector('[class*="live-badge-layer-"]')) {
+      existingOverlay?.remove();
+      return;
+    }
+    const duration2 = getDurationSeconds();
+    if (!Number.isFinite(duration2) || duration2 <= 0) {
+      existingOverlay?.remove();
+      return;
+    }
+    if (window.getComputedStyle(slider).position === "static") {
+      slider.style.position = "relative";
+    }
+    let overlay = slider.querySelector("#stremio-enhanced-chapter-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "stremio-enhanced-chapter-overlay";
+      Object.assign(overlay.style, {
+        position: "absolute",
+        inset: "0",
+        pointerEvents: "none",
+        zIndex: "4",
+        overflow: "visible"
+      });
+      slider.appendChild(overlay);
+    }
+    const signature = `${duration2.toFixed(1)}|${chapters.map((c) => `${c.time.toFixed(2)}:${c.title}`).join(",")}`;
+    if (overlay.dataset.signature === signature) return;
+    overlay.dataset.signature = signature;
+    overlay.innerHTML = "";
+    for (const chapter of chapters) {
+      if (chapter.time <= 0.5 || chapter.time >= duration2 - 0.5) continue;
+      const pct = Math.min(99.5, Math.max(0.5, chapter.time / duration2 * 100));
+      const tick = document.createElement("div");
+      tick.className = "stremio-enhanced-chapter-tick";
+      Object.assign(tick.style, {
+        position: "absolute",
+        left: `${pct}%`,
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "2px",
+        height: "10px",
+        borderRadius: "1px",
+        background: "rgba(255, 255, 255, 0.78)",
+        boxShadow: "0 0 3px rgba(0, 0, 0, 0.75)",
+        pointerEvents: "none"
+      });
+      overlay.appendChild(tick);
+    }
+  }
+  function jumpChapter(direction) {
+    if (!chapterMarkersEnabled || chapters.length === 0) return;
+    const now = getCurrentTimeSeconds();
+    let target = null;
+    if (direction > 0) {
+      target = chapters.find((c) => c.time > now + 1) || null;
+    } else {
+      for (let i = chapters.length - 1; i >= 0; i--) {
+        if (chapters[i].time < now - 2) {
+          target = chapters[i];
+          break;
+        }
+      }
+      if (!target && chapters.length > 0) {
+        target = chapters[0];
+      }
+    }
+    if (!target) return;
+    try {
+      window.ipc?.postMessage?.(
+        JSON.stringify({
+          type: 6,
+          args: ["mpv-command", ["seek", String(target.time), "absolute"]]
+        })
+      );
+      modalManager.showToast("chapter-jump", "Chapter", target.title, "info");
+    } catch (_) {
+    }
+  }
+  function setupChapterMarkers() {
+    if (initialized5) return;
+    initialized5 = true;
+    window.__receiveChapters = function(list) {
+      chapters = Array.isArray(list) ? list.filter((c) => c && typeof c.time === "number" && Number.isFinite(c.time)).map((c) => ({ title: String(c.title || "Chapter"), time: c.time })).sort((a, b) => a.time - b.time) : [];
+      const overlay = document.getElementById("stremio-enhanced-chapter-overlay");
+      if (overlay) delete overlay.dataset.signature;
+      syncChapterObserver();
+      scheduleRenderChapterTicks();
+    };
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (!isPlayerRoute3() || !chapterMarkersEnabled || isEditableTarget3(e.target)) return;
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            e.stopPropagation();
+            jumpChapter(1);
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            e.stopPropagation();
+            jumpChapter(-1);
+          }
+        }
+      },
+      true
+    );
+    const onRouteChange = () => {
+      if (isPlayerRoute3()) {
+        postEnhancedMessage("getChapters");
+        syncChapterObserver();
+        scheduleRenderChapterTicks();
+      } else {
+        chapters = [];
+        syncChapterObserver();
+        document.getElementById("stremio-enhanced-chapter-overlay")?.remove();
+      }
+    };
+    window.addEventListener("hashchange", onRouteChange);
+    window.addEventListener("popstate", onRouteChange);
+    if (isPlayerRoute3()) {
+      postEnhancedMessage("getChapters");
+    }
+  }
+
+  // src/player/thumbnailPreview.ts
+  var MAX_JS_CACHE_ENTRIES = 150;
+  var REQUEST_THROTTLE_MS = 80;
+  var NORMAL_PREVIEW_WIDTH = 240;
+  var PIP_PREVIEW_WIDTH = 160;
+  var previewEnabled = true;
+  var initialized6 = false;
+  var inPlayerRoute = false;
+  var currentStreamKey = "";
+  var thumbCache = /* @__PURE__ */ new Map();
+  var previewEl = null;
+  var frameWrapEl = null;
+  var imgEl = null;
+  var chapterEl = null;
+  var timeEl = null;
+  var isVisible = false;
+  var draggingSlider = null;
+  var lastHoveredTime = -1;
+  var lastPreviewWidth = NORMAL_PREVIEW_WIDTH;
+  var lastRequestSentAt = 0;
+  var trailingTimer = null;
+  var pendingTrailingRequest = null;
+  var lastDisplayFrameSize = null;
+  var pendingThumbnailRequests = [];
+  function requestThumbnail(time2, maxWidth, timeoutMs = 5e3) {
+    if (!Number.isFinite(time2) || time2 < 0) {
+      return Promise.resolve(null);
+    }
+    const duration2 = getDurationSeconds2();
+    const streamKey = ensureStreamCacheScope();
+    const widthKey = maxWidth ?? NORMAL_PREVIEW_WIDTH;
+    const qTime = quantizeTime(time2, duration2);
+    const cacheKey = makeCacheKey(streamKey, qTime, widthKey);
+    const cached = thumbCache.get(cacheKey);
+    if (cached) {
+      return Promise.resolve({
+        time: time2,
+        dataUrl: cached.dataUrl,
+        width: cached.width,
+        height: cached.height
+      });
+    }
+    return new Promise((resolve) => {
+      const entry = {
+        time: time2,
+        resolve,
+        timer: setTimeout(() => {
+          const idx = pendingThumbnailRequests.indexOf(entry);
+          if (idx !== -1) pendingThumbnailRequests.splice(idx, 1);
+          resolve(null);
+        }, timeoutMs)
+      };
+      pendingThumbnailRequests.push(entry);
+      postEnhancedMessage("requestThumbnail", maxWidth !== void 0 ? { time: time2, maxWidth } : { time: time2 });
+    });
+  }
+  function isThumbnailPreviewEnabled() {
+    return previewEnabled;
+  }
+  function updateThumbnailPreviewData(data) {
+    if (typeof data.thumbnailPreview === "boolean") {
+      previewEnabled = data.thumbnailPreview;
+      if (!previewEnabled) {
+        hidePreview();
+        thumbCache.clear();
+      }
+      syncThumbnailPreviewToggle();
+    }
+  }
+  function syncThumbnailPreviewToggle() {
+    const toggle = document.getElementById("thumbnailpreviewToggle");
+    if (!toggle) return;
+    toggle.classList.toggle("checked", previewEnabled);
+    toggle.setAttribute("aria-checked", previewEnabled ? "true" : "false");
+  }
+  function getDurationSeconds2() {
+    const coreDur = Number(PermanentCore.getState?.("player")?.duration || 0) / 1e3;
+    if (Number.isFinite(coreDur) && coreDur > 0) return coreDur;
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    const bridgeDur = Number(bridge?.duration || 0);
+    return Number.isFinite(bridgeDur) && bridgeDur > 0 ? bridgeDur : 0;
+  }
+  function getCurrentStreamKey() {
+    const state = PermanentCore.getState?.("player");
+    const coreUrl = state?.selected?.stream?.url;
+    if (coreUrl) return String(coreUrl);
+    const bridge = document.getElementById("stremio-shell-bridge-video");
+    return bridge?.getAttribute("src") || "";
+  }
+  function ensureStreamCacheScope() {
+    const key = getCurrentStreamKey();
+    if (key && key !== currentStreamKey) {
+      currentStreamKey = key;
+      thumbCache.clear();
+      lastDisplayFrameSize = null;
+      if (imgEl) {
+        imgEl.removeAttribute("src");
+        imgEl.style.opacity = "0";
+      }
+    }
+    return currentStreamKey;
+  }
+  function quantizeTime(timeSec, duration2) {
+    const step = duration2 > 0 && duration2 <= 120 ? 0.5 : 1;
+    return Math.round(timeSec / step) * step;
+  }
+  function makeCacheKey(streamKey, qTime, maxWidth) {
+    return `${streamKey}|${qTime.toFixed(1)}|${maxWidth}`;
+  }
+  function formatTimestamp(seconds) {
+    const total = Math.max(0, Math.floor(seconds));
+    const hrs = Math.floor(total / 3600);
+    const mins = Math.floor(total % 3600 / 60);
+    const secs = total % 60;
+    const pad = (n) => n < 10 ? `0${n}` : `${n}`;
+    if (hrs > 0) {
+      return `${hrs}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${mins}:${pad(secs)}`;
+  }
+  function ensurePreviewElement() {
+    if (!previewEl) {
+      previewEl = document.createElement("div");
+      previewEl.id = "stremio-enhanced-thumb-preview";
+      Object.assign(previewEl.style, {
+        position: "fixed",
+        left: "0px",
+        bottom: "0px",
+        display: "none",
+        flexDirection: "column",
+        alignItems: "center",
+        pointerEvents: "none",
+        zIndex: "2147483000",
+        backgroundColor: "rgba(12, 11, 17, 0.94)",
+        border: "1px solid rgba(255, 255, 255, 0.16)",
+        borderRadius: "10px",
+        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.65)",
+        overflow: "hidden",
+        backdropFilter: "blur(10px)",
+        userSelect: "none"
+      });
+      frameWrapEl = document.createElement("div");
+      Object.assign(frameWrapEl.style, {
+        width: `${NORMAL_PREVIEW_WIDTH}px`,
+        height: `${Math.round(NORMAL_PREVIEW_WIDTH * 9 / 16)}px`,
+        backgroundColor: "#09090d",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        position: "relative"
+      });
+      imgEl = document.createElement("img");
+      imgEl.alt = "Thumbnail preview";
+      Object.assign(imgEl.style, {
+        display: "block",
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        opacity: "0",
+        transition: "opacity 0.1s ease"
+      });
+      chapterEl = document.createElement("div");
+      Object.assign(chapterEl.style, {
+        width: "100%",
+        maxWidth: `${NORMAL_PREVIEW_WIDTH}px`,
+        textAlign: "center",
+        padding: "5px 10px 0px",
+        fontSize: "0.78rem",
+        fontWeight: "600",
+        color: "rgba(205, 196, 255, 0.96)",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        display: "none",
+        lineHeight: "1.25"
+      });
+      timeEl = document.createElement("div");
+      Object.assign(timeEl.style, {
+        width: "100%",
+        textAlign: "center",
+        padding: "5px 8px",
+        fontSize: "0.85rem",
+        fontWeight: "600",
+        fontVariantNumeric: "tabular-nums",
+        color: "rgba(255, 255, 255, 0.95)",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+        boxSizing: "border-box",
+        lineHeight: "1.2"
+      });
+      timeEl.textContent = "0:00";
+      frameWrapEl.appendChild(imgEl);
+      previewEl.appendChild(frameWrapEl);
+      previewEl.appendChild(chapterEl);
+      previewEl.appendChild(timeEl);
+    }
+    const playerContainer = document.querySelector('[class*="player-container"]');
+    const targetParent = playerContainer || document.body;
+    if (targetParent && previewEl.parentElement !== targetParent) {
+      targetParent.appendChild(previewEl);
+    }
+  }
+  function applyThumbToDom(thumb) {
+    if (!imgEl || !frameWrapEl) return;
+    lastDisplayFrameSize = { width: thumb.width, height: thumb.height };
+    frameWrapEl.style.width = `${thumb.width}px`;
+    frameWrapEl.style.height = `${thumb.height}px`;
+    if (imgEl.src !== thumb.dataUrl) {
+      imgEl.src = thumb.dataUrl;
+    }
+    imgEl.style.opacity = "1";
+  }
+  function hidePreview() {
+    isVisible = false;
+    lastHoveredTime = -1;
+    pendingTrailingRequest = null;
+    if (trailingTimer) {
+      clearTimeout(trailingTimer);
+      trailingTimer = null;
+    }
+    if (previewEl) {
+      previewEl.style.display = "none";
+    }
+  }
+  function dispatchThumbnailRequest(time2, maxWidth) {
+    const now = Date.now();
+    const elapsed = now - lastRequestSentAt;
+    if (elapsed >= REQUEST_THROTTLE_MS) {
+      lastRequestSentAt = now;
+      pendingTrailingRequest = null;
+      if (trailingTimer) {
+        clearTimeout(trailingTimer);
+        trailingTimer = null;
+      }
+      postEnhancedMessage("requestThumbnail", { time: time2, maxWidth });
+      return;
+    }
+    pendingTrailingRequest = { time: time2, maxWidth };
+    if (!trailingTimer) {
+      trailingTimer = setTimeout(() => {
+        trailingTimer = null;
+        if (!isVisible || !previewEnabled || !pendingTrailingRequest) return;
+        const req = pendingTrailingRequest;
+        pendingTrailingRequest = null;
+        lastRequestSentAt = Date.now();
+        postEnhancedMessage("requestThumbnail", { time: req.time, maxWidth: req.maxWidth });
+      }, REQUEST_THROTTLE_MS - elapsed);
+    }
+  }
+  function findSeekSlider(target) {
+    if (!(target instanceof Element)) return null;
+    return target.closest('[class*="seek-bar-container-"] [class*="slider-container-"]');
+  }
+  function isLiveSeekBar(slider) {
+    if (slider.classList.contains("disabled")) return true;
+    const seekContainer = slider.closest('[class*="seek-bar-container-"]');
+    if (!seekContainer) return true;
+    return seekContainer.querySelector('[class*="live-badge-layer-"]') !== null;
+  }
+  function canShowTooltip() {
+    return previewEnabled || isChapterMarkersEnabled() && getChapters().length > 0;
+  }
+  function updatePreviewAtPointer(slider, clientX) {
+    if (!canShowTooltip() || isLiveSeekBar(slider)) {
+      hidePreview();
+      return;
+    }
+    const duration2 = getDurationSeconds2();
+    if (!Number.isFinite(duration2) || duration2 <= 0) {
+      hidePreview();
+      return;
+    }
+    const rect = slider.getBoundingClientRect();
+    if (rect.width <= 0) {
+      hidePreview();
+      return;
+    }
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const targetTime = ratio * duration2;
+    const isPip = document.documentElement.classList.contains("stremio-pip-mode");
+    const previewW = isPip ? PIP_PREVIEW_WIDTH : NORMAL_PREVIEW_WIDTH;
+    lastPreviewWidth = previewW;
+    lastHoveredTime = targetTime;
+    ensurePreviewElement();
+    if (!previewEl || !frameWrapEl || !imgEl || !timeEl) return;
+    if (previewEnabled) {
+      frameWrapEl.style.display = "flex";
+      const streamKey = ensureStreamCacheScope();
+      const qTime = quantizeTime(targetTime, duration2);
+      const cacheKey = makeCacheKey(streamKey, qTime, previewW);
+      const cached = thumbCache.get(cacheKey);
+      if (cached) {
+        applyThumbToDom(cached);
+      } else {
+        const defaultH = lastDisplayFrameSize ? Math.round(previewW * lastDisplayFrameSize.height / lastDisplayFrameSize.width) : Math.round(previewW * 9 / 16);
+        frameWrapEl.style.width = `${previewW}px`;
+        frameWrapEl.style.height = `${defaultH}px`;
+        if (!imgEl.getAttribute("src")) {
+          imgEl.style.opacity = "0";
+        }
+        dispatchThumbnailRequest(targetTime, previewW);
+      }
+    } else {
+      frameWrapEl.style.display = "none";
+    }
+    const chapter = isChapterMarkersEnabled() ? getChapterAtTime(targetTime) : null;
+    if (chapterEl) {
+      if (chapter && chapter.title) {
+        chapterEl.textContent = chapter.title;
+        chapterEl.style.maxWidth = `${previewEnabled ? previewW : 240}px`;
+        chapterEl.style.display = "block";
+        timeEl.style.borderTop = "none";
+      } else {
+        chapterEl.style.display = "none";
+        timeEl.style.borderTop = "1px solid rgba(255, 255, 255, 0.08)";
+      }
+    }
+    timeEl.textContent = formatTimestamp(targetTime);
+    previewEl.style.display = "flex";
+    const cardWidth = previewEnabled ? Number.parseFloat(frameWrapEl.style.width) || previewW : Math.max(110, previewEl.offsetWidth || 160);
+    const clampedLeft = Math.min(
+      window.innerWidth - cardWidth - 12,
+      Math.max(12, clientX - cardWidth / 2)
+    );
+    const bottomOffset = Math.max(12, window.innerHeight - rect.top + 14);
+    previewEl.style.left = `${Math.round(clampedLeft)}px`;
+    previewEl.style.bottom = `${Math.round(bottomOffset)}px`;
+    isVisible = true;
+  }
+  function updateInPlayerRoute() {
+    const hash = window.location.hash || "";
+    inPlayerRoute = hash.startsWith("#/player") || hash.includes("/player/") || Boolean(document.documentElement?.classList.contains("stremio-player-active"));
+    return inPlayerRoute;
+  }
+  function setupThumbnailPreview() {
+    if (initialized6) return;
+    initialized6 = true;
+    updateInPlayerRoute();
+    window.__receiveThumbnailPreview = function(payload) {
+      if (!payload || !payload.dataUrl || !Number.isFinite(payload.time)) return;
+      const duration2 = getDurationSeconds2();
+      const streamKey = ensureStreamCacheScope();
+      const widthKey = payload.width || lastPreviewWidth || NORMAL_PREVIEW_WIDTH;
+      const qTime = quantizeTime(payload.time, duration2);
+      const cacheKey = makeCacheKey(streamKey, qTime, widthKey);
+      if (thumbCache.size >= MAX_JS_CACHE_ENTRIES && !thumbCache.has(cacheKey)) {
+        const oldest = thumbCache.keys().next().value;
+        if (oldest !== void 0) thumbCache.delete(oldest);
+      }
+      const entry = {
+        dataUrl: payload.dataUrl,
+        width: payload.width || NORMAL_PREVIEW_WIDTH,
+        height: payload.height || Math.round(NORMAL_PREVIEW_WIDTH * 9 / 16)
+      };
+      thumbCache.set(cacheKey, entry);
+      if (isVisible && previewEnabled && lastHoveredTime >= 0) {
+        const delta = Math.abs(payload.time - lastHoveredTime);
+        const maxTolerance = Math.max(2.5, duration2 * 0.015);
+        if (delta <= maxTolerance || !imgEl?.getAttribute("src")) {
+          applyThumbToDom(entry);
+        }
+      }
+      for (let i = pendingThumbnailRequests.length - 1; i >= 0; i--) {
+        const req = pendingThumbnailRequests[i];
+        if (Math.abs(payload.time - req.time) <= 0.5) {
+          pendingThumbnailRequests.splice(i, 1);
+          clearTimeout(req.timer);
+          req.resolve(payload);
+        }
+      }
+    };
+    document.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || !inPlayerRoute && !updateInPlayerRoute()) return;
+      const slider = findSeekSlider(e.target);
+      if (slider) {
+        draggingSlider = slider;
+        updatePreviewAtPointer(slider, e.clientX);
+      }
+    }, true);
+    document.addEventListener("pointermove", (e) => {
+      if (!inPlayerRoute || !canShowTooltip()) {
+        if (isVisible) hidePreview();
+        return;
+      }
+      if (draggingSlider) {
+        if (!document.body.contains(draggingSlider)) {
+          draggingSlider = null;
+          hidePreview();
+          return;
+        }
+        updatePreviewAtPointer(draggingSlider, e.clientX);
+        return;
+      }
+      const slider = findSeekSlider(e.target);
+      if (slider) {
+        updatePreviewAtPointer(slider, e.clientX);
+      } else if (isVisible) {
+        hidePreview();
+      }
+    }, true);
+    window.addEventListener("pointerup", (e) => {
+      if (!draggingSlider) return;
+      const hovered = findSeekSlider(e.target);
+      draggingSlider = null;
+      if (!hovered) {
+        hidePreview();
+      }
+    }, true);
+    document.addEventListener("mouseleave", () => {
+      if (!draggingSlider && isVisible) {
+        hidePreview();
+      }
+    });
+    window.addEventListener("blur", () => {
+      draggingSlider = null;
+      hidePreview();
+    });
+    const onRouteChange = () => {
+      if (!updateInPlayerRoute()) {
+        draggingSlider = null;
+        hidePreview();
+      }
+    };
+    window.addEventListener("hashchange", onRouteChange);
+    window.addEventListener("popstate", onRouteChange);
+  }
+
+  // src/api/shellApi.ts
+  var shellApi = {
+    setShaderPreset(id) {
+      return applyShaderPreset(id);
+    },
+    setPictureInPicture(enabled) {
+      setPictureInPicture(enabled);
+    },
+    getPlaybackStats() {
+      return requestPlaybackStats();
+    },
+    requestThumbnail(time2, maxWidth) {
+      return requestThumbnail(time2, maxWidth);
+    }
+  };
+
+  // src/api/stremioEnhancedApi.ts
+  var currentEnhancedData5 = { plugins: [], themes: [], activeTheme: null };
+  function updateApiData(data) {
+    currentEnhancedData5 = data;
+  }
+  function syncLocalStorage() {
+    try {
+      const installedPlugins = (currentEnhancedData5.plugins || []).map((p) => p.fileName);
+      localStorage.setItem("installedPlugins", JSON.stringify(installedPlugins));
+      const enabledPluginsList = [];
+      (currentEnhancedData5.plugins || []).forEach((p) => {
+        if (p.enabled) {
+          enabledPluginsList.push(p.fileName);
+          const baseName = p.fileName.replace(/\.plugin\.js$/, "").replace(/\.js$/, "");
+          if (baseName && !enabledPluginsList.includes(baseName)) {
+            enabledPluginsList.push(baseName);
+          }
+        }
+      });
+      localStorage.setItem("enabledPlugins", JSON.stringify(enabledPluginsList));
+      if (currentEnhancedData5.activeTheme) {
+        localStorage.setItem("currentTheme", currentEnhancedData5.activeTheme);
+      } else {
+        localStorage.setItem("currentTheme", "Default");
+      }
+    } catch (_) {
+    }
+  }
+  function setupEnhancedApi() {
+    setupMpvApi();
+    setupPlayerBus();
+    window.__pluginSchemas = window.__pluginSchemas || {};
+    window.__pluginSettingListeners = window.__pluginSettingListeners || {};
+    function getPluginBaseName(name) {
+      return name ? name.replace(/\.plugin\.js$/, "").replace(/\.js$/, "") : "global";
+    }
+    let pendingMacrotaskCallbacks = [];
+    let macrotaskScheduled = false;
+    let lastMacrotaskFlushAt = 0;
+    let consecutiveMacrotaskTicks = 0;
+    function yieldToMacrotask(value) {
+      return new Promise((resolve) => {
+        pendingMacrotaskCallbacks.push(() => resolve(value));
+        if (macrotaskScheduled) return;
+        macrotaskScheduled = true;
+        const now = Date.now();
+        if (now - lastMacrotaskFlushAt < 25) {
+          consecutiveMacrotaskTicks++;
+        } else {
+          consecutiveMacrotaskTicks = 0;
+        }
+        const delayMs = consecutiveMacrotaskTicks >= 20 ? 16 : consecutiveMacrotaskTicks >= 5 ? 4 : 0;
+        setTimeout(() => {
+          const callbacks = pendingMacrotaskCallbacks;
+          pendingMacrotaskCallbacks = [];
+          macrotaskScheduled = false;
+          lastMacrotaskFlushAt = Date.now();
+          for (const cb of callbacks) {
+            cb();
+          }
+        }, delayMs);
+      });
+    }
+    function readSettingSync(pluginName, key) {
+      const baseName = getPluginBaseName(pluginName);
+      const storageKey = `plugin_setting:${baseName}:${key}`;
+      const val = localStorage.getItem(storageKey);
+      if (val === null || val === void 0) {
+        const schema = window.__pluginSchemas[baseName] || window.__pluginSchemas[pluginName];
+        if (schema && Array.isArray(schema)) {
+          const opt = schema.find((s) => s.key === key);
+          if (opt && opt.defaultValue !== void 0) return opt.defaultValue;
+        }
+        return null;
+      }
+      try {
+        return JSON.parse(val);
+      } catch (_) {
+        return val;
+      }
+    }
+    function internalGetSetting(pluginName, key) {
+      return yieldToMacrotask(readSettingSync(pluginName, key));
+    }
+    function internalGetSettings(pluginName) {
+      const baseName = getPluginBaseName(pluginName);
+      const schema = window.__pluginSchemas[baseName] || window.__pluginSchemas[pluginName] || [];
+      const result = {};
+      for (const item of schema) {
+        result[item.key] = readSettingSync(baseName, item.key);
+      }
+      return yieldToMacrotask(result);
+    }
+    async function internalSaveSetting(pluginName, key, value) {
+      const baseName = getPluginBaseName(pluginName);
+      const storageKey = `plugin_setting:${baseName}:${key}`;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(value));
+      } catch (e) {
+        localStorage.setItem(storageKey, String(value));
+      }
+      await yieldToMacrotask(void 0);
+      const notifyPayload = { [key]: value };
+      const listeners2 = window.__pluginSettingListeners[baseName] || window.__pluginSettingListeners[pluginName] || [];
+      listeners2.forEach((cb) => {
+        try {
+          cb(notifyPayload);
+        } catch (err) {
+          console.error("[Enhanced] Error in onSettingsSaved:", err);
+        }
+      });
+      return true;
+    }
+    function internalRegisterSettings(pluginName, schema) {
+      if (!Array.isArray(schema)) {
+        console.error("[Enhanced] Invalid settings schema provided for:", pluginName);
+        return Promise.reject(new Error("Invalid settings schema. Expected array."));
+      }
+      const baseName = getPluginBaseName(pluginName);
+      window.__pluginSchemas[baseName] = schema;
+      window.__pluginSchemas[pluginName] = schema;
+      console.log(`[Enhanced] Registered settings schema for ${baseName}:`, schema);
+      const optBtn = document.getElementById(`${baseName}.plugin.js-settings`) || document.getElementById(`${baseName}-settings`) || document.getElementById(`${pluginName}-settings`);
+      if (optBtn) optBtn.style.display = "flex";
+      return yieldToMacrotask(true);
+    }
+    window.__createScopedPluginAPI = function(pluginBaseName) {
+      return {
+        logger: {
+          info: function(message) {
+            console.log(`[${pluginBaseName}]`, message);
+          },
+          warn: function(message) {
+            console.warn(`[${pluginBaseName}]`, message);
+          },
+          error: function(message) {
+            console.error(`[${pluginBaseName}]`, message);
+          }
+        },
+        getSetting: async function(key) {
+          return internalGetSetting(pluginBaseName, key);
+        },
+        getSettings: async function() {
+          return internalGetSettings(pluginBaseName);
+        },
+        saveSetting: async function(key, value) {
+          return internalSaveSetting(pluginBaseName, key, value);
+        },
+        registerSettings: async function(schema) {
+          return internalRegisterSettings(pluginBaseName, schema);
+        },
+        getRegisteredSettings: function() {
+          return window.__pluginSchemas[pluginBaseName] || null;
+        },
+        clearRegisteredSettings: function() {
+          delete window.__pluginSchemas[pluginBaseName];
+          return true;
+        },
+        onSettingsSaved: function(callback) {
+          if (!window.__pluginSettingListeners[pluginBaseName]) {
+            window.__pluginSettingListeners[pluginBaseName] = [];
+          }
+          window.__pluginSettingListeners[pluginBaseName].push(callback);
+        },
+        showAlert: function(alertType, title, message, buttons) {
+          return modalManager.showAlert(alertType, title, message, buttons);
+        },
+        showPrompt: function(promptIdOrTitle, titleOrMsg, messageOrDefault, defaultValue) {
+          if (defaultValue !== void 0) {
+            return modalManager.showPrompt(promptIdOrTitle, titleOrMsg || "", messageOrDefault || "", defaultValue);
+          } else if (messageOrDefault !== void 0) {
+            return modalManager.showPrompt(pluginBaseName, promptIdOrTitle, titleOrMsg || "", messageOrDefault);
+          }
+          return modalManager.showPrompt(pluginBaseName, promptIdOrTitle, titleOrMsg || "", "");
+        },
+        showToast: function(id, title, message, status) {
+          modalManager.showToast(id, title, message, status);
+        },
+        toast: function(id, title, message, status) {
+          modalManager.showToast(id, title, message, status);
+        },
+        mpv: mpvApi,
+        shell: shellApi,
+        player: playerBus
+      };
+    };
+    window.StremioEnhancedAPI = {
+      openThemesFolder: function() {
+        postEnhancedMessage("openThemesFolder");
+      },
+      openPluginsFolder: function() {
+        postEnhancedMessage("openPluginsFolder");
+      },
+      openStreamingServerFolder: function() {
+        openStreamingServerFolder();
+      },
+      checkServerUpdates: function() {
+        return checkServerJsUpdateAndSetup(true);
+      },
+      checkClientUpdates: function() {
+        return checkClientUpdate(true);
+      },
+      getClientVersion: function() {
+        return getCurrentClientVersion();
+      },
+      getServerStatus: function() {
+        return getServerStatus();
+      },
+      startStreamingServer: function() {
+        return startStreamingServer();
+      },
+      reloadToLocalStreamingServer: function() {
+        reloadToLocalStreamingServer();
+      },
+      applyTheme: function(fileName) {
+        applyThemeUI(fileName);
+        postEnhancedMessage("applyTheme", { fileName });
+      },
+      togglePlugin: function(fileName, enabled) {
+        const plugin = (currentEnhancedData5.plugins || []).find((p) => p.fileName === fileName);
+        if (plugin) {
+          plugin.enabled = enabled;
+        }
+        if (enabled) {
+          loadPlugin(fileName);
+        } else {
+          unloadPlugin(fileName);
+          showReloadWarning();
+        }
+        let enabledPlugins = [];
+        try {
+          const raw = localStorage.getItem("enabledPlugins");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) enabledPlugins = parsed;
+          }
+        } catch (_) {
+        }
+        const baseName = fileName.replace(/\.plugin\.js$/, "").replace(/\.js$/, "");
+        if (enabled) {
+          if (!enabledPlugins.includes(fileName)) enabledPlugins.push(fileName);
+          if (baseName && !enabledPlugins.includes(baseName)) enabledPlugins.push(baseName);
+        } else {
+          enabledPlugins = enabledPlugins.filter((name) => name !== fileName && name !== baseName);
+        }
+        localStorage.setItem("enabledPlugins", JSON.stringify(enabledPlugins));
+        syncLocalStorage();
+        postEnhancedMessage("togglePlugin", { fileName, enabled });
+      },
+      refresh: function() {
+        postEnhancedMessage("getData");
+      },
+      // Logger methods (supports both StremioEnhancedAPI.info(msg) and StremioEnhancedAPI.info(pluginName, msg))
+      logger: {
+        info: (pluginNameOrMsg, maybeMsg) => {
+          if (maybeMsg !== void 0) console.log(`[${pluginNameOrMsg}]`, maybeMsg);
+          else console.log("[Plugin]", pluginNameOrMsg);
+        },
+        warn: (pluginNameOrMsg, maybeMsg) => {
+          if (maybeMsg !== void 0) console.warn(`[${pluginNameOrMsg}]`, maybeMsg);
+          else console.warn("[Plugin]", pluginNameOrMsg);
+        },
+        error: (pluginNameOrMsg, maybeMsg) => {
+          if (maybeMsg !== void 0) console.error(`[${pluginNameOrMsg}]`, maybeMsg);
+          else console.error("[Plugin]", pluginNameOrMsg);
+        }
+      },
+      info: (pluginName, message) => console.log(`[${pluginName}]`, message),
+      warn: (pluginName, message) => console.warn(`[${pluginName}]`, message),
+      error: (pluginName, message) => console.error(`[${pluginName}]`, message),
+      // Settings API methods
+      getSetting: async (pluginOrKey, maybeKey) => {
+        if (maybeKey !== void 0) {
+          return internalGetSetting(pluginOrKey, maybeKey);
+        }
+        return internalGetSetting("global", pluginOrKey);
+      },
+      getSettings: async (pluginName) => {
+        return internalGetSettings(pluginName);
+      },
+      saveSetting: async (pluginOrKey, keyOrVal, maybeVal) => {
+        if (maybeVal !== void 0) {
+          return internalSaveSetting(pluginOrKey, keyOrVal, maybeVal);
+        }
+        return internalSaveSetting("global", pluginOrKey, keyOrVal);
+      },
+      registerSettings: async (pluginOrSchema, maybeSchema) => {
+        if (maybeSchema !== void 0) {
+          return internalRegisterSettings(pluginOrSchema, maybeSchema);
+        }
+        return internalRegisterSettings("global", pluginOrSchema);
+      },
+      getRegisteredSettings: (pluginFileName) => {
+        const baseName = getPluginBaseName(pluginFileName);
+        return window.__pluginSchemas[baseName] || window.__pluginSchemas[pluginFileName] || null;
+      },
+      clearRegisteredSettings: (pluginFileName) => {
+        const baseName = getPluginBaseName(pluginFileName);
+        delete window.__pluginSchemas[baseName];
+        delete window.__pluginSchemas[pluginFileName];
+        return true;
+      },
+      onSettingsSaved: (pluginOrCallback, maybeCallback) => {
+        const plugin = typeof pluginOrCallback === "string" ? pluginOrCallback : "global";
+        const baseName = getPluginBaseName(plugin);
+        const cb = typeof pluginOrCallback === "function" ? pluginOrCallback : maybeCallback;
+        if (!window.__pluginSettingListeners[baseName]) {
+          window.__pluginSettingListeners[baseName] = [];
+        }
+        window.__pluginSettingListeners[baseName].push(cb);
+      },
+      // Alert, Prompt, and Toast Modal APIs
+      showAlert: async (alertType, title, message, buttons) => {
+        return modalManager.showAlert(alertType, title, message, buttons);
+      },
+      showPrompt: async (promptId, title, message, defaultValue) => {
+        return modalManager.showPrompt(promptId, title, message, defaultValue);
+      },
+      showToast: (id, title, message, status) => {
+        modalManager.showToast(id, title, message, status);
+      },
+      toast: (id, title, message, status) => {
+        modalManager.showToast(id, title, message, status);
+      },
+      mpv: mpvApi,
+      shell: shellApi,
+      player: playerBus
+    };
+  }
+
   // src/bridge/mediaCapabilitiesBridge.ts
   function setupMediaCapabilitiesBridge() {
     const isAdvancedCodec = (codecStr) => {
@@ -4391,924 +6074,6 @@ Please place server.js in the folder or start Stremio Service. Would you like to
   var NARROW_LIST_ICON = `<svg viewBox="0 0 24 24" style="width: 1.15rem; height: 1.15rem; fill: none; stroke: currentcolor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
     <path d="M10 5v14M14 5v14M2 12h5M5 9l3 3-3 3M22 12h-5M19 9l-3 3 3 3"></path>
 </svg>`;
-
-  // src/player/chapterMarkers.ts
-  var chapters = [];
-  var chapterMarkersEnabled = true;
-  var initialized = false;
-  var observer2 = null;
-  var renderScheduled = false;
-  function isPlayerRoute() {
-    const hash = window.location.hash || "";
-    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
-    return Boolean(document.documentElement?.classList.contains("stremio-player-active"));
-  }
-  function syncChapterObserver() {
-    const shouldObserve = isPlayerRoute() && chapterMarkersEnabled && chapters.length > 0;
-    if (shouldObserve) {
-      if (observer2 || !document.body) return;
-      const target = document.getElementById("app") || document.body;
-      observer2 = new MutationObserver(() => {
-        if (isPlayerRoute() && chapterMarkersEnabled && chapters.length > 0) {
-          scheduleRenderChapterTicks();
-        } else {
-          syncChapterObserver();
-        }
-      });
-      observer2.observe(target, { childList: true, subtree: true });
-    } else if (observer2) {
-      observer2.disconnect();
-      observer2 = null;
-    }
-  }
-  function isEditableTarget(target) {
-    if (!(target instanceof HTMLElement)) return false;
-    const tag = target.tagName.toLowerCase();
-    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
-  }
-  function getDurationSeconds() {
-    const coreDur = Number(PermanentCore.getState?.("player")?.duration || 0) / 1e3;
-    if (Number.isFinite(coreDur) && coreDur > 0) return coreDur;
-    const bridge = document.getElementById("stremio-shell-bridge-video");
-    const bridgeDur = Number(bridge?.duration || 0);
-    return Number.isFinite(bridgeDur) && bridgeDur > 0 ? bridgeDur : 0;
-  }
-  function getCurrentTimeSeconds() {
-    const bridge = document.getElementById("stremio-shell-bridge-video");
-    const bridgeTime = Number(bridge?.currentTime || 0);
-    if (Number.isFinite(bridgeTime) && bridgeTime >= 0) return bridgeTime;
-    const coreTime = Number(PermanentCore.getState?.("player")?.time || 0) / 1e3;
-    return Number.isFinite(coreTime) && coreTime >= 0 ? coreTime : 0;
-  }
-  function isChapterMarkersEnabled() {
-    return chapterMarkersEnabled;
-  }
-  function getChapters() {
-    return chapters;
-  }
-  function getChapterAtTime(timeSec) {
-    if (!chapterMarkersEnabled || chapters.length === 0 || !Number.isFinite(timeSec)) {
-      return null;
-    }
-    let active = null;
-    for (const ch of chapters) {
-      if (ch.time <= timeSec + 0.25) {
-        active = ch;
-      } else {
-        break;
-      }
-    }
-    return active;
-  }
-  function updateChapterMarkersData(data) {
-    if (typeof data.chapterMarkers === "boolean") {
-      chapterMarkersEnabled = data.chapterMarkers;
-      syncChapterMarkersToggle();
-      syncChapterObserver();
-      scheduleRenderChapterTicks();
-    }
-  }
-  function syncChapterMarkersToggle() {
-    const toggle = document.getElementById("chaptermarkersToggle");
-    if (!toggle) return;
-    toggle.classList.toggle("checked", chapterMarkersEnabled);
-    toggle.setAttribute("aria-checked", chapterMarkersEnabled ? "true" : "false");
-  }
-  function scheduleRenderChapterTicks() {
-    if (renderScheduled) return;
-    renderScheduled = true;
-    requestAnimationFrame(() => {
-      renderScheduled = false;
-      renderChapterTicks();
-    });
-  }
-  function renderChapterTicks() {
-    const existingOverlay = document.getElementById("stremio-enhanced-chapter-overlay");
-    if (!chapterMarkersEnabled || chapters.length === 0 || !isPlayerRoute()) {
-      existingOverlay?.remove();
-      return;
-    }
-    const slider = document.querySelector(
-      '[class*="seek-bar-container-"] [class*="slider-container-"]'
-    );
-    if (!slider) return;
-    const seekContainer = slider.closest('[class*="seek-bar-container-"]');
-    if (slider.classList.contains("disabled") || seekContainer?.querySelector('[class*="live-badge-layer-"]')) {
-      existingOverlay?.remove();
-      return;
-    }
-    const duration = getDurationSeconds();
-    if (!Number.isFinite(duration) || duration <= 0) {
-      existingOverlay?.remove();
-      return;
-    }
-    if (window.getComputedStyle(slider).position === "static") {
-      slider.style.position = "relative";
-    }
-    let overlay = slider.querySelector("#stremio-enhanced-chapter-overlay");
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = "stremio-enhanced-chapter-overlay";
-      Object.assign(overlay.style, {
-        position: "absolute",
-        inset: "0",
-        pointerEvents: "none",
-        zIndex: "4",
-        overflow: "visible"
-      });
-      slider.appendChild(overlay);
-    }
-    const signature = `${duration.toFixed(1)}|${chapters.map((c) => `${c.time.toFixed(2)}:${c.title}`).join(",")}`;
-    if (overlay.dataset.signature === signature) return;
-    overlay.dataset.signature = signature;
-    overlay.innerHTML = "";
-    for (const chapter of chapters) {
-      if (chapter.time <= 0.5 || chapter.time >= duration - 0.5) continue;
-      const pct = Math.min(99.5, Math.max(0.5, chapter.time / duration * 100));
-      const tick = document.createElement("div");
-      tick.className = "stremio-enhanced-chapter-tick";
-      Object.assign(tick.style, {
-        position: "absolute",
-        left: `${pct}%`,
-        top: "50%",
-        transform: "translate(-50%, -50%)",
-        width: "2px",
-        height: "10px",
-        borderRadius: "1px",
-        background: "rgba(255, 255, 255, 0.78)",
-        boxShadow: "0 0 3px rgba(0, 0, 0, 0.75)",
-        pointerEvents: "none"
-      });
-      overlay.appendChild(tick);
-    }
-  }
-  function jumpChapter(direction) {
-    if (!chapterMarkersEnabled || chapters.length === 0) return;
-    const now = getCurrentTimeSeconds();
-    let target = null;
-    if (direction > 0) {
-      target = chapters.find((c) => c.time > now + 1) || null;
-    } else {
-      for (let i = chapters.length - 1; i >= 0; i--) {
-        if (chapters[i].time < now - 2) {
-          target = chapters[i];
-          break;
-        }
-      }
-      if (!target && chapters.length > 0) {
-        target = chapters[0];
-      }
-    }
-    if (!target) return;
-    try {
-      window.ipc?.postMessage?.(
-        JSON.stringify({
-          type: 6,
-          args: ["mpv-command", ["seek", String(target.time), "absolute"]]
-        })
-      );
-      modalManager.showToast("chapter-jump", "Chapter", target.title, "info");
-    } catch (_) {
-    }
-  }
-  function setupChapterMarkers() {
-    if (initialized) return;
-    initialized = true;
-    window.__receiveChapters = function(list) {
-      chapters = Array.isArray(list) ? list.filter((c) => c && typeof c.time === "number" && Number.isFinite(c.time)).map((c) => ({ title: String(c.title || "Chapter"), time: c.time })).sort((a, b) => a.time - b.time) : [];
-      const overlay = document.getElementById("stremio-enhanced-chapter-overlay");
-      if (overlay) delete overlay.dataset.signature;
-      syncChapterObserver();
-      scheduleRenderChapterTicks();
-    };
-    window.addEventListener(
-      "keydown",
-      (e) => {
-        if (!isPlayerRoute() || !chapterMarkersEnabled || isEditableTarget(e.target)) return;
-        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-          if (e.key === "ArrowRight") {
-            e.preventDefault();
-            e.stopPropagation();
-            jumpChapter(1);
-          } else if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            e.stopPropagation();
-            jumpChapter(-1);
-          }
-        }
-      },
-      true
-    );
-    const onRouteChange = () => {
-      if (isPlayerRoute()) {
-        postEnhancedMessage("getChapters");
-        syncChapterObserver();
-        scheduleRenderChapterTicks();
-      } else {
-        chapters = [];
-        syncChapterObserver();
-        document.getElementById("stremio-enhanced-chapter-overlay")?.remove();
-      }
-    };
-    window.addEventListener("hashchange", onRouteChange);
-    window.addEventListener("popstate", onRouteChange);
-    if (isPlayerRoute()) {
-      postEnhancedMessage("getChapters");
-    }
-  }
-
-  // src/player/thumbnailPreview.ts
-  var MAX_JS_CACHE_ENTRIES = 150;
-  var REQUEST_THROTTLE_MS = 80;
-  var NORMAL_PREVIEW_WIDTH = 240;
-  var PIP_PREVIEW_WIDTH = 160;
-  var previewEnabled = true;
-  var initialized2 = false;
-  var inPlayerRoute = false;
-  var currentStreamKey = "";
-  var thumbCache = /* @__PURE__ */ new Map();
-  var previewEl = null;
-  var frameWrapEl = null;
-  var imgEl = null;
-  var chapterEl = null;
-  var timeEl = null;
-  var isVisible = false;
-  var draggingSlider = null;
-  var lastHoveredTime = -1;
-  var lastPreviewWidth = NORMAL_PREVIEW_WIDTH;
-  var lastRequestSentAt = 0;
-  var trailingTimer = null;
-  var pendingTrailingRequest = null;
-  var lastDisplayFrameSize = null;
-  function isThumbnailPreviewEnabled() {
-    return previewEnabled;
-  }
-  function updateThumbnailPreviewData(data) {
-    if (typeof data.thumbnailPreview === "boolean") {
-      previewEnabled = data.thumbnailPreview;
-      if (!previewEnabled) {
-        hidePreview();
-        thumbCache.clear();
-      }
-      syncThumbnailPreviewToggle();
-    }
-  }
-  function syncThumbnailPreviewToggle() {
-    const toggle = document.getElementById("thumbnailpreviewToggle");
-    if (!toggle) return;
-    toggle.classList.toggle("checked", previewEnabled);
-    toggle.setAttribute("aria-checked", previewEnabled ? "true" : "false");
-  }
-  function getDurationSeconds2() {
-    const coreDur = Number(PermanentCore.getState?.("player")?.duration || 0) / 1e3;
-    if (Number.isFinite(coreDur) && coreDur > 0) return coreDur;
-    const bridge = document.getElementById("stremio-shell-bridge-video");
-    const bridgeDur = Number(bridge?.duration || 0);
-    return Number.isFinite(bridgeDur) && bridgeDur > 0 ? bridgeDur : 0;
-  }
-  function getCurrentStreamKey() {
-    const state = PermanentCore.getState?.("player");
-    const coreUrl = state?.selected?.stream?.url;
-    if (coreUrl) return String(coreUrl);
-    const bridge = document.getElementById("stremio-shell-bridge-video");
-    return bridge?.getAttribute("src") || "";
-  }
-  function ensureStreamCacheScope() {
-    const key = getCurrentStreamKey();
-    if (key && key !== currentStreamKey) {
-      currentStreamKey = key;
-      thumbCache.clear();
-      lastDisplayFrameSize = null;
-      if (imgEl) {
-        imgEl.removeAttribute("src");
-        imgEl.style.opacity = "0";
-      }
-    }
-    return currentStreamKey;
-  }
-  function quantizeTime(timeSec, duration) {
-    const step = duration > 0 && duration <= 120 ? 0.5 : 1;
-    return Math.round(timeSec / step) * step;
-  }
-  function makeCacheKey(streamKey, qTime, maxWidth) {
-    return `${streamKey}|${qTime.toFixed(1)}|${maxWidth}`;
-  }
-  function formatTimestamp(seconds) {
-    const total = Math.max(0, Math.floor(seconds));
-    const hrs = Math.floor(total / 3600);
-    const mins = Math.floor(total % 3600 / 60);
-    const secs = total % 60;
-    const pad = (n) => n < 10 ? `0${n}` : `${n}`;
-    if (hrs > 0) {
-      return `${hrs}:${pad(mins)}:${pad(secs)}`;
-    }
-    return `${mins}:${pad(secs)}`;
-  }
-  function ensurePreviewElement() {
-    if (!previewEl) {
-      previewEl = document.createElement("div");
-      previewEl.id = "stremio-enhanced-thumb-preview";
-      Object.assign(previewEl.style, {
-        position: "fixed",
-        left: "0px",
-        bottom: "0px",
-        display: "none",
-        flexDirection: "column",
-        alignItems: "center",
-        pointerEvents: "none",
-        zIndex: "2147483000",
-        backgroundColor: "rgba(12, 11, 17, 0.94)",
-        border: "1px solid rgba(255, 255, 255, 0.16)",
-        borderRadius: "10px",
-        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.65)",
-        overflow: "hidden",
-        backdropFilter: "blur(10px)",
-        userSelect: "none"
-      });
-      frameWrapEl = document.createElement("div");
-      Object.assign(frameWrapEl.style, {
-        width: `${NORMAL_PREVIEW_WIDTH}px`,
-        height: `${Math.round(NORMAL_PREVIEW_WIDTH * 9 / 16)}px`,
-        backgroundColor: "#09090d",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-        position: "relative"
-      });
-      imgEl = document.createElement("img");
-      imgEl.alt = "Thumbnail preview";
-      Object.assign(imgEl.style, {
-        display: "block",
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-        opacity: "0",
-        transition: "opacity 0.1s ease"
-      });
-      chapterEl = document.createElement("div");
-      Object.assign(chapterEl.style, {
-        width: "100%",
-        maxWidth: `${NORMAL_PREVIEW_WIDTH}px`,
-        textAlign: "center",
-        padding: "5px 10px 0px",
-        fontSize: "0.78rem",
-        fontWeight: "600",
-        color: "rgba(205, 196, 255, 0.96)",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        boxSizing: "border-box",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        display: "none",
-        lineHeight: "1.25"
-      });
-      timeEl = document.createElement("div");
-      Object.assign(timeEl.style, {
-        width: "100%",
-        textAlign: "center",
-        padding: "5px 8px",
-        fontSize: "0.85rem",
-        fontWeight: "600",
-        fontVariantNumeric: "tabular-nums",
-        color: "rgba(255, 255, 255, 0.95)",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-        boxSizing: "border-box",
-        lineHeight: "1.2"
-      });
-      timeEl.textContent = "0:00";
-      frameWrapEl.appendChild(imgEl);
-      previewEl.appendChild(frameWrapEl);
-      previewEl.appendChild(chapterEl);
-      previewEl.appendChild(timeEl);
-    }
-    const playerContainer = document.querySelector('[class*="player-container"]');
-    const targetParent = playerContainer || document.body;
-    if (targetParent && previewEl.parentElement !== targetParent) {
-      targetParent.appendChild(previewEl);
-    }
-  }
-  function applyThumbToDom(thumb) {
-    if (!imgEl || !frameWrapEl) return;
-    lastDisplayFrameSize = { width: thumb.width, height: thumb.height };
-    frameWrapEl.style.width = `${thumb.width}px`;
-    frameWrapEl.style.height = `${thumb.height}px`;
-    if (imgEl.src !== thumb.dataUrl) {
-      imgEl.src = thumb.dataUrl;
-    }
-    imgEl.style.opacity = "1";
-  }
-  function hidePreview() {
-    isVisible = false;
-    lastHoveredTime = -1;
-    pendingTrailingRequest = null;
-    if (trailingTimer) {
-      clearTimeout(trailingTimer);
-      trailingTimer = null;
-    }
-    if (previewEl) {
-      previewEl.style.display = "none";
-    }
-  }
-  function dispatchThumbnailRequest(time, maxWidth) {
-    const now = Date.now();
-    const elapsed = now - lastRequestSentAt;
-    if (elapsed >= REQUEST_THROTTLE_MS) {
-      lastRequestSentAt = now;
-      pendingTrailingRequest = null;
-      if (trailingTimer) {
-        clearTimeout(trailingTimer);
-        trailingTimer = null;
-      }
-      postEnhancedMessage("requestThumbnail", { time, maxWidth });
-      return;
-    }
-    pendingTrailingRequest = { time, maxWidth };
-    if (!trailingTimer) {
-      trailingTimer = setTimeout(() => {
-        trailingTimer = null;
-        if (!isVisible || !previewEnabled || !pendingTrailingRequest) return;
-        const req = pendingTrailingRequest;
-        pendingTrailingRequest = null;
-        lastRequestSentAt = Date.now();
-        postEnhancedMessage("requestThumbnail", { time: req.time, maxWidth: req.maxWidth });
-      }, REQUEST_THROTTLE_MS - elapsed);
-    }
-  }
-  function findSeekSlider(target) {
-    if (!(target instanceof Element)) return null;
-    return target.closest('[class*="seek-bar-container-"] [class*="slider-container-"]');
-  }
-  function isLiveSeekBar(slider) {
-    if (slider.classList.contains("disabled")) return true;
-    const seekContainer = slider.closest('[class*="seek-bar-container-"]');
-    if (!seekContainer) return true;
-    return seekContainer.querySelector('[class*="live-badge-layer-"]') !== null;
-  }
-  function canShowTooltip() {
-    return previewEnabled || isChapterMarkersEnabled() && getChapters().length > 0;
-  }
-  function updatePreviewAtPointer(slider, clientX) {
-    if (!canShowTooltip() || isLiveSeekBar(slider)) {
-      hidePreview();
-      return;
-    }
-    const duration = getDurationSeconds2();
-    if (!Number.isFinite(duration) || duration <= 0) {
-      hidePreview();
-      return;
-    }
-    const rect = slider.getBoundingClientRect();
-    if (rect.width <= 0) {
-      hidePreview();
-      return;
-    }
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    const targetTime = ratio * duration;
-    const isPip = document.documentElement.classList.contains("stremio-pip-mode");
-    const previewW = isPip ? PIP_PREVIEW_WIDTH : NORMAL_PREVIEW_WIDTH;
-    lastPreviewWidth = previewW;
-    lastHoveredTime = targetTime;
-    ensurePreviewElement();
-    if (!previewEl || !frameWrapEl || !imgEl || !timeEl) return;
-    if (previewEnabled) {
-      frameWrapEl.style.display = "flex";
-      const streamKey = ensureStreamCacheScope();
-      const qTime = quantizeTime(targetTime, duration);
-      const cacheKey = makeCacheKey(streamKey, qTime, previewW);
-      const cached = thumbCache.get(cacheKey);
-      if (cached) {
-        applyThumbToDom(cached);
-      } else {
-        const defaultH = lastDisplayFrameSize ? Math.round(previewW * lastDisplayFrameSize.height / lastDisplayFrameSize.width) : Math.round(previewW * 9 / 16);
-        frameWrapEl.style.width = `${previewW}px`;
-        frameWrapEl.style.height = `${defaultH}px`;
-        if (!imgEl.getAttribute("src")) {
-          imgEl.style.opacity = "0";
-        }
-        dispatchThumbnailRequest(targetTime, previewW);
-      }
-    } else {
-      frameWrapEl.style.display = "none";
-    }
-    const chapter = isChapterMarkersEnabled() ? getChapterAtTime(targetTime) : null;
-    if (chapterEl) {
-      if (chapter && chapter.title) {
-        chapterEl.textContent = chapter.title;
-        chapterEl.style.maxWidth = `${previewEnabled ? previewW : 240}px`;
-        chapterEl.style.display = "block";
-        timeEl.style.borderTop = "none";
-      } else {
-        chapterEl.style.display = "none";
-        timeEl.style.borderTop = "1px solid rgba(255, 255, 255, 0.08)";
-      }
-    }
-    timeEl.textContent = formatTimestamp(targetTime);
-    previewEl.style.display = "flex";
-    const cardWidth = previewEnabled ? Number.parseFloat(frameWrapEl.style.width) || previewW : Math.max(110, previewEl.offsetWidth || 160);
-    const clampedLeft = Math.min(
-      window.innerWidth - cardWidth - 12,
-      Math.max(12, clientX - cardWidth / 2)
-    );
-    const bottomOffset = Math.max(12, window.innerHeight - rect.top + 14);
-    previewEl.style.left = `${Math.round(clampedLeft)}px`;
-    previewEl.style.bottom = `${Math.round(bottomOffset)}px`;
-    isVisible = true;
-  }
-  function updateInPlayerRoute() {
-    const hash = window.location.hash || "";
-    inPlayerRoute = hash.startsWith("#/player") || hash.includes("/player/") || Boolean(document.documentElement?.classList.contains("stremio-player-active"));
-    return inPlayerRoute;
-  }
-  function setupThumbnailPreview() {
-    if (initialized2) return;
-    initialized2 = true;
-    updateInPlayerRoute();
-    window.__receiveThumbnailPreview = function(payload) {
-      if (!payload || !payload.dataUrl || !Number.isFinite(payload.time)) return;
-      const duration = getDurationSeconds2();
-      const streamKey = ensureStreamCacheScope();
-      const widthKey = payload.width || lastPreviewWidth || NORMAL_PREVIEW_WIDTH;
-      const qTime = quantizeTime(payload.time, duration);
-      const cacheKey = makeCacheKey(streamKey, qTime, widthKey);
-      if (thumbCache.size >= MAX_JS_CACHE_ENTRIES && !thumbCache.has(cacheKey)) {
-        const oldest = thumbCache.keys().next().value;
-        if (oldest !== void 0) thumbCache.delete(oldest);
-      }
-      const entry = {
-        dataUrl: payload.dataUrl,
-        width: payload.width || NORMAL_PREVIEW_WIDTH,
-        height: payload.height || Math.round(NORMAL_PREVIEW_WIDTH * 9 / 16)
-      };
-      thumbCache.set(cacheKey, entry);
-      if (isVisible && previewEnabled && lastHoveredTime >= 0) {
-        const delta = Math.abs(payload.time - lastHoveredTime);
-        const maxTolerance = Math.max(2.5, duration * 0.015);
-        if (delta <= maxTolerance || !imgEl?.getAttribute("src")) {
-          applyThumbToDom(entry);
-        }
-      }
-    };
-    document.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0 || !inPlayerRoute && !updateInPlayerRoute()) return;
-      const slider = findSeekSlider(e.target);
-      if (slider) {
-        draggingSlider = slider;
-        updatePreviewAtPointer(slider, e.clientX);
-      }
-    }, true);
-    document.addEventListener("pointermove", (e) => {
-      if (!inPlayerRoute || !canShowTooltip()) {
-        if (isVisible) hidePreview();
-        return;
-      }
-      if (draggingSlider) {
-        if (!document.body.contains(draggingSlider)) {
-          draggingSlider = null;
-          hidePreview();
-          return;
-        }
-        updatePreviewAtPointer(draggingSlider, e.clientX);
-        return;
-      }
-      const slider = findSeekSlider(e.target);
-      if (slider) {
-        updatePreviewAtPointer(slider, e.clientX);
-      } else if (isVisible) {
-        hidePreview();
-      }
-    }, true);
-    window.addEventListener("pointerup", (e) => {
-      if (!draggingSlider) return;
-      const hovered = findSeekSlider(e.target);
-      draggingSlider = null;
-      if (!hovered) {
-        hidePreview();
-      }
-    }, true);
-    document.addEventListener("mouseleave", () => {
-      if (!draggingSlider && isVisible) {
-        hidePreview();
-      }
-    });
-    window.addEventListener("blur", () => {
-      draggingSlider = null;
-      hidePreview();
-    });
-    const onRouteChange = () => {
-      if (!updateInPlayerRoute()) {
-        draggingSlider = null;
-        hidePreview();
-      }
-    };
-    window.addEventListener("hashchange", onRouteChange);
-    window.addEventListener("popstate", onRouteChange);
-  }
-
-  // src/player/shaderControls.ts
-  var currentShaderPreset = "off";
-  var shaderPresets = [];
-  var applyingPresetId = null;
-  var initialized3 = false;
-  var popoverEl = null;
-  var osdEl = null;
-  var osdTimer = null;
-  var pendingShaderRequests = /* @__PURE__ */ new Map();
-  function isPlayerRoute2() {
-    const hash = window.location.hash || "";
-    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
-    return document.querySelector('[class*="player-container"]') !== null;
-  }
-  function isEditableTarget2(target) {
-    if (!(target instanceof HTMLElement)) return false;
-    const tag = target.tagName.toLowerCase();
-    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
-  }
-  function getActiveShaderPresetName() {
-    const found = shaderPresets.find((p) => p.id === currentShaderPreset);
-    return found ? found.name : currentShaderPreset === "off" ? "Off (Default)" : currentShaderPreset;
-  }
-  function updateShaderControlsData(data) {
-    if (typeof data.shaderPreset === "string" && data.shaderPreset) {
-      currentShaderPreset = data.shaderPreset;
-    }
-    if (Array.isArray(data.shaderPresets)) {
-      shaderPresets = data.shaderPresets;
-    }
-    syncShaderSettingsUI();
-    renderShaderPopover();
-  }
-  function showPlayerOsd(text) {
-    const container = document.querySelector('[class*="player-container"]') || document.body;
-    if (!container) return;
-    if (!osdEl) {
-      osdEl = document.createElement("div");
-      osdEl.id = "stremio-enhanced-shader-osd";
-      Object.assign(osdEl.style, {
-        position: "fixed",
-        top: "20px",
-        right: "24px",
-        zIndex: "2147483200",
-        padding: "8px 14px",
-        borderRadius: "10px",
-        backgroundColor: "rgba(14, 13, 22, 0.88)",
-        border: "1px solid rgba(255, 255, 255, 0.16)",
-        color: "#fff",
-        fontSize: "0.88rem",
-        fontWeight: "600",
-        boxShadow: "0 8px 28px rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(12px)",
-        pointerEvents: "none",
-        opacity: "0",
-        transition: "opacity 0.18s ease"
-      });
-    }
-    if (osdEl.parentElement !== container) {
-      container.appendChild(osdEl);
-    }
-    osdEl.textContent = text;
-    osdEl.style.opacity = "1";
-    if (osdTimer) clearTimeout(osdTimer);
-    osdTimer = setTimeout(() => {
-      if (osdEl) osdEl.style.opacity = "0";
-    }, 2400);
-  }
-  async function applyShaderPreset(presetId) {
-    if (applyingPresetId) return false;
-    applyingPresetId = presetId;
-    syncShaderSettingsUI();
-    renderShaderPopover();
-    const preset = shaderPresets.find((p) => p.id === presetId);
-    if (preset && preset.id !== "off" && !preset.installed) {
-      modalManager.showToast(
-        "shader-downloading",
-        "Downloading Shaders",
-        `Installing ${preset.name} GLSL shader(s)...`,
-        "info"
-      );
-      if (isPlayerRoute2()) {
-        showPlayerOsd(`Downloading ${preset.name}...`);
-      }
-    }
-    const result = await new Promise((resolve) => {
-      const id = "sh_" + Math.random().toString(36).substring(2, 9);
-      const timer = setTimeout(() => {
-        if (pendingShaderRequests.has(id)) {
-          pendingShaderRequests.delete(id);
-          resolve({ success: false, preset: presetId, error: "Timed out while applying shader preset." });
-        }
-      }, 12e4);
-      pendingShaderRequests.set(id, (res) => {
-        clearTimeout(timer);
-        resolve(res);
-      });
-      postEnhancedMessage("setShaderPreset", { id, preset: presetId });
-    });
-    applyingPresetId = null;
-    if (result.success) {
-      currentShaderPreset = result.preset;
-      const name = getActiveShaderPresetName();
-      if (isPlayerRoute2()) {
-        showPlayerOsd(`Shader: ${name}`);
-      } else {
-        modalManager.showToast("shader-applied", "Shader Applied", `Active upscaling preset: ${name}`, "success");
-      }
-    } else {
-      modalManager.showToast(
-        "shader-error",
-        "Shader Error",
-        result.error || "Failed to download or apply shader preset.",
-        "fail"
-      );
-    }
-    syncShaderSettingsUI();
-    renderShaderPopover();
-    return result.success;
-  }
-  function syncShaderSettingsUI() {
-    const container = document.getElementById("enhanced-shaders-grid");
-    if (!container) return;
-    if (shaderPresets.length === 0) {
-      container.innerHTML = `<div class="enhanced-option-description">Loading shader presets...</div>`;
-      return;
-    }
-    const categoryOrder = ["Default", "Sharpening (1:1)", "Anime4K", "FSRCNNX", "ArtCNN"];
-    const grouped = /* @__PURE__ */ new Map();
-    for (const cat of categoryOrder) grouped.set(cat, []);
-    for (const preset of shaderPresets) {
-      if (!grouped.has(preset.category)) grouped.set(preset.category, []);
-      grouped.get(preset.category).push(preset);
-    }
-    let html = "";
-    for (const [category, list] of grouped.entries()) {
-      if (list.length === 0) continue;
-      html += `<div class="enhanced-shader-group-title">${escapeHtml(category)}</div>`;
-      html += `<div class="enhanced-shader-grid">`;
-      for (const preset of list) {
-        const isActive = preset.id === currentShaderPreset;
-        const isLoading = preset.id === applyingPresetId;
-        const badgeText = isLoading ? "Installing..." : preset.id === "off" ? "Bypass" : preset.installed ? "Ready" : "Download";
-        const badgeClass = isLoading ? "loading" : preset.installed || preset.id === "off" ? "ready" : "download";
-        html += `
-                <button type="button"
-                    class="enhanced-shader-card${isActive ? " active" : ""}${isLoading ? " loading" : ""}"
-                    data-shader-preset="${escapeHtml(preset.id)}"
-                    ${applyingPresetId ? "disabled" : ""}>
-                    <div class="enhanced-shader-card-top">
-                        <span class="enhanced-shader-card-name">${escapeHtml(preset.name)}</span>
-                        <span class="enhanced-shader-badge ${badgeClass}">${escapeHtml(badgeText)}</span>
-                    </div>
-                    <div class="enhanced-shader-card-desc">${escapeHtml(preset.description)}</div>
-                </button>
-            `;
-      }
-      html += `</div>`;
-    }
-    container.innerHTML = html;
-    container.querySelectorAll("[data-shader-preset]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-shader-preset");
-        if (id) applyShaderPreset(id);
-      });
-    });
-  }
-  function renderShaderPopover() {
-    if (!popoverEl || popoverEl.style.display === "none") return;
-    const categoryOrder = ["Default", "Sharpening (1:1)", "Anime4K", "FSRCNNX", "ArtCNN"];
-    const grouped = /* @__PURE__ */ new Map();
-    for (const cat of categoryOrder) grouped.set(cat, []);
-    for (const p of shaderPresets) {
-      if (!grouped.has(p.category)) grouped.set(p.category, []);
-      grouped.get(p.category).push(p);
-    }
-    let itemsHtml = "";
-    for (const [cat, list] of grouped.entries()) {
-      if (list.length === 0) continue;
-      itemsHtml += `<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin:10px 4px 4px;">${escapeHtml(cat)}</div>`;
-      for (const preset of list) {
-        const active = preset.id === currentShaderPreset;
-        const loading = preset.id === applyingPresetId;
-        const tag = loading ? "Installing..." : preset.id === "off" ? "Bypass" : preset.installed ? "Ready" : "Download";
-        itemsHtml += `
-                <button type="button" data-popover-shader="${escapeHtml(preset.id)}" ${applyingPresetId ? "disabled" : ""}
-                    style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;margin-bottom:4px;border-radius:8px;border:1px solid ${active ? "var(--accent-color, #7b5bf5)" : "rgba(255,255,255,0.08)"};background:${active ? "rgba(123,91,245,0.25)" : "rgba(255,255,255,0.04)"};color:#fff;cursor:${applyingPresetId ? "wait" : "pointer"};text-align:left;font-size:0.86rem;">
-                    <span style="font-weight:${active ? "700" : "500"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(preset.name)}</span>
-                    <span style="font-size:0.72rem;padding:2px 7px;border-radius:999px;background:${active ? "rgba(123,91,245,0.45)" : "rgba(255,255,255,0.1)"};color:rgba(255,255,255,0.88);flex-shrink:0;">${escapeHtml(tag)}</span>
-                </button>
-            `;
-      }
-    }
-    const bodyEl = popoverEl.querySelector("#stremio-enhanced-shader-popover-body");
-    if (bodyEl) {
-      bodyEl.innerHTML = itemsHtml;
-      bodyEl.querySelectorAll("[data-popover-shader]").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const id = btn.getAttribute("data-popover-shader");
-          if (id) applyShaderPreset(id);
-        });
-      });
-    }
-  }
-  function closeShaderPopover() {
-    if (popoverEl) {
-      popoverEl.style.display = "none";
-    }
-  }
-  function toggleShaderPopover(force) {
-    const show = force !== void 0 ? force : !(popoverEl && popoverEl.style.display !== "none");
-    if (!show) {
-      closeShaderPopover();
-      return;
-    }
-    if (!popoverEl) {
-      popoverEl = document.createElement("div");
-      popoverEl.id = "stremio-enhanced-shader-popover";
-      Object.assign(popoverEl.style, {
-        position: "fixed",
-        top: "64px",
-        right: "20px",
-        width: "330px",
-        maxHeight: "72vh",
-        display: "none",
-        flexDirection: "column",
-        zIndex: "2147483150",
-        backgroundColor: "rgba(13, 12, 22, 0.94)",
-        border: "1px solid rgba(255, 255, 255, 0.16)",
-        borderRadius: "12px",
-        boxShadow: "0 16px 40px rgba(0, 0, 0, 0.72)",
-        backdropFilter: "blur(16px)",
-        color: "#fff",
-        overflow: "hidden",
-        userSelect: "none"
-      });
-      popoverEl.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.1);">
-                <div>
-                    <div style="font-weight:700;font-size:0.95rem;">Upscaling &amp; GLSL Shaders</div>
-                    <div style="font-size:0.74rem;color:rgba(255,255,255,0.55);margin-top:2px;">Shortcut: Ctrl+Shift+U</div>
-                </div>
-                <button type="button" id="stremio-enhanced-shader-popover-close"
-                    style="background:rgba(255,255,255,0.08);border:none;color:#fff;width:26px;height:26px;border-radius:999px;cursor:pointer;font-size:1rem;line-height:1;">&times;</button>
-            </div>
-            <div id="stremio-enhanced-shader-popover-body" style="padding:8px 12px 12px;overflow-y:auto;"></div>
-        `;
-      popoverEl.querySelector("#stremio-enhanced-shader-popover-close")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        closeShaderPopover();
-      });
-    }
-    const parent = document.querySelector('[class*="player-container"]') || document.body;
-    if (parent && popoverEl.parentElement !== parent) {
-      parent.appendChild(popoverEl);
-    }
-    popoverEl.style.display = "flex";
-    renderShaderPopover();
-  }
-  function setupShaderControls() {
-    if (initialized3) return;
-    initialized3 = true;
-    window.__receiveShaderPresetResult = function(id, success, preset, error) {
-      const resolver = pendingShaderRequests.get(id);
-      if (resolver) {
-        pendingShaderRequests.delete(id);
-        resolver({ success, preset, error });
-      }
-    };
-    window.addEventListener(
-      "keydown",
-      (e) => {
-        if (!isPlayerRoute2() || isEditableTarget2(e.target)) return;
-        if (e.key === "Escape" && popoverEl && popoverEl.style.display !== "none") {
-          e.preventDefault();
-          e.stopPropagation();
-          closeShaderPopover();
-          return;
-        }
-        if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === "u") {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleShaderPopover();
-        }
-      },
-      true
-    );
-    document.addEventListener("pointerdown", (e) => {
-      if (!popoverEl || popoverEl.style.display === "none") return;
-      const target = e.target;
-      if (target && !popoverEl.contains(target)) {
-        closeShaderPopover();
-      }
-    });
-    const onRoute = () => {
-      if (!isPlayerRoute2()) {
-        closeShaderPopover();
-      }
-    };
-    window.addEventListener("hashchange", onRoute);
-    window.addEventListener("popstate", onRoute);
-  }
 
   // src/components/settings/settingsInjector.ts
   var SELECTORS = {
@@ -6078,361 +6843,6 @@ Please place server.js in the folder or start Stremio Service. Would you like to
     Promise.allSettled([buildSettingsPage(), buildNavGroup()]).finally(() => {
       isBuilding = false;
     });
-  }
-
-  // src/player/statsOverlay.ts
-  var POLL_INTERVAL_MS = 500;
-  var MAX_SPEED_SAMPLES = 30;
-  var statsVisible = false;
-  var initialized4 = false;
-  var pollTimer = null;
-  var hudEl = null;
-  var lastStats = null;
-  var lastServerStats = null;
-  var speedHistory = [];
-  var pendingStatsRequests = /* @__PURE__ */ new Map();
-  function isPlayerRoute3() {
-    const hash = window.location.hash || "";
-    if (hash.startsWith("#/player") || hash.includes("/player/")) return true;
-    return document.querySelector('[class*="player-container"]') !== null;
-  }
-  function isEditableTarget3(target) {
-    if (!(target instanceof HTMLElement)) return false;
-    const tag = target.tagName.toLowerCase();
-    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
-  }
-  function formatBitrate(bps) {
-    if (!bps || !Number.isFinite(bps) || bps <= 0) return "N/A";
-    if (bps >= 1e6) return `${(bps / 1e6).toFixed(2)} Mbps`;
-    return `${Math.round(bps / 1e3)} kbps`;
-  }
-  function formatRate(bytesPerSec) {
-    if (!bytesPerSec || !Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return "0 B/s";
-    if (bytesPerSec >= 1048576) return `${(bytesPerSec / 1048576).toFixed(2)} MiB/s`;
-    if (bytesPerSec >= 1024) return `${(bytesPerSec / 1024).toFixed(0)} KiB/s`;
-    return `${Math.round(bytesPerSec)} B/s`;
-  }
-  function formatFps(fps) {
-    if (!fps || !Number.isFinite(fps) || fps <= 0) return "\u2014";
-    return fps.toFixed(2);
-  }
-  function getResolutionBadge(w, h) {
-    if (!w || !h) return "VIDEO";
-    if (h >= 2100 || w >= 3800) return "4K UHD";
-    if (h >= 1400 || w >= 2500) return "1440p";
-    if (h >= 1050 || w >= 1900) return "1080p";
-    if (h >= 700 || w >= 1200) return "720p";
-    return `${w}x${h}`;
-  }
-  function isHdrStream(stats) {
-    const gamma = (stats.colorGamma || "").toLowerCase();
-    const primaries = (stats.colorPrimaries || "").toLowerCase();
-    return gamma === "pq" || gamma === "hlg" || gamma.includes("2084") || primaries.includes("2020");
-  }
-  function buildSparklineSvg(samples) {
-    const width = 260;
-    const height = 28;
-    if (samples.length < 2) {
-      return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;opacity:0.35;"><line x1="0" y1="${height - 4}" x2="${width}" y2="${height - 4}" stroke="rgba(255,255,255,0.25)" stroke-width="1"/></svg>`;
-    }
-    const maxVal = Math.max(1024, ...samples);
-    const points = samples.map((val, idx) => {
-      const x = idx / (MAX_SPEED_SAMPLES - 1) * width;
-      const y = height - 3 - Math.max(0, val) / maxVal * (height - 6);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
-    return `
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;">
-            <polyline fill="none" stroke="#8b74ff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" points="${points.join(" ")}" />
-        </svg>
-    `;
-  }
-  function computeVideoScaleFactor(stats) {
-    const srcW = stats.dwidth || stats.width;
-    const srcH = stats.dheight || stats.height;
-    const outW = stats.outputWidth;
-    const outH = stats.outputHeight;
-    if (!srcW || !srcH || !outW || !outH || srcW <= 0 || srcH <= 0 || outW <= 0 || outH <= 0) {
-      return null;
-    }
-    return Math.min(outW / srcW, outH / srcH);
-  }
-  function getShaderActivityStatus(stats, scale) {
-    const shaders = stats.activeShaders || [];
-    if (shaders.length === 0) return null;
-    let alwaysOnCount = 0;
-    let upscalerCount = 0;
-    let firingUpscalers = 0;
-    let minUpscalerThreshold = Infinity;
-    for (const file of shaders) {
-      const lower = file.toLowerCase();
-      if (lower.includes("fsrcnnx") || lower.includes("artcnn")) {
-        upscalerCount++;
-        minUpscalerThreshold = Math.min(minUpscalerThreshold, 1.3);
-        if (scale !== null && scale > 1.3) firingUpscalers++;
-      } else if (lower.includes("anime4k_upscale")) {
-        upscalerCount++;
-        minUpscalerThreshold = Math.min(minUpscalerThreshold, 1.2);
-        if (scale !== null && scale > 1.2) firingUpscalers++;
-      } else if (lower.includes("autodownscale")) {
-      } else {
-        alwaysOnCount++;
-      }
-    }
-    const scaleStr = scale !== null ? `${scale.toFixed(2)}x` : "?";
-    if (upscalerCount > 0 && scale !== null) {
-      if (firingUpscalers > 0) {
-        return {
-          badgeText: `Firing (${scaleStr})`,
-          badgeBg: "rgba(34,197,94,0.22)",
-          badgeColor: "#86efac",
-          detail: `Upscaler active at ${scaleStr} scale`
-        };
-      }
-      if (alwaysOnCount > 0) {
-        return {
-          badgeText: `1:1 Active (${scaleStr})`,
-          badgeBg: "rgba(56,189,248,0.22)",
-          badgeColor: "#7dd3fc",
-          detail: `1:1 restore/sharpen pass active; upscaler needs >${minUpscalerThreshold.toFixed(1)}x scale`
-        };
-      }
-      return {
-        badgeText: `Bypassed (${scaleStr} <= ${minUpscalerThreshold.toFixed(1)}x)`,
-        badgeBg: "rgba(245,158,11,0.24)",
-        badgeColor: "#fcd34d",
-        detail: `Upscaler skipped until output exceeds ${minUpscalerThreshold.toFixed(1)}x source size`
-      };
-    }
-    return {
-      badgeText: alwaysOnCount > 0 ? `Active (${scaleStr})` : "Loaded",
-      badgeBg: "rgba(34,197,94,0.22)",
-      badgeColor: "#86efac",
-      detail: "Running at native resolution"
-    };
-  }
-  function formatPlainDiagnostics(stats) {
-    const res = stats.width && stats.height ? `${stats.width}x${stats.height}` : "Unknown";
-    const outRes = stats.outputWidth && stats.outputHeight ? `${stats.outputWidth}x${stats.outputHeight}` : stats.dwidth && stats.dheight ? `${stats.dwidth}x${stats.dheight}` : res;
-    const scale = computeVideoScaleFactor(stats);
-    const scaleLabel = scale !== null ? ` (${scale.toFixed(2)}x)` : "";
-    const hdr = isHdrStream(stats) ? "HDR" : "SDR";
-    const shaders = stats.activeShaders && stats.activeShaders.length > 0 ? stats.activeShaders.join(", ") : "None";
-    const shaderStatus = getShaderActivityStatus(stats, scale);
-    return [
-      `Title: ${stats.mediaTitle || "N/A"}`,
-      `Video: ${stats.videoCodec || "N/A"} | ${res} -> ${outRes}${scaleLabel} | ${formatFps(stats.estimatedVfFps || stats.containerFps)} fps | ${formatBitrate(stats.videoBitrate)}`,
-      `Color/HDR: ${hdr} (${stats.colorPrimaries || "?"} / ${stats.colorGamma || "?"} / ${stats.pixelFormat || "?"})`,
-      `HWDEC: ${stats.hwdecCurrent || "software"} | Display FPS: ${formatFps(stats.displayFps)}`,
-      `Audio: ${stats.audioCodec || "N/A"} | ${stats.audioChannels || "?"} | ${stats.audioSampleRate ? `${(stats.audioSampleRate / 1e3).toFixed(1)} kHz` : "?"} | ${formatBitrate(stats.audioBitrate)}`,
-      `Sync/Drops: A/V ${stats.avsync !== null && stats.avsync !== void 0 ? `${(stats.avsync * 1e3).toFixed(1)} ms` : "N/A"} | Dropped ${stats.droppedFrames ?? 0} (dec ${stats.decoderDroppedFrames ?? 0})`,
-      `Buffer: ${stats.cacheDuration !== null && stats.cacheDuration !== void 0 ? `${stats.cacheDuration.toFixed(1)}s` : "N/A"} | Speed ${formatRate(stats.cacheSpeed)}`,
-      `Shaders (${getActiveShaderPresetName()}${shaderStatus ? ` - ${shaderStatus.badgeText}` : ""}): ${shaders}`
-    ].join("\n");
-  }
-  function renderHud(stats) {
-    if (!hudEl || !statsVisible) return;
-    const hdr = isHdrStream(stats);
-    const resBadge = getResolutionBadge(stats.width, stats.height);
-    const resText = stats.width && stats.height ? `${stats.width}x${stats.height}` : "\u2014";
-    const outText = stats.outputWidth && stats.outputHeight ? `${stats.outputWidth}x${stats.outputHeight}` : stats.dwidth && stats.dheight ? `${stats.dwidth}x${stats.dheight}` : resText;
-    const scale = computeVideoScaleFactor(stats);
-    const scaleText = scale !== null ? ` (${scale.toFixed(2)}x)` : "";
-    const hwdec = stats.hwdecCurrent || "sw (none)";
-    const shaderLabel = stats.activeShaders && stats.activeShaders.length > 0 ? `${getActiveShaderPresetName()} (${stats.activeShaders.length})` : "Off";
-    const shaderStatus = getShaderActivityStatus(stats, scale);
-    const shaderBadgeHtml = shaderStatus ? `<span style="margin-left:6px;padding:1px 6px;border-radius:999px;font-size:0.68rem;font-weight:700;background:${shaderStatus.badgeBg};color:${shaderStatus.badgeColor};white-space:nowrap;" title="${escapeHtml(shaderStatus.detail)}">${escapeHtml(shaderStatus.badgeText)}</span>` : "";
-    const cacheSec = stats.cacheDuration !== null && stats.cacheDuration !== void 0 ? `${stats.cacheDuration.toFixed(1)} s` : "\u2014";
-    const cacheRate = formatRate(lastServerStats?.downloadSpeed ?? stats.cacheSpeed);
-    const peersInfo = lastServerStats && typeof lastServerStats.peers === "number" ? ` \u2022 ${lastServerStats.peers} peers` : "";
-    const avsync = stats.avsync !== null && stats.avsync !== void 0 ? `${(stats.avsync * 1e3).toFixed(1)} ms` : "\u2014";
-    const bodyEl = hudEl.querySelector("#stremio-enhanced-stats-body");
-    if (!bodyEl) return;
-    bodyEl.innerHTML = `
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:rgba(123,91,245,0.28);border:1px solid rgba(139,116,255,0.45);color:#d8cfff;">${escapeHtml(resBadge)}</span>
-            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:${hdr ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.09)"};color:${hdr ? "#fcd34d" : "#d4d4d8"};">${hdr ? "HDR" : "SDR"}</span>
-            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:rgba(255,255,255,0.09);color:#e4e4e7;">${escapeHtml((stats.videoCodec || "unknown").toUpperCase())}</span>
-            <span style="padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;background:${stats.hwdecCurrent ? "rgba(34,197,94,0.22)" : "rgba(255,255,255,0.09)"};color:${stats.hwdecCurrent ? "#86efac" : "#d4d4d8"};">HWDEC: ${escapeHtml(hwdec)}</span>
-        </div>
-
-        <div style="display:grid;grid-template-columns:88px 1fr;gap:4px 10px;font-size:0.79rem;line-height:1.45;font-variant-numeric:tabular-nums;">
-            <div style="color:rgba(255,255,255,0.52);">Video</div>
-            <div>${escapeHtml(resText)} &rarr; ${escapeHtml(outText)}${escapeHtml(scaleText)} &bull; ${formatFps(stats.estimatedVfFps || stats.containerFps)}/${formatFps(stats.displayFps)} fps &bull; ${escapeHtml(formatBitrate(stats.videoBitrate))}</div>
-
-            <div style="color:rgba(255,255,255,0.52);">Color</div>
-            <div>${escapeHtml(stats.colorPrimaries || "\u2014")} / ${escapeHtml(stats.colorGamma || "\u2014")} / ${escapeHtml(stats.pixelFormat || "\u2014")}${stats.sigPeak ? ` (${stats.sigPeak.toFixed(1)}x)` : ""}</div>
-
-            <div style="color:rgba(255,255,255,0.52);">Audio</div>
-            <div>${escapeHtml(stats.audioCodec || "\u2014")} &bull; ${escapeHtml(stats.audioChannels || "\u2014")}${stats.audioSampleRate ? ` &bull; ${(stats.audioSampleRate / 1e3).toFixed(1)} kHz` : ""} &bull; ${escapeHtml(formatBitrate(stats.audioBitrate))}</div>
-
-            <div style="color:rgba(255,255,255,0.52);">Drops / Sync</div>
-            <div>VO: ${stats.droppedFrames ?? 0} &bull; Dec: ${stats.decoderDroppedFrames ?? 0} &bull; Mistimed: ${stats.mistimedFrames ?? 0} &bull; A/V: ${escapeHtml(avsync)}</div>
-
-            <div style="color:rgba(255,255,255,0.52);">Shaders</div>
-            <div style="display:flex;align-items:center;min-width:0;" title="${escapeHtml((stats.activeShaders || []).join(", ") + (shaderStatus ? ` \u2014 ${shaderStatus.detail}` : ""))}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(shaderLabel)}</span>${shaderBadgeHtml}</div>
-
-            <div style="color:rgba(255,255,255,0.52);">Cache</div>
-            <div>${escapeHtml(cacheSec)} &bull; ${escapeHtml(cacheRate)}${escapeHtml(peersInfo)}${stats.pausedForCache ? ' <span style="color:#fbbf24;">(Buffering)</span>' : ""}</div>
-        </div>
-
-        <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px;">
-            <span style="font-size:0.7rem;color:rgba(255,255,255,0.48);">Cache I/O</span>
-            ${buildSparklineSvg(speedHistory)}
-        </div>
-    `;
-  }
-  async function pollOnce() {
-    if (!statsVisible || !isPlayerRoute3()) {
-      toggleStatsOverlay(false);
-      return;
-    }
-    const id = "st_" + Math.random().toString(36).substring(2, 9);
-    const stats = await new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        pendingStatsRequests.delete(id);
-        resolve(null);
-      }, 1200);
-      pendingStatsRequests.set(id, (s) => {
-        clearTimeout(timer);
-        resolve(s);
-      });
-      postEnhancedMessage("getPlaybackStats", { id });
-    });
-    if (!stats || !statsVisible) return;
-    lastStats = stats;
-    const path = stats.path || "";
-    const match = path.match(/^(https?:\/\/127\.0\.0\.1:11470\/[^/]+\/\d+)/);
-    if (match) {
-      try {
-        const ctrl = new AbortController();
-        const abortId = setTimeout(() => ctrl.abort(), 700);
-        const res = await fetch(`${match[1]}/stats.json`, { signal: ctrl.signal });
-        clearTimeout(abortId);
-        if (res.ok) {
-          lastServerStats = await res.json();
-        }
-      } catch (_) {
-        lastServerStats = null;
-      }
-    } else {
-      lastServerStats = null;
-    }
-    const rateVal = Number(lastServerStats?.downloadSpeed ?? stats.cacheSpeed ?? 0);
-    if (Number.isFinite(rateVal) && rateVal >= 0) {
-      speedHistory.push(rateVal);
-      if (speedHistory.length > MAX_SPEED_SAMPLES) {
-        speedHistory.shift();
-      }
-    }
-    renderHud(stats);
-  }
-  function ensureHudElement() {
-    if (!hudEl) {
-      hudEl = document.createElement("div");
-      hudEl.id = "stremio-enhanced-stats-hud";
-      Object.assign(hudEl.style, {
-        position: "fixed",
-        top: "64px",
-        left: "20px",
-        width: "360px",
-        maxWidth: "calc(100vw - 40px)",
-        zIndex: "2147483100",
-        backgroundColor: "rgba(11, 11, 18, 0.86)",
-        border: "1px solid rgba(255, 255, 255, 0.14)",
-        borderRadius: "12px",
-        boxShadow: "0 14px 36px rgba(0, 0, 0, 0.65)",
-        backdropFilter: "blur(14px)",
-        color: "#f4f4f5",
-        padding: "12px 14px",
-        fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
-        display: "none",
-        userSelect: "text"
-      });
-      hudEl.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.09);">
-                <div style="font-weight:700;font-size:0.9rem;letter-spacing:0.01em;">Stats for Nerds <span style="font-weight:400;font-size:0.74rem;color:rgba(255,255,255,0.5);">[I]</span></div>
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <button type="button" id="stremio-stats-shaders-btn"
-                        style="background:rgba(123,91,245,0.28);border:1px solid rgba(139,116,255,0.45);color:#e9e4ff;border-radius:6px;padding:3px 8px;font-size:0.74rem;font-weight:600;cursor:pointer;">Shaders</button>
-                    <button type="button" id="stremio-stats-copy-btn"
-                        style="background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:6px;padding:3px 8px;font-size:0.74rem;font-weight:600;cursor:pointer;">Copy</button>
-                    <button type="button" id="stremio-stats-close-btn"
-                        style="background:rgba(255,255,255,0.09);border:none;color:#fff;width:22px;height:22px;border-radius:999px;cursor:pointer;font-size:0.95rem;line-height:1;">&times;</button>
-                </div>
-            </div>
-            <div id="stremio-enhanced-stats-body" style="font-size:0.8rem;color:rgba(255,255,255,0.8);">Collecting playback telemetry...</div>
-        `;
-      hudEl.querySelector("#stremio-stats-shaders-btn")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggleShaderPopover();
-      });
-      hudEl.querySelector("#stremio-stats-copy-btn")?.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (!lastStats) return;
-        try {
-          await navigator.clipboard.writeText(formatPlainDiagnostics(lastStats));
-          modalManager.showToast("stats-copied", "Copied", "Playback telemetry copied to clipboard.", "success");
-        } catch (_) {
-        }
-      });
-      hudEl.querySelector("#stremio-stats-close-btn")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggleStatsOverlay(false);
-      });
-    }
-    const parent = document.querySelector('[class*="player-container"]') || document.body;
-    if (parent && hudEl.parentElement !== parent) {
-      parent.appendChild(hudEl);
-    }
-  }
-  function toggleStatsOverlay(force) {
-    const next = force !== void 0 ? force : !statsVisible;
-    if (next && !isPlayerRoute3()) return;
-    statsVisible = next;
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
-    if (!statsVisible) {
-      speedHistory.length = 0;
-      if (hudEl) hudEl.style.display = "none";
-      return;
-    }
-    ensureHudElement();
-    if (hudEl) hudEl.style.display = "block";
-    pollOnce();
-    pollTimer = setInterval(pollOnce, POLL_INTERVAL_MS);
-  }
-  function setupStatsOverlay() {
-    if (initialized4) return;
-    initialized4 = true;
-    window.__receivePlaybackStats = function(id, stats) {
-      const resolver = pendingStatsRequests.get(id);
-      if (resolver) {
-        pendingStatsRequests.delete(id);
-        resolver(stats);
-      }
-    };
-    window.addEventListener(
-      "keydown",
-      (e) => {
-        if (!isPlayerRoute3() || isEditableTarget3(e.target)) return;
-        if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "i") {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleStatsOverlay();
-        }
-      },
-      true
-    );
-    const onRoute = () => {
-      if (!isPlayerRoute3() && statsVisible) {
-        toggleStatsOverlay(false);
-      }
-    };
-    window.addEventListener("hashchange", onRoute);
-    window.addEventListener("popstate", onRoute);
   }
 
   // src/index.ts

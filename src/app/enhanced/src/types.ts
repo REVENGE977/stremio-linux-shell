@@ -157,3 +157,46 @@ export interface MarketplaceRegistry {
     themes: MarketplaceMod[];
 }
 
+export interface ThumbnailPayload {
+    time: number;
+    dataUrl: string;
+    width: number;
+    height: number;
+}
+
+export type PlayerEventName = 'play' | 'pause' | 'seeked' | 'timeupdate' | 'ended' | 'trackchange';
+
+export interface PlayerTrackChangeEvent {
+    property: 'track-list' | 'sid' | 'aid' | 'vid' | 'secondary-sid';
+    value: any;
+    tracks: any[];
+    sid: string | number | boolean | null;
+    aid: string | number | boolean | null;
+    vid: string | number | boolean | null;
+    secondarySid: string | number | boolean | null;
+}
+
+export interface PlayerEventMap {
+    play: { time: number; duration: number; paused: false };
+    pause: { time: number; duration: number; paused: true };
+    seeked: { time: number; duration: number };
+    timeupdate: { time: number; duration: number };
+    ended: { reason: string; error: { message: string; critical: boolean } | null };
+    trackchange: PlayerTrackChangeEvent;
+}
+
+export interface PlayerStateSnapshot {
+    paused: boolean;
+    time: number;
+    duration: number;
+    seeking: boolean;
+    ended: boolean;
+    path: string;
+    tracks: any[];
+    sid: string | number | boolean | null;
+    aid: string | number | boolean | null;
+    vid: string | number | boolean | null;
+    secondarySid: string | number | boolean | null;
+}
+
+
